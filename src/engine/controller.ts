@@ -2,7 +2,7 @@
 // the FX punch-in/write logic. It owns the Groovebox (audio) and keeps the store in sync with what
 // is *audible* (the scheduler runs ~120 ms ahead of the speakers).
 import { Groovebox, type MixInput } from "./audio";
-import { manglerTarget } from "./mangler";
+import { manglerTarget, sweepLevel, VERB_ID, VERB_TAIL } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { NUM_TRACKS, TRACKS } from "./spec";
 import type { Pattern } from "./state";
@@ -39,7 +39,14 @@ class Controller {
 
   // FX
   private punchApplied = 0;
+  private lvlApplied = 1;
+  /** Written-lane state last scheduled (id, level) so unchanged steps send nothing. */
   private punchScheduled = -1;
+  private lvlScheduled = -1;
+  /** Audio time the held punch went down: the sweep level grows from here. */
+  private punchSince = 0;
+  /** Keep the reverb return open until this audio time so a released VERB rings out. */
+  private verbUntil = 0;
 
   constructor() {
     observe((next, prev) => this.onState(next, prev));
@@ -79,6 +86,7 @@ class Controller {
     this.gridTime = gb.now + 0.06;
     this.events = [];
     this.punchScheduled = -1;
+    gb.resetManglerSchedule();
     this.audibleSince = this.gridTime;
     gb.setTempo(st.bpm, this.gridTime);
     this.audibleStep = -1;
@@ -94,10 +102,12 @@ class Controller {
     gb.clearPending();
     this.events = [];
     this.punchScheduled = -1;
+    gb.resetManglerSchedule();
     this.audibleStep = -1;
     setAudible(-1, -1);
     setState({ playing: false, cue: null });
-    this.applyPunch(getState().punch);
+    const held = getState().punch;
+    this.applyPunch(held, held ? this.heldLevel(gb.now) : 0);
   }
 
   togglePlay(): void {
@@ -148,34 +158,52 @@ class Controller {
 
   // --- FX punch ------------------------------------------------------------------------------
 
+  /** Sweep level of the held punch at audio time `t`. */
+  private levelAt(t: number, pattern = getState().playing ? this.schedPattern : getState().pattern): number {
+    const st = getState();
+    return sweepLevel(st.patterns[pattern].mangler, st.bpm, t - this.punchSince);
+  }
+
+  private heldLevel(now: number): number {
+    return this.levelAt(now, this.soundPatternIndex());
+  }
+
   /** A punch pad went down. */
   punchDown(id: number): void {
     const st = getState();
-    setState({ punch: id });
-    this.applyPunch(id);
+    const gb = this.gb;
+    this.punchSince = gb ? gb.now : 0;
+    setState({ punch: id, punchSel: id });
+    const lvl = this.heldLevel(this.punchSince);
+    this.applyPunch(id, lvl);
     if (st.playing && st.write && this.audibleStep >= 0) {
-      const gb = this.gb;
       const stepDur = 15 / st.bpm;
       const frac = gb ? (gb.now - this.audibleSince) / stepDur : 0;
       // A press late in a step is aimed at the next one; that step is written as it arrives.
-      if (frac < 0.65) editPattern((p) => { p.fx[this.audibleStep] = id; }, st.playPattern);
+      // The press step starts the recorded sweep from its beginning.
+      if (frac < 0.65) {
+        editPattern((p) => { p.fx[this.audibleStep] = id; p.fxLvl[this.audibleStep] = lvl; }, st.playPattern);
+      }
     }
   }
 
   punchUp(): void {
     const st = getState();
+    const held = st.punch;
     setState({ punch: 0 });
     this.punchScheduled = -1;
+    if (held === VERB_ID && this.gb) this.verbUntil = this.gb.now + VERB_TAIL;
     const lane = st.playing && st.fxPlay && this.audibleStep >= 0 ? st.patterns[st.playPattern].fx[this.audibleStep] : 0;
-    this.applyPunch(lane);
+    const lvl = lane ? st.patterns[st.playPattern].fxLvl[this.audibleStep] : 0;
+    this.applyPunch(lane, lvl);
   }
 
   clearFxStep(step: number): void {
-    editPattern((p) => { p.fx[step] = 0; });
+    editPattern((p) => { p.fx[step] = 0; p.fxLvl[step] = 0; });
   }
 
   clearFxAll(): void {
-    editPattern((p) => { p.fx.fill(0); });
+    editPattern((p) => { p.fx.fill(0); p.fxLvl.fill(0); });
   }
 
   // --- state observation ---------------------------------------------------------------------
@@ -190,22 +218,28 @@ class Controller {
     }
     if (next.bpm !== prev.bpm && next.playing) this.gb.setTempo(next.bpm, this.gridTime, this.gridTime);
     if (next.fxPlay !== prev.fxPlay && next.punch === 0) {
-      this.applyPunch(next.fxPlay && next.playing && this.audibleStep >= 0 ? next.patterns[next.playPattern].fx[this.audibleStep] : 0);
+      const on = next.fxPlay && next.playing && this.audibleStep >= 0;
+      const lane = on ? next.patterns[next.playPattern] : null;
+      this.applyPunch(lane ? lane.fx[this.audibleStep] : 0, lane ? lane.fxLvl[this.audibleStep] : 0);
       this.punchScheduled = -1;
     }
   }
 
   /** The pattern whose sound is (about to be) audible. */
   private soundPattern(): Pattern {
+    return getState().patterns[this.soundPatternIndex()];
+  }
+
+  private soundPatternIndex(): number {
     const st = getState();
-    return st.patterns[st.playing ? this.schedPattern : st.pattern];
+    return st.playing ? this.schedPattern : st.pattern;
   }
 
   private syncNow(): void {
     const gb = this.gb;
     if (!gb) return;
     gb.applySound(this.soundPattern());
-    this.applyPunch(this.punchApplied);
+    this.applyPunch(this.punchApplied, this.lvlApplied);
   }
 
   private mixInput(takeover: boolean, boost: number): MixInput {
@@ -213,16 +247,41 @@ class Controller {
     return { pattern: this.soundPattern(), mutes: st.mutes, solos: st.solos, takeover, boost };
   }
 
-  /** Put the mangler in the state for punch `id` (0 = resting) at `time` (now if omitted). */
-  private applyPunch(id: number, time?: number): void {
+  /** Put the punch bus in the state for punch `id` (0 = resting) at sweep level `lvl`. */
+  private applyPunch(id: number, lvl = 1, time?: number): void {
     const gb = this.gb;
     if (!gb) return;
     gb.when(time, () => {
       this.punchApplied = id;
-      const target = manglerTarget(this.soundPattern().mangler, id);
+      this.lvlApplied = lvl;
+      const keepVerb = id === 0 && gb.now < this.verbUntil;
+      const target = manglerTarget(this.soundPattern().mangler, id, lvl, keepVerb);
       gb.applyManglerValues(target.values);
       gb.applyMix(this.mixInput(target.takeover, target.boost));
     });
+  }
+
+  /** Written lane: step `step` of `pat` starts at audio time `t`. Its chain values go out as
+   * scheduled webdsp ramps (the level at this step to the level at the next), the routing at `t`. */
+  private scheduleLaneStep(pat: Pattern, step: number, t: number, stepDur: number): void {
+    const gb = this.gb!;
+    const id = this.punchGate(pat, step);
+    const lvl = id ? pat.fxLvl[step] : 0;
+    const nextStep = (step + 1) % pat.length;
+    const nextId = this.punchGate(pat, nextStep);
+    const hasRamp = id !== 0 && nextId === id && pat.fxLvl[nextStep] !== lvl;
+    const a = manglerTarget(pat.mangler, id, lvl);
+    const b = hasRamp ? manglerTarget(pat.mangler, id, pat.fxLvl[nextStep]) : a;
+    gb.scheduleManglerSegment(a.values, b.values, t, hasRamp ? stepDur : 0);
+    gb.when(t, () => {
+      this.punchApplied = id;
+      this.lvlApplied = lvl;
+      gb.applyMix(this.mixInput(a.takeover, a.boost));
+    });
+  }
+
+  private punchGate(pat: Pattern, step: number): number {
+    return getState().fxPlay ? pat.fx[step] : 0;
   }
 
   // --- the clock -----------------------------------------------------------------------------
@@ -231,9 +290,22 @@ class Controller {
     const gb = this.gb;
     if (!gb) return;
     gb.tick();
+    this.sweepHeldPunch(gb.now);
     if (!getState().playing) return;
     while (this.gridTime < gb.now + LOOKAHEAD) this.scheduleStep();
     this.publishAudible(gb.now);
+  }
+
+  /** While a punch is held its level climbs; push it to the chain every tick until it is full. */
+  private sweepHeldPunch(now: number): void {
+    const st = getState();
+    if (st.punch !== 0) {
+      const lvl = this.heldLevel(now);
+      if (lvl !== this.lvlApplied || st.punch !== this.punchApplied) this.applyPunch(st.punch, lvl);
+    } else if (this.verbUntil && now >= this.verbUntil) {
+      this.verbUntil = 0;
+      if (this.punchApplied === 0) this.applyPunch(0, 0);
+    }
   }
 
   private scheduleStep(): void {
@@ -275,9 +347,11 @@ class Controller {
       this.punchScheduled = -1;
     } else {
       const want = st.fxPlay ? pat.fx[step] : 0;
-      if (want !== this.punchScheduled) {
+      const lvl = want ? pat.fxLvl[step] : 0;
+      if (want !== this.punchScheduled || lvl !== this.lvlScheduled || want !== 0) {
         this.punchScheduled = want;
-        this.applyPunch(want, t);
+        this.lvlScheduled = lvl;
+        this.scheduleLaneStep(pat, step, t, stepDur);
       }
     }
 
@@ -307,7 +381,7 @@ class Controller {
     if (next === this.schedPattern) return;
     this.schedPattern = next;
     gb.applySound(st.patterns[next], time);
-    gb.when(time, () => this.applyPunch(this.punchApplied));
+    gb.when(time, () => this.applyPunch(this.punchApplied, this.lvlApplied));
   }
 
   /** Move the store's playhead to what is audible now; record/erase FX as steps pass. */
@@ -317,8 +391,10 @@ class Controller {
       const ev = this.events.shift()!;
       latest = ev;
       const st = getState();
-      if (st.punch !== 0 && st.write) editPattern((p) => { p.fx[ev.step] = st.punch; }, ev.pattern);
-      else if (st.erase) editPattern((p) => { p.fx[ev.step] = 0; }, ev.pattern);
+      if (st.punch !== 0 && st.write) {
+        const lvl = this.levelAt(ev.time, ev.pattern);
+        editPattern((p) => { p.fx[ev.step] = st.punch; p.fxLvl[ev.step] = lvl; }, ev.pattern);
+      } else if (st.erase) editPattern((p) => { p.fx[ev.step] = 0; p.fxLvl[ev.step] = 0; }, ev.pattern);
     }
     if (!latest) return;
     this.audibleSince = latest.time;

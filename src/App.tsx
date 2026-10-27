@@ -3,7 +3,7 @@ import { controller } from "./engine/controller";
 import { getState, setState, useStore } from "./engine/store";
 import type { Tab } from "./engine/state";
 import { Header } from "./ui/Header";
-import { ManglerPanel, MixerPanel, PatternsPanel, PunchBar, SoundPanel } from "./ui/Panels";
+import { ManglerPanel, TrackFxPanel, MixerPanel, PatternsPanel, PunchBar, SoundPanel } from "./ui/Panels";
 import { SequencerPanel } from "./ui/Sequencer";
 
 const TABS: Array<{ id: Tab; label: string }> = [
@@ -64,7 +64,8 @@ export function App() {
       <main className="layout">
         <div className="band">
           <section className="panel sound-panel" aria-label="Sound"><SoundPanel /></section>
-          <section className="panel fx-panel" aria-label="FX mangler"><ManglerPanel /></section>
+          <section className="panel trackfx-panel" aria-label="Track FX"><TrackFxPanel /></section>
+          <section className="panel fx-panel" aria-label="Punch FX"><ManglerPanel /></section>
         </div>
         <div className="col col-a">
           <section className="panel seq" aria-label="Sequencer">

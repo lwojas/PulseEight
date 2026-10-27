@@ -1,6 +1,8 @@
 // The whole application state, and the pure functions that edit a pattern.
 // Nothing here touches audio or React.
 import { defaultSound, DRUM_TRACKS, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
+import { defaultMangler } from "./mangler";
+import { newDelay, newReverb, type DelaySend, type ReverbSend } from "./trackfx";
 
 export const MAX_STEPS = 64;
 export const PAGE = 16;
@@ -23,8 +25,9 @@ export interface TrackPattern {
   /** Normalised 0..1 per control of the track's spec. */
   sound: number[];
   level: number;
-  /** Send into the FX mangler. */
-  send: number;
+  /** Track sends (mixing): delay and reverb. */
+  dly: DelaySend;
+  rev: ReverbSend;
   /** Octave shift for melodic tracks. */
   oct: number;
   /** Name of the preset last loaded into this track (cosmetic). */
@@ -32,14 +35,10 @@ export interface TrackPattern {
 }
 
 export interface ManglerBase {
-  /** DubDelayDivision index offered by the UI. */
-  div: number;
-  /** Echo feedback, 0..1 (mapped to the engine range). */
-  fb: number;
-  /** Echo darkness: low-pass in the feedback loop, 0 dark .. 1 bright. */
-  tone: number;
-  /** Punch intensity, 0..1. */
-  amt: number;
+  /** Index into `SWEEPS`: how long a held punch takes to reach full effect. */
+  sweep: number;
+  /** Character parameter per punch id (index 0 unused), normalised 0..1. */
+  param: number[];
 }
 
 export interface Pattern {
@@ -47,6 +46,8 @@ export interface Pattern {
   tracks: TrackPattern[];
   /** Written FX, one punch id per step (0 = none). */
   fx: number[];
+  /** Sweep level 0..1 of the written punch at the start of each step (the recorded automation). */
+  fxLvl: number[];
   mangler: ManglerBase;
 }
 
@@ -81,6 +82,8 @@ export interface AppState {
   erase: boolean;
   /** Punch id currently held by the player (0 = none). */
   punch: number;
+  /** Punch whose character parameter is shown (the last one pressed). */
+  punchSel: number;
   // pattern bank tools
   chainEdit: boolean;
   copyArm: boolean;
@@ -94,21 +97,22 @@ export function newTrackPattern(track: number): TrackPattern {
     steps: Array.from({ length: MAX_STEPS }, () => emptyStep(spec.defaultNote ?? 0)),
     sound: defaultSound(spec),
     level: DEFAULT_LEVELS[track],
-    send: DEFAULT_SENDS[track],
+    dly: newDelay(track),
+    rev: newReverb(track),
     oct: 0,
     preset: "",
   };
 }
 
 export const DEFAULT_LEVELS = [0.85, 0.75, 0.55, 0.55, 0.7, 0.6, 0.78, 0.62];
-export const DEFAULT_SENDS = [0, 0.15, 0.12, 0.25, 0.3, 0.3, 0.1, 0.3];
 
 export function newPattern(): Pattern {
   return {
     length: 16,
     tracks: Array.from({ length: NUM_TRACKS }, (_, i) => newTrackPattern(i)),
     fx: new Array(MAX_STEPS).fill(0),
-    mangler: { div: 2, fb: 0.5, tone: 0.55, amt: 0.6 },
+    fxLvl: new Array(MAX_STEPS).fill(0),
+    mangler: defaultMangler(),
   };
 }
 
@@ -238,6 +242,7 @@ export function initialState(): AppState {
     write: false,
     erase: false,
     punch: 0,
+    punchSel: 1,
     chainEdit: false,
     copyArm: false,
   };

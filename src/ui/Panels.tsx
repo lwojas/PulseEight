@@ -1,14 +1,15 @@
 // Sound, mixer, FX mangler and pattern panels.
 import { type CSSProperties } from "react";
 import {
-  clearChain, clearPattern, loadKit, loadSynthPreset, removeChainEntry, setLevel, setMangler, setSend, setSound,
-  toggleMute, toggleSolo,
+  clearChain, clearPattern, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPunchParam, setReverb,
+  setSound, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
-import { DUB_DIVISIONS, PUNCHES } from "../engine/mangler";
+import { punchById, PUNCHES, SWEEPS } from "../engine/mangler";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
-import { DEFAULT_LEVELS, DEFAULT_SENDS } from "../engine/state";
+import { DEFAULT_LEVELS } from "../engine/state";
+import { BEAT_DIVISIONS, DEFAULT_DELAY_SENDS, DEFAULT_REVERB_SENDS, DELAY_MODES, formatFreeDelay } from "../engine/trackfx";
 import { setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
 import { ConfirmButton } from "./Sequencer";
@@ -98,14 +99,16 @@ export function SoundPanel() {
 function MixRow({ track }: { track: number }) {
   const spec = TRACKS[track];
   const level = useStore((s) => s.patterns[s.pattern].tracks[track].level);
-  const send = useStore((s) => s.patterns[s.pattern].tracks[track].send);
+  const dly = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
+  const rev = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
   const mute = useStore((s) => s.mutes[track]);
   const solo = useStore((s) => s.solos[track]);
   return (
     <div className="mix-row" style={accentStyle(track)} data-dim={mute}>
       <button type="button" className="mix-name" onClick={() => setState({ focus: track, selStep: -1 })}>{spec.name}</button>
       <Slider label="LVL" value={level} def={DEFAULT_LEVELS[track]} onChange={(v) => setLevel(track, v)} />
-      <Slider label="FX" value={send} def={DEFAULT_SENDS[track]} accent="var(--fx)" onChange={(v) => setSend(track, v)} />
+      <Slider label="DLY" value={dly} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)" onChange={(v) => setDelay(track, { send: v })} />
+      <Slider label="REV" value={rev} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)" onChange={(v) => setReverb(track, { send: v })} />
       <button type="button" className="btn sm" data-active={mute} aria-pressed={mute} aria-label={`Mute ${spec.name}`} onClick={() => toggleMute(track)}>M</button>
       <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} aria-label={`Solo ${spec.name}`} onClick={() => toggleSolo(track)}>S</button>
     </div>
@@ -118,24 +121,92 @@ export function MixerPanel() {
       <header className="panel-title">
         <span className="dot" />
         <h2>MIXER</h2>
-        <span className="silk">LEVEL · SEND TO FX MANGLER</span>
+        <span className="silk">LEVEL · DELAY + REVERB SENDS</span>
       </header>
       {TRACKS.map((t) => <MixRow key={t.id} track={t.id} />)}
     </div>
   );
 }
 
-// --- FX mangler ----------------------------------------------------------------------------------
+// --- track FX: delay + reverb sends (mixing) ------------------------------------------------------
+
+export function TrackFxPanel() {
+  const track = useStore((s) => s.focus);
+  const dly = useStore((s) => s.patterns[s.pattern].tracks[track].dly);
+  const rev = useStore((s) => s.patterns[s.pattern].tracks[track].rev);
+  const spec = TRACKS[track];
+  const beat = dly.mode === 1;
+  const divN = BEAT_DIVISIONS.length;
+  return (
+    <div className="trackfx" style={accentStyle(track)}>
+      <header className="panel-title">
+        <span className="dot" />
+        <h2>TRACK FX</h2>
+        <span className="silk">{spec.name} · SENDS</span>
+      </header>
+      <div className="tfx-groups">
+        <section className="tfx-group" aria-label="Delay send">
+          <div className="tfx-head">
+            <span className="silk">DELAY</span>
+            <div className="seg" role="group" aria-label="Delay timing mode">
+              {DELAY_MODES.map((m, i) => (
+                <button key={m} type="button" className="chip" data-active={dly.mode === i} aria-pressed={dly.mode === i} onClick={() => setDelay(track, { mode: i as 0 | 1 })}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="knobs tfx-knobs" style={{ "--n": 2 } as CSSProperties}>
+            <Knob
+              label="SEND" value={dly.send} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)"
+              readout={`${Math.round(dly.send * 100)}%`} onChange={(v) => setDelay(track, { send: v })}
+            />
+            {beat ? (
+              <Knob
+                key="beat" label="TIME" value={dly.div / (divN - 1)} def={1 / (divN - 1)} steps={divN} accent="var(--fx)"
+                readout={BEAT_DIVISIONS[dly.div].label} onChange={(v) => setDelay(track, { div: Math.round(v * (divN - 1)) })}
+              />
+            ) : (
+              <Knob
+                key="free" label="TIME" value={dly.time} def={0.5} accent="var(--fx)"
+                readout={formatFreeDelay(dly.time)} onChange={(v) => setDelay(track, { time: v })}
+              />
+            )}
+          </div>
+        </section>
+        <section className="tfx-group" aria-label="Reverb send">
+          <div className="tfx-head"><span className="silk">REVERB</span></div>
+          <div className="knobs tfx-knobs" style={{ "--n": 2 } as CSSProperties}>
+            <Knob
+              label="SEND" value={rev.send} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)"
+              readout={`${Math.round(rev.send * 100)}%`} onChange={(v) => setReverb(track, { send: v })}
+            />
+            <Knob
+              label="SIZE" value={rev.size} def={0.5} accent="var(--fx)"
+              readout={`${Math.round(rev.size * 100)}%`} onChange={(v) => setReverb(track, { size: v })}
+            />
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// --- punch FX: performed, not mixed --------------------------------------------------------------
 
 export function PunchPad({ id, compact }: { id: number; compact?: boolean }) {
   const def = PUNCHES.find((p) => p.id === id)!;
   const held = useStore((s) => s.punch === id);
+  const sweepSec = useStore((s) => (SWEEPS[s.patterns[s.pattern].mangler.sweep]?.steps ?? 0) * (15 / s.bpm));
+  const sel = useStore((s) => s.punchSel === id);
   return (
     <button
       type="button"
       className="punch"
       data-compact={compact}
       data-held={held}
+      data-sel={sel}
+      style={{ "--sweep": `${sweepSec.toFixed(3)}s` } as CSSProperties}
       aria-pressed={held}
       aria-label={`${def.label}: ${def.hint}`}
       onPointerDown={(e) => {
@@ -189,32 +260,36 @@ export function PunchBar() {
 
 export function ManglerPanel() {
   const m = useStore((s) => s.patterns[s.pattern].mangler);
+  const sel = useStore((s) => s.punchSel);
   const write = useStore((s) => s.write);
+  const def = punchById(sel) ?? PUNCHES[0];
+  const value = m.param[def.id] ?? def.param.def;
   return (
     <div className="mangler" style={{ "--acc": "var(--fx)" } as CSSProperties}>
       <header className="panel-title">
         <span className="dot" />
-        <h2>FX MANGLER</h2>
-        <span className="silk">SHARED RETURN · PUNCH-IN</span>
+        <h2>PUNCH FX</h2>
+        <span className="silk">PERFORM · {def.label} · {def.hint}</span>
       </header>
       <div className="knobs mangler-knobs">
-        <Knob label="ECHO" value={m.fb} def={0.5} readout={`${Math.round(m.fb * 100)}%`} onChange={(v) => setMangler({ fb: v })} />
-        <Knob label="TONE" value={m.tone} def={0.55} readout={`${Math.round(m.tone * 100)}%`} onChange={(v) => setMangler({ tone: v })} />
-        <Knob label="PUNCH AMT" value={m.amt} def={0.6} readout={`${Math.round(m.amt * 100)}%`} onChange={(v) => setMangler({ amt: v })} />
+        <Knob
+          key={def.id} label={def.param.label} value={value} def={def.param.def} steps={def.param.steps?.length} accent="var(--fx)"
+          readout={def.param.format(value)} onChange={(v) => setPunchParam(def.id, v)}
+        />
       </div>
       <div className="mangler-mid">
-      <div className="chips" role="group" aria-label="Echo time">
-        <span className="silk">ECHO TIME</span>
-        {DUB_DIVISIONS.map((d, i) => (
-          <button key={d.label} type="button" className="chip" data-active={m.div === i} onClick={() => setMangler({ div: i })}>{d.label}</button>
-        ))}
-      </div>
-      <WriteControls />
+        <div className="chips" role="group" aria-label="Sweep time">
+          <span className="silk">SWEEP IN</span>
+          {SWEEPS.map((w, i) => (
+            <button key={w.label} type="button" className="chip" data-active={m.sweep === i} aria-pressed={m.sweep === i} onClick={() => setSweep(i)}>{w.label}</button>
+          ))}
+        </div>
+        <WriteControls />
       </div>
       <div className="punch-grid" data-write={write}>
         {PUNCHES.map((p) => <PunchPad key={p.id} id={p.id} />)}
       </div>
-      <p className="hint silk">{write ? "WRITE ARMED · PLAY, THEN HOLD A PAD TO PUNCH IT INTO THE PATTERN" : "HOLD A PAD TO PERFORM · ARM WRITE TO RECORD IT"}</p>
+      <p className="hint silk">{write ? "WRITE ARMED · PLAY, THEN HOLD A PAD · THE SWEEP IS RECORDED" : "HOLD A PAD TO PERFORM · ARM WRITE TO RECORD THE SWEEP"}</p>
     </div>
   );
 }

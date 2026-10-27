@@ -64,10 +64,12 @@ h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
   display: none; flex-direction: column; min-height: 0; margin-top: 8px; padding: 10px;
   background: var(--bay); border: 1px solid var(--rule-2); border-radius: var(--radius);
 }
+.app[data-tab="fx"] .layout { overflow-y: auto; }
 .app[data-tab="seq"] .seq,
 .app[data-tab="sound"] .sound-panel,
 .app[data-tab="mix"] .mix-panel,
 .app[data-tab="fx"] .fx-panel,
+.app[data-tab="fx"] .trackfx-panel,
 .app[data-tab="ptn"] .ptn-panel { display: flex; flex: 1 1 auto; }
 
 .tabs { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: #0d0e11; border-top: 1px solid var(--rule); }
@@ -182,7 +184,7 @@ button.oled { cursor: pointer; text-align: left; }
 .fx-strip-cells > .fx-cell:nth-child(4n):not(:last-child) { margin-right: 3px; }
 .fx-cell { position: relative; height: 20px; min-width: 0; border-radius: 3px; background: var(--cap); border: 1px solid var(--rule); font-family: var(--font-mono); font-size: 8px; font-weight: 700; color: var(--ink); }
 .fx-cell[data-beat="true"]:not([data-on="true"]) { background: var(--cap-hi); }
-.fx-cell[data-on="true"] { background: var(--fx); border-color: var(--fx); }
+.fx-cell[data-on="true"] { background: linear-gradient(to top, var(--fx) calc(var(--lvl, 1) * 100%), color-mix(in srgb, var(--fx) 22%, var(--cap)) 0); border-color: var(--fx); color: var(--text); }
 
 .track-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: var(--gap) 0; }
 .track-id { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
@@ -212,7 +214,7 @@ button.oled { cursor: pointer; text-align: left; }
 /* ---- mixer ------------------------------------------------------------------------------------ */
 
 .mixer { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.mix-row { flex: 1 1 0; min-height: 30px; max-height: 46px; display: grid; grid-template-columns: 50px 1fr 1fr 34px 34px; gap: 6px; align-items: stretch; padding: 2px 0; border-bottom: 1px solid var(--rule-2); }
+.mix-row { flex: 1 1 0; min-height: 30px; max-height: 46px; display: grid; grid-template-columns: 50px 1fr 1fr 1fr 34px 34px; gap: 6px; align-items: stretch; padding: 2px 0; border-bottom: 1px solid var(--rule-2); }
 .mix-row[data-dim="true"] { opacity: 0.55; }
 .mix-row .btn.sm { min-height: 0; min-width: 0; padding: 0; }
 .mix-name { text-align: left; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--acc); }
@@ -221,6 +223,17 @@ button.oled { cursor: pointer; text-align: left; }
 .slider-label, .slider-value { position: absolute; top: 50%; transform: translateY(-50%); font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
 .slider-label { left: 8px; }
 .slider-value { right: 8px; }
+
+/* ---- track FX (delay + reverb sends) ---------------------------------------------------------- */
+
+.trackfx { display: flex; flex-direction: column; min-height: 0; }
+.tfx-groups { display: flex; flex-direction: column; gap: 10px; }
+.tfx-group { padding: 6px 8px 8px; border: 1px solid var(--rule-2); border-radius: var(--radius); background: var(--cap); }
+.tfx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.tfx-head .silk { color: var(--fx); font-weight: 700; }
+.seg { display: flex; gap: 3px; }
+.seg .chip { min-height: 26px; padding: 0 10px; font-size: 10px; }
+.tfx-knobs { margin-top: 2px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* ---- FX mangler ------------------------------------------------------------------------------- */
 
@@ -231,11 +244,18 @@ button.oled { cursor: pointer; text-align: left; }
 .punch { min-height: var(--punch-h); border-radius: var(--radius); background: var(--cap); border: 1px solid var(--rule); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; touch-action: none; padding: 4px; }
 .punch b { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.08em; color: var(--fx); }
 .punch small { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.08em; color: var(--silk); text-align: center; }
-.punch[data-held="true"] { background: var(--fx); border-color: var(--fx); transform: translateY(2px); }
-.punch[data-held="true"] b, .punch[data-held="true"] small { color: var(--ink); }
+.punch { position: relative; overflow: hidden; }
+.punch b, .punch small { position: relative; }
+.punch[data-sel="true"]:not([data-held="true"]) { border-color: var(--fx); }
+/* the sweep: the pad fills left to right over the sweep time while it is held */
+.punch::before { content: ""; position: absolute; inset: 0; background: var(--fx); transform: scaleX(0); transform-origin: 0 50%; }
+.punch[data-held="true"] { background: var(--cap-hi); border-color: var(--fx); transform: translateY(2px); }
+.punch[data-held="true"]::before { animation: punch-sweep var(--sweep, 0s) linear forwards; }
+.punch[data-held="true"] b, .punch[data-held="true"] small { color: var(--text); }
+@keyframes punch-sweep { to { transform: scaleX(1); } }
 .punchbar { flex: none; margin-top: 8px; padding-top: 2px; border-top: 1px solid var(--rule-2); }
 .punchbar .write-controls { margin: 6px 0; }
-.punch-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.punch-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .punch[data-compact="true"] { min-height: calc(var(--punch-h) * 0.75); }
 .punch[data-compact="true"] b { font-size: 10px; letter-spacing: 0.02em; }
 
@@ -290,6 +310,7 @@ button.oled { cursor: pointer; text-align: left; }
 
 @media (min-width: 1100px) {
   :root { --gap: 8px; }
+  .app[data-tab="fx"] .layout { overflow: visible; }
   .tabs, .punchbar, .ptn-panel, .phone-only, .app[data-tab] .ptn-panel { display: none; }
   .topbar { padding-left: 4px; padding-right: 4px; }
   .transport { padding: 8px 12px; gap: 8px; }
@@ -307,7 +328,7 @@ button.oled { cursor: pointer; text-align: left; }
   .patternbar .btn.sm { min-height: 32px; }
 
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "band band" "seq mix"; gap: var(--gap); padding: var(--gap) 12px 12px; }
-  .band { grid-area: band; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--gap); }
+  .band { grid-area: band; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(250px, 0.62fr) minmax(0, 1.05fr); gap: var(--gap); }
   .col-a { grid-area: seq; }
   .col-c { grid-area: mix; }
   .col { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
@@ -361,15 +382,21 @@ button.oled { cursor: pointer; text-align: left; }
   /* band: instrument controls (secondary) and FX mangler (supporting), each a horizontal strip */
   .band > .panel, .app[data-tab] .band > .panel { padding: 10px 12px; }
   .band .panel-title { margin-bottom: 6px; }
-  .sound { display: grid; grid-template-columns: minmax(210px, 0.8fr) minmax(0, 2fr); grid-template-rows: auto 1fr; grid-template-areas: "title knobs" "chips knobs"; column-gap: 16px; min-height: 0; }
+  .sound { display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "title knobs" "chips knobs"; column-gap: 16px; min-height: 0; }
   .sound .panel-title { grid-area: title; }
   .sound .chips { grid-area: chips; align-content: start; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .sound .chips .silk { grid-column: 1 / -1; }
   .sound .chip { min-height: 28px; padding: 0 4px; font-size: 10px; min-width: 0; }
   .sound .knobs { grid-area: knobs; --ks: var(--ks-lg); margin: 0; align-self: center; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); }
+  .trackfx { height: 100%; }
+  .tfx-groups { flex-direction: row; gap: 8px; flex: 1 1 auto; min-height: 0; }
+  .tfx-group { flex: 1 1 0; min-width: 0; padding: 4px 6px 6px; background: transparent; display: flex; flex-direction: column; }
+  .tfx-knobs { --ks: 44px; margin: auto 0; }
+  .tfx-head { min-height: 24px; }
+  .seg .chip { min-height: 22px; padding: 0 5px; font-size: 9px; }
   .mangler { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto 1fr; grid-template-areas: "title title title" "knobs mid pads"; column-gap: 14px; }
   .mangler .panel-title { grid-area: title; }
-  .mangler .knobs { grid-area: knobs; grid-template-columns: repeat(3, 76px); margin: 0; align-self: center; }
+  .mangler .knobs { grid-area: knobs; grid-template-columns: repeat(1, 76px); margin: 0; align-self: center; }
   .mangler-mid { grid-area: mid; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; }
   .mangler .knob-label { font-size: 9px; letter-spacing: 0.06em; }
   .mangler .chip { min-height: 28px; padding: 0 6px; font-size: 10px; flex: 1 1 0; min-width: 0; }
@@ -385,8 +412,9 @@ button.oled { cursor: pointer; text-align: left; }
   /* mixer column */
   .mix-panel, .app[data-tab] .mix-panel { flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .mix-panel .panel-title .silk { display: none; }
-  .mix-row { max-height: 64px; grid-template-columns: 38px minmax(0, 1.5fr) minmax(0, 1fr) 28px 28px; gap: 4px; }
-  .mix-row .slider-label { display: none; }
+  .mix-row { max-height: 64px; grid-template-columns: 38px repeat(3, minmax(0, 1fr)) 28px 28px; gap: 4px; }
+  .mix-row .slider-value { display: none; }
+  .mix-row .slider-label { left: 5px; font-size: 9px; letter-spacing: 0.04em; }
   .mix-name { font-size: 9px; }
   .app .ptn-panel, .app[data-tab] .ptn-panel { display: none; }
 }
@@ -404,16 +432,16 @@ button.oled { cursor: pointer; text-align: left; }
 
 @media (min-width: 1100px) and (max-height: 760px) {
   .sound .knobs { --ks: 44px; }
-  .mangler .knobs { --ks: 40px; grid-template-columns: repeat(3, 66px); }
+  .mangler .knobs { --ks: 40px; grid-template-columns: repeat(1, 66px); }
   .band .panel-title { margin-bottom: 2px; }
 }
 
 @media (min-width: 1100px) and (max-width: 1299px) {
-  .sound { grid-template-columns: minmax(170px, 0.6fr) minmax(0, 2fr); column-gap: 8px; }
+  .sound { grid-template-columns: 130px minmax(0, 1fr); column-gap: 8px; }
   .sound .knobs { --ks: 46px; }
   .layout { grid-template-columns: minmax(0, 1fr) 264px; }
   .mangler { column-gap: 8px; }
-  .mangler .knobs { grid-template-columns: repeat(3, 60px); }
+  .mangler .knobs { grid-template-columns: repeat(1, 60px); }
   .mangler .chip { padding: 0 2px; font-size: 9px; letter-spacing: 0; }
   .mangler .write-controls .btn { padding: 0 4px; }
   .mix-row .btn.sm { min-width: 0; }

@@ -3,7 +3,8 @@
 import { controller } from "./controller";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { TRACKS } from "./spec";
-import { clearTrackSteps, newPattern, newTrackPattern, PAGE, randomizeTrack, type ManglerBase } from "./state";
+import { clearTrackSteps, newPattern, newTrackPattern, PAGE, randomizeTrack } from "./state";
+import { BEAT_DIVISIONS, type DelaySend, type ReverbSend } from "./trackfx";
 import { editPattern, getState, setState } from "./store";
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
@@ -84,8 +85,23 @@ export function setLevel(track: number, value: number): void {
   editPattern((p) => { p.tracks[track].level = clamp01(value); });
 }
 
-export function setSend(track: number, value: number): void {
-  editPattern((p) => { p.tracks[track].send = clamp01(value); });
+export function setDelay(track: number, patch: Partial<DelaySend>): void {
+  editPattern((p) => {
+    const d = p.tracks[track].dly;
+    Object.assign(d, patch);
+    d.send = clamp01(d.send);
+    d.time = clamp01(d.time);
+    d.div = Math.max(0, Math.min(BEAT_DIVISIONS.length - 1, Math.round(d.div)));
+  });
+}
+
+export function setReverb(track: number, patch: Partial<ReverbSend>): void {
+  editPattern((p) => {
+    const r = p.tracks[track].rev;
+    Object.assign(r, patch);
+    r.send = clamp01(r.send);
+    r.size = clamp01(r.size);
+  });
 }
 
 export function setOctave(track: number, oct: number): void {
@@ -100,8 +116,13 @@ export function toggleSolo(track: number): void {
   setState((s) => ({ solos: s.solos.map((m, i) => (i === track ? !m : m)) }));
 }
 
-export function setMangler(patch: Partial<ManglerBase>): void {
-  editPattern((p) => { Object.assign(p.mangler, patch); });
+/** Set one punch's character parameter. */
+export function setPunchParam(id: number, value: number): void {
+  editPattern((p) => { p.mangler.param[id] = clamp01(value); });
+}
+
+export function setSweep(index: number): void {
+  editPattern((p) => { p.mangler.sweep = index; });
 }
 
 export function loadKit(index: number): void {

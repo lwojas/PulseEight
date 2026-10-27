@@ -75,6 +75,7 @@ export function PageBar() {
 
 function FxCell({ abs }: { abs: number }) {
   const id = useStore((s) => s.patterns[s.pattern].fx[abs]);
+  const lvl = useStore((s) => s.patterns[s.pattern].fxLvl[abs]);
   const label = id ? PUNCHES.find((p) => p.id === id)?.label.slice(0, 2) : "";
   return (
     <button
@@ -82,7 +83,8 @@ function FxCell({ abs }: { abs: number }) {
       className="cell fx-cell"
       data-on={id !== 0}
       data-beat={abs % 4 === 0}
-      aria-label={id ? `FX ${PUNCHES.find((p) => p.id === id)?.label} on step ${abs + 1}, tap to clear` : `No FX on step ${abs + 1}`}
+      style={id ? ({ "--lvl": lvl.toFixed(2) } as CSSProperties) : undefined}
+      aria-label={id ? `FX ${PUNCHES.find((p) => p.id === id)?.label} at ${Math.round(lvl * 100)}% on step ${abs + 1}, tap to clear` : `No FX on step ${abs + 1}`}
       onClick={() => id && controller.clearFxStep(abs)}
     >
       {label}
