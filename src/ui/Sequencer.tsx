@@ -21,14 +21,27 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 function PageButton({ index }: { index: number }) {
   const length = useStore((s) => s.patterns[s.pattern].length);
   const active = useStore((s) => s.page === index);
-  // Progress through this page: transform/opacity only, written straight to the element.
+  // Progress through this page: one compositor-driven linear animation per step (no per-frame JS),
+  // sweeping from the step's start to its end over the step duration.
   const bar = useRef<HTMLElement>(null);
+  const anim = useRef<Animation | null>(null);
   usePlayheadEffect((v) => {
     const el = bar.current;
     if (!el) return;
+    anim.current?.cancel();
+    anim.current = null;
     const here = v >= 0 && Math.floor(v / PAGE) === index;
     el.style.opacity = here ? "1" : "0";
-    if (here) el.style.transform = `scaleX(${((v % PAGE) + 1) / PAGE})`;
+    if (!here) return;
+    const pos = v % PAGE;
+    const from = `scaleX(${pos / PAGE})`;
+    const to = `scaleX(${(pos + 1) / PAGE})`;
+    el.style.transform = to;
+    anim.current = el.animate([{ transform: from }, { transform: to }], {
+      duration: (15 / getState().bpm) * 1000,
+      easing: "linear",
+      fill: "forwards",
+    });
   });
   const inside = index * PAGE < length;
   return (
