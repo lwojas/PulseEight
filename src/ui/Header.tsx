@@ -4,6 +4,7 @@ import { controller } from "../engine/controller";
 import { setState, useStore } from "../engine/store";
 import { Knob } from "./controls";
 import { PatternBar } from "./Panels";
+import { ProjectMenu } from "./ProjectMenu";
 import { usePlayheadEffect } from "./usePlayhead";
 
 /** The step counter: updated by the playhead directly, never through React. */
@@ -63,6 +64,7 @@ export function Header() {
           readout={`${Math.round(swing * 100)}%`} onChange={(v) => setState({ swing: 0.5 + v * 0.25 })}
         />
       </div>
+      <ProjectMenu />
       </div>
       <PatternBar />
     </header>

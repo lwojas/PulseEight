@@ -446,3 +446,34 @@ button.oled { cursor: pointer; text-align: left; }
   .mangler .write-controls .btn { padding: 0 4px; }
   .mix-row .btn.sm { min-width: 0; }
 }
+
+/* ---- project menu and modal ------------------------------------------------------------------- */
+
+.project-menu { display: flex; align-items: center; gap: 4px; margin-left: 6px; flex: none; }
+.project-name { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 4px; font: 700 11px var(--font-mono); letter-spacing: 0.04em; color: var(--text); }
+.project-name[data-empty="true"] { color: var(--silk); }
+@media (max-width: 699px) { .project-name { display: none; } }
+@media (min-width: 1100px) { .project-menu { margin-left: auto; } }
+.project-menu .btn.sm { min-width: 34px; }
+.project-menu .lbl { display: none; }
+@media (min-width: 700px) { .project-menu .lbl { display: inline; } }
+
+.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(5, 6, 8, 0.7); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal { width: min(360px, 100%); max-height: 80vh; display: flex; flex-direction: column; background: var(--bay); border: 1px solid var(--rule); border-radius: var(--radius); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--rule-2); }
+.modal-head h2 { margin: 0; font: 700 12px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--silk); }
+.modal-body { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.modal-form, .modal-menu { display: flex; flex-direction: column; gap: 10px; }
+.modal-input { min-height: 38px; padding: 0 10px; background: var(--bg); color: var(--text); border: 1px solid var(--rule); border-radius: var(--radius); font: 14px var(--font-mono); }
+.modal-input:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+.modal-primary { background: var(--bass); border-color: var(--bass); color: var(--ink); }
+.modal-note { margin: 0; font-size: 12px; color: var(--silk); }
+.modal-note.err { color: var(--drum); }
+.modal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.modal-list li { display: flex; gap: 6px; }
+.modal-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; background: var(--cap); border: 1px solid var(--rule); border-radius: var(--radius); color: var(--text); text-align: left; }
+.modal-item b { font: 700 13px var(--font-mono); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-item small { font-size: 11px; color: var(--silk); }
+.modal-item:hover { border-color: var(--tone); }
+.modal-backdrop[data-anchored="true"] { display: block; background: transparent; padding: 0; }
+.modal-backdrop[data-anchored="true"] .modal { position: fixed; max-width: calc(100vw - 16px); box-shadow: 0 0 0 1px #000; }

@@ -55,6 +55,8 @@ export type Tab = "seq" | "sound" | "mix" | "fx" | "ptn";
 
 export interface AppState {
   // persisted
+  /** Name of the loaded or last-saved project; empty for an unsaved one. */
+  projectName: string;
   patterns: Pattern[];
   chain: number[];
   chainOn: boolean;
@@ -219,6 +221,7 @@ export function isDrum(track: number): boolean {
 
 export function initialState(): AppState {
   return {
+    projectName: "",
     patterns: Array.from({ length: NUM_PATTERNS }, (_, i) => (i === 0 ? demoPattern() : newPattern())),
     chain: [],
     chainOn: false,
