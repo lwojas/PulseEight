@@ -161,7 +161,7 @@ class Controller {
   /** Sweep level of the held punch at audio time `t`. */
   private levelAt(t: number, pattern = getState().playing ? this.schedPattern : getState().pattern): number {
     const st = getState();
-    return sweepLevel(st.patterns[pattern].mangler, st.bpm, t - this.punchSince);
+    return sweepLevel(st.patterns[pattern].mangler, st.bpm, t - this.punchSince, st.punch);
   }
 
   private heldLevel(now: number): number {

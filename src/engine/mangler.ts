@@ -210,9 +210,18 @@ export function manglerTarget(base: ManglerBase, punchId: number, lvl = 1, keepV
   };
 }
 
+/** Punches whose level swings back and forth (0 → 1 → 0 …) for as long as the pad is held. */
+export const PING_PONG = new Set([7]);
+/** Half-period of a ping-pong swing when the sweep time is NOW, in 16th steps. */
+export const PING_PONG_NOW_STEPS = 8;
+
 /** Sweep level reached `elapsed` seconds after a punch went down. */
-export function sweepLevel(base: ManglerBase, bpm: number, elapsed: number): number {
+export function sweepLevel(base: ManglerBase, bpm: number, elapsed: number, punchId = 0): number {
   const steps = SWEEPS[base.sweep]?.steps ?? 0;
-  if (steps === 0) return 1;
-  return clamp01(elapsed / (steps * (15 / bpm)));
+  const pingPong = PING_PONG.has(punchId);
+  if (steps === 0 && !pingPong) return 1;
+  const t = elapsed / ((steps || PING_PONG_NOW_STEPS) * (15 / bpm));
+  if (!pingPong) return clamp01(t);
+  const ph = ((t % 2) + 2) % 2;
+  return ph <= 1 ? ph : 2 - ph;
 }

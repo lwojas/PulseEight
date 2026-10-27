@@ -5,7 +5,7 @@ import {
   setSound, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
-import { punchById, PUNCHES, SWEEPS } from "../engine/mangler";
+import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
 import { DEFAULT_LEVELS } from "../engine/state";
@@ -197,7 +197,10 @@ export function TrackFxPanel() {
 export function PunchPad({ id, compact }: { id: number; compact?: boolean }) {
   const def = PUNCHES.find((p) => p.id === id)!;
   const held = useStore((s) => s.punch === id);
-  const sweepSec = useStore((s) => (SWEEPS[s.patterns[s.pattern].mangler.sweep]?.steps ?? 0) * (15 / s.bpm));
+  const pingPong = PING_PONG.has(id);
+  const sweepSec = useStore(
+    (s) => ((SWEEPS[s.patterns[s.pattern].mangler.sweep]?.steps ?? 0) || (pingPong ? PING_PONG_NOW_STEPS : 0)) * (15 / s.bpm),
+  );
   const sel = useStore((s) => s.punchSel === id);
   return (
     <button
@@ -205,6 +208,7 @@ export function PunchPad({ id, compact }: { id: number; compact?: boolean }) {
       className="punch"
       data-compact={compact}
       data-held={held}
+      data-pingpong={pingPong || undefined}
       data-sel={sel}
       style={{ "--sweep": `${sweepSec.toFixed(3)}s` } as CSSProperties}
       aria-pressed={held}

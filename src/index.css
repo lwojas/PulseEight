@@ -251,6 +251,7 @@ button.oled { cursor: pointer; text-align: left; }
 .punch::before { content: ""; position: absolute; inset: 0; background: var(--fx); transform: scaleX(0); transform-origin: 0 50%; }
 .punch[data-held="true"] { background: var(--cap-hi); border-color: var(--fx); transform: translateY(2px); }
 .punch[data-held="true"]::before { animation: punch-sweep var(--sweep, 0s) linear forwards; }
+.punch[data-held="true"][data-pingpong="true"]::before { animation: punch-sweep var(--sweep, 0s) linear infinite alternate; }
 .punch[data-held="true"] b, .punch[data-held="true"] small { color: var(--text); }
 @keyframes punch-sweep { to { transform: scaleX(1); } }
 .punchbar { flex: none; margin-top: 8px; padding-top: 2px; border-top: 1px solid var(--rule-2); }
