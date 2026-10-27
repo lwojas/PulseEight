@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"primary-container":"#caf300","on-tertiary-fixed-variant":"#8c1900","secondary":"#d3fbff","surface-container-lowest":"#0d0e11","tertiary-container":"#ffdad2","tertiary-fixed-dim":"#ffb4a3","tertiary":"#ffffff","on-error":"#690005","surface-container":"#1f1f23","primary":"#ffffff","secondary-container":"#00eefc","on-background":"#e3e2e6","outline-variant":"#444932","surface-variant":"#343538","secondary-fixed-dim":"#00dbe9","surface-container-high":"#292a2d","error":"#ffb4ab","on-tertiary":"#630f00","inverse-on-surface":"#2f3034","on-surface-variant":"#c5c9ac","surface-bright":"#38393c","inverse-primary":"#536600","on-primary-container":"#596c00","on-primary-fixed-variant":"#3e4c00","on-error-container":"#ffdad6","outline":"#8f9378","surface-dim":"#121316","tertiary-fixed":"#ffdad2","on-tertiary-container":"#c12600","inverse-surface":"#e3e2e6","on-primary":"#2a3400","on-surface":"#e3e2e6","primary-fixed-dim":"#b0d500","primary-fixed":"#caf300","on-tertiary-fixed":"#3d0600","surface-container-low":"#1b1b1f","background":"#121316","surface-container-highest":"#343538","on-secondary-container":"#00686f","surface-tint":"#b0d500","secondary-fixed":"#7df4ff","on-secondary":"#00363a","error-container":"#93000a","on-secondary-fixed":"#002022","surface":"#121316","on-primary-fixed":"#171e00","on-secondary-fixed-variant":"#004f54"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"space-lg":"0.75rem","gutter":"0.5rem","space-sm":"0.375rem","space-xs":"0.25rem","space-xl":"1rem","margin":"0.75rem","margin-mobile":"0.5rem","space-md":"0.5rem","gutter-mobile":"0.375rem"},"fontFamily":{"headline-sm":["Space Grotesk"],"body-lg":["Space Grotesk"],"body-sm":["Space Grotesk"],"label-sm":["JetBrains Mono"],"headline-md":["Space Grotesk"],"body-md":["Space Grotesk"],"headline-lg-mobile":["Space Grotesk"],"label-md":["JetBrains Mono"],"label-lg":["JetBrains Mono"],"headline-lg":["Space Grotesk"]},"fontSize":{"headline-sm":["16px",{"lineHeight":"20px","letterSpacing":"0em","fontWeight":"700"}],"body-lg":["15px",{"lineHeight":"20px","fontWeight":"500"}],"body-sm":["11px",{"lineHeight":"14px","fontWeight":"400"}],"label-sm":["9px",{"lineHeight":"12px","letterSpacing":"0.1em","fontWeight":"700"}],"headline-md":["20px",{"lineHeight":"24px","letterSpacing":"-0.01em","fontWeight":"700"}],"body-md":["13px",{"lineHeight":"18px","fontWeight":"400"}],"headline-lg-mobile":["26px",{"lineHeight":"30px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-md":["11px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"600"}],"label-lg":["13px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"700"}],"headline-lg":["32px",{"lineHeight":"36px","letterSpacing":"-0.02em","fontWeight":"700"}]}}}};</script></head><body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex flex-col justify-between"><header class="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest/95 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.45)]"><div class="h-14 w-full px-space-lg flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary-fixed tracking-tight">PULSE.8</span><span class="font-label-sm text-label-sm text-outline px-space-xs py-0.5 rounded bg-surface-container-high">V2.4</span></div><div class="h-6 w-px bg-surface-variant hidden sm:block"></div><nav class="flex items-center gap-space-xs" data-active-classes="bg-surface-container-highest text-primary-fixed border-primary-fixed"><a aria-current="page" class="font-label-md uppercase px-space-sm py-1 rounded transition-all bg-surface-container-highest text-primary-fixed border-primary-fixed" data-path="live-session" href="#">Live Session</a><a class="font-label-md text-label-md uppercase px-space-sm py-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" data-path="sound-design" href="#">Sound Design</a><a class="font-label-md text-label-md uppercase px-space-sm py-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all" data-path="patch-manager" href="#">Patch Manager</a></nav></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1 rounded border border-surface-variant"><span class="font-label-sm text-label-sm text-on-surface-variant">SYNC:</span><span class="font-label-sm text-label-sm text-primary-fixed font-bold">INTERNAL</span><span class="h-1.5 w-1.5 rounded-full bg-primary-fixed animate-pulse ml-1"></span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-14 flex-1 bg-surface-dim"><div class="flex flex-col w-full">
+<div class="w-full bg-surface-dim p-space-md flex flex-col gap-space-md">
+<!-- OLED TRANSPORT & STATUS TELEMETRY BAR -->
+<section class="w-full bg-surface-container-lowest rounded-lg p-space-md shadow-xl flex flex-wrap items-center justify-between gap-space-md">
+<!-- OLED Display Window -->
+<div class="flex items-center gap-space-lg bg-surface-dim px-space-md py-space-xs rounded shadow-inner">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">PROJECT PATTERN</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-headline-md text-headline-md text-primary-fixed tracking-tight">PTN 07</span>
+<span class="font-label-md text-label-md text-on-surface-variant">/ ACID RIOT</span>
+</div>
+</div>
+<div class="w-2 h-8 bg-surface-variant rounded-full"></div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline uppercase">TEMPO / SWING</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-headline-md text-headline-md text-secondary-container tracking-tight">134.0</span>
+<span class="font-label-sm text-label-sm text-secondary-container">BPM</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-space-xs">SWG 56%</span>
+</div>
+</div>
+<div class="w-2 h-8 bg-surface-variant rounded-full hidden sm:block"></div>
+<div class="hidden sm:flex flex-col">
+<span class="font-label-sm text-label-sm text-outline uppercase">BAR / LENGTH</span>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-headline-md text-headline-md text-primary tracking-tight">03:04</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">/ 64 STP</span>
+</div>
+</div>
+<!-- Tiny Scope SVG Display -->
+<div class="hidden md:flex items-center bg-surface-container-lowest px-space-sm py-1 rounded">
+<svg class="w-24 h-6 text-primary-fixed" fill="none" viewbox="0 0 96 24">
+<path d="M0 12 Q 12 0, 24 12 T 48 12 T 72 12 T 96 12" stroke="currentColor" stroke-dasharray="2 1" stroke-width="1.5"></path>
+<path d="M0 12 L 20 12 L 24 3 L 28 21 L 32 12 L 56 12 L 60 4 L 64 20 L 68 12 L 96 12" stroke="currentColor" stroke-width="1.5"></path>
+</svg>
+</div>
+</div>
+<!-- Live Transport Deck -->
+<div class="flex items-center gap-space-xs">
+<button class="flex items-center gap-space-xs px-space-lg py-space-sm bg-primary-container text-on-primary-container rounded font-label-md text-label-md tracking-wider uppercase transition-all shadow-md active:translate-y-0.5" id="btn-play">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+<span>PLAY</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-high text-on-surface rounded font-label-md text-label-md tracking-wider uppercase hover:bg-surface-container-highest transition-all" id="btn-stop">
+<span class="material-symbols-outlined text-[16px]">stop</span>
+<span>STOP</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container text-error rounded font-label-md text-label-md tracking-wider uppercase transition-all" id="btn-rec">
+<span class="h-2 w-2 rounded-full bg-error animate-pulse"></span>
+<span>REC</span>
+</button>
+<div class="h-6 w-2 bg-surface-variant rounded-full mx-space-xs"></div>
+<!-- Page Select Strip -->
+<div class="flex items-center bg-surface-container-high rounded p-0.5">
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm bg-primary text-surface-dim font-bold">1-16</button>
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">17-32</button>
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">33-48</button>
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">49-64</button>
+</div>
+</div>
+<!-- Quick Session Controls -->
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline hidden lg:inline">SYNC CLOCK: EXT-USB</span>
+<button class="bg-surface-container px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-primary-fixed">CLEAR PTN</button>
+<button class="bg-surface-container px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-secondary-container">RANDOMIZE</button>
+</div>
+</section>
+<!-- SECTION 1: TOP 8-TRACK IMMEDIATE MIXER STRIP -->
+<section class="w-full bg-surface-container-lowest rounded-lg p-space-md shadow-xl flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="h-2 w-2 rounded-full bg-primary-fixed"></span>
+<span class="font-label-md text-label-md uppercase tracking-wider text-on-surface">8-TRACK MIXER ENGINE / SELECTION STRIP</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">CLICK TRACK HEADER TO FOCUS WORKSPACE</span>
+</div>
+<!-- 8 Horizontal Track Channels -->
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-space-xs w-full">
+<!-- TRK 01: KICK -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-on-surface-variant">T1</span>
+<span class="font-label-sm text-label-sm font-bold text-on-surface">KICK</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">BD-909</span>
+<span class="font-label-sm text-label-sm text-primary-fixed">52 Hz</span>
+</div>
+<!-- Tiny VU Meter -->
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[78%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">12%</span>
+</div>
+</div>
+<!-- TRK 02: SNARE -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-on-surface-variant">T2</span>
+<span class="font-label-sm text-label-sm font-bold text-on-surface">SNARE</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">SD-808</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">SNAPPY</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[62%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">34%</span>
+</div>
+</div>
+<!-- TRK 03: CLSD HAT -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-on-surface-variant">T3</span>
+<span class="font-label-sm text-label-sm font-bold text-on-surface">CH-HAT</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">CH-606</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">TIGHT</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[45%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">40%</span>
+</div>
+</div>
+<!-- TRK 04: OPEN HAT -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-on-surface-variant">T4</span>
+<span class="font-label-sm text-label-sm font-bold text-on-surface">OP-HAT</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">OH-808</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">SIZZLE</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[50%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">65%</span>
+</div>
+</div>
+<!-- TRK 05: CLAP -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-outline">T5</span>
+<span class="font-label-sm text-label-sm font-bold text-on-surface">CLAP</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">CP-MOD</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">SPREAD</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[20%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">55%</span>
+</div>
+</div>
+<!-- TRK 06: PERC -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-outline">T6</span>
+<span class="font-label-sm text-label-sm font-bold text-on-surface">PERC</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">RIM/CONG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">FM RING</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[35%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">18%</span>
+</div>
+</div>
+<!-- TRK 07: ACID BASS (ACTIVE FOCUSED TRACK) -->
+<div class="bg-surface-container-high rounded p-space-xs flex flex-col gap-space-xs shadow-lg cursor-pointer transform -translate-y-0.5">
+<div class="flex items-center justify-between bg-primary-container px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">T7</span>
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">ACID BASS</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-primary-fixed font-bold">TB-CORE</span>
+<span class="font-label-sm text-label-sm text-primary-fixed">ACTIVE FOCUS</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-fixed w-[92%] animate-pulse"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-variant text-on-surface hover:bg-surface-bright">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-primary-container text-on-primary-container font-bold">SOLO</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span class="text-primary-fixed font-bold">DUB SEND</span>
+<span class="text-primary-fixed font-bold">84%</span>
+</div>
+</div>
+<!-- TRK 08: FM TONE -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col gap-space-xs transition-all hover:bg-surface-container cursor-pointer">
+<div class="flex items-center justify-between bg-surface-container-high px-space-xs py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-outline">T8</span>
+<span class="font-label-sm text-label-sm font-bold text-secondary-container">FM TONE</span>
+</div>
+<div class="flex flex-col text-center">
+<span class="font-body-sm text-body-sm text-outline">2-OP CHIME</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">CHORUS</span>
+</div>
+<div class="w-full h-1.5 bg-surface-dim rounded-full overflow-hidden flex">
+<div class="h-full bg-secondary-container w-[58%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-0.5 pt-0.5">
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">M</button>
+<button class="font-label-sm text-label-sm py-0.5 rounded bg-surface-container text-on-surface-variant hover:bg-surface-variant">S</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm px-0.5">
+<span>SND</span>
+<span class="text-on-surface">42%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: MIDDLE TACTILE SOUND CONTROL PANEL & DIRECT FX DOCK -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-space-md w-full">
+<!-- LEFT: ACTIVE TRACK SOUND SCULPTOR (TB-CORE ACID BASS) -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-lg p-space-md shadow-xl flex flex-col gap-space-md">
+<!-- Header & Quick Bank Switching -->
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm">
+<div class="px-space-sm py-0.5 bg-primary-container text-on-primary-container rounded font-label-sm text-label-sm font-bold uppercase">
+              T7: ACID BASS SYNTH ENGINE
+            </div>
+<span class="font-label-sm text-label-sm text-outline">ANALOG FILTER EMULATION V2</span>
+</div>
+<!-- Bank Toggle Buttons -->
+<div class="flex items-center gap-space-xs bg-surface-dim p-0.5 rounded">
+<button class="px-space-sm py-0.5 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">DRUM MACROS</button>
+<button class="px-space-sm py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">ACID BASS [T7]</button>
+<button class="px-space-sm py-0.5 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">FM TONE [T8]</button>
+</div>
+</div>
+<!-- Chunky Hardware Rotaries & Toggles -->
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-space-md pt-space-xs">
+<!-- KNOB 1: CUTOFF -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col items-center justify-between gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">CUTOFF</span>
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full text-surface-container-highest" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="none" r="15" stroke="currentColor" stroke-dasharray="75 25" stroke-dashoffset="25" stroke-width="3"></circle>
+<circle cx="18" cy="18" fill="none" r="15" stroke="#caf300" stroke-dasharray="62 38" stroke-dashoffset="25" stroke-width="3.5"></circle>
+</svg>
+<!-- Center Knob Cap -->
+<div class="absolute w-10 h-10 bg-surface-container rounded-full shadow-inner flex items-center justify-center">
+<div class="w-1 h-3.5 bg-primary-fixed rounded-full transform -rotate-45 -translate-y-1"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary-fixed font-bold">2.45 kHz</span>
+</div>
+<!-- KNOB 2: RESONANCE -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col items-center justify-between gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">RESONANCE</span>
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full text-surface-container-highest" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="none" r="15" stroke="currentColor" stroke-dasharray="75 25" stroke-dashoffset="25" stroke-width="3"></circle>
+<circle cx="18" cy="18" fill="none" r="15" stroke="#caf300" stroke-dasharray="55 45" stroke-dashoffset="25" stroke-width="3.5"></circle>
+</svg>
+<div class="absolute w-10 h-10 bg-surface-container rounded-full shadow-inner flex items-center justify-center">
+<div class="w-1 h-3.5 bg-primary-fixed rounded-full transform rotate-30 -translate-y-1"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary-fixed font-bold">78 %</span>
+</div>
+<!-- KNOB 3: ENV MOD -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col items-center justify-between gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">ENV MOD</span>
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-24 h-16 flex items-center justify-center">
+<svg class="w-full h-full text-surface-container-highest" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="none" r="15" stroke="currentColor" stroke-dasharray="75 25" stroke-dashoffset="25" stroke-width="3"></circle>
+<circle cx="18" cy="18" fill="none" r="15" stroke="#caf300" stroke-dasharray="45 55" stroke-dashoffset="25" stroke-width="3.5"></circle>
+</svg>
+</svg><div class="absolute w-10 h-10 bg-surface-container rounded-full shadow-inner flex items-center justify-center">
+<div class="w-1 h-3.5 bg-primary-fixed rounded-full transform rotate-15 -translate-y-1"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary-fixed font-bold">+64 st</span>
+</div>
+<!-- KNOB 4: DECAY -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col items-center justify-between gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">DECAY</span>
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full text-surface-container-highest" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="none" r="15" stroke="currentColor" stroke-dasharray="75 25" stroke-dashoffset="25" stroke-width="3"></circle>
+<circle cx="18" cy="18" fill="none" r="15" stroke="#caf300" stroke-dasharray="35 65" stroke-dashoffset="25" stroke-width="3.5"></circle>
+</svg>
+<div class="absolute w-10 h-10 bg-surface-container rounded-full shadow-inner flex items-center justify-center">
+<div class="w-1 h-3.5 bg-primary-fixed rounded-full transform -rotate-15 -translate-y-1"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary-fixed font-bold">380 ms</span>
+</div>
+<!-- KNOB 5: ACCENT LEVEL -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col items-center justify-between gap-space-xs col-span-2 sm:col-span-1">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">ACCENT</span>
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full text-surface-container-highest" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="none" r="15" stroke="currentColor" stroke-dasharray="75 25" stroke-dashoffset="25" stroke-width="3"></circle>
+<circle cx="18" cy="18" fill="none" r="15" stroke="#caf300" stroke-dasharray="50 50" stroke-dashoffset="25" stroke-width="3.5"></circle>
+</svg>
+<div class="absolute w-10 h-10 bg-surface-container rounded-full shadow-inner flex items-center justify-center">
+<div class="w-1 h-3.5 bg-primary-fixed rounded-full transform rotate-45 -translate-y-1"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary-fixed font-bold">8.5 dB</span>
+</div>
+</div>
+<!-- Sub-switches & Toggles for Acid Bass -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded">
+<div class="flex items-center gap-space-md">
+<span class="font-label-sm text-label-sm text-outline uppercase">WAVEFORM:</span>
+<div class="flex items-center bg-surface-container rounded p-0.5">
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm bg-primary-container text-on-primary-container font-bold">SAWTOOTH</button>
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">SQUARE</button>
+</div>
+</div>
+<div class="flex items-center gap-space-md">
+<span class="font-label-sm text-label-sm text-outline uppercase">SLIDE GLIDE:</span>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold">LEGATO (35ms)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="bg-surface-container-high px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-primary-fixed">OCT -1</button>
+<span class="font-label-sm text-label-sm text-on-surface px-space-xs">BASE: C1</span>
+<button class="bg-surface-container-high px-space-sm py-1 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-primary-fixed">OCT +1</button>
+</div>
+</div>
+</div>
+<!-- RIGHT: MASTER FX MANGLE & PUNCH-IN FX DOCK -->
+<div class="lg:col-span-4 bg-surface-container-lowest rounded-lg p-space-md shadow-xl flex flex-col justify-between gap-space-md">
+<!-- Master FX Knobs -->
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="h-2 w-2 rounded-full bg-secondary-container"></span>
+<span class="font-label-md text-label-md uppercase tracking-wider text-on-surface">FX ENGINE &amp; PUNCH-IN</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary-container">LIVE BUFFER</span>
+</div>
+<div class="grid grid-cols-3 gap-space-xs text-center">
+<!-- FX 1: DUAL FILTER -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-outline uppercase">HP / LP</span>
+<div class="w-10 h-10 rounded-full bg-surface-container my-1 shadow-inner flex items-center justify-center">
+<div class="w-1 h-3 bg-secondary-container rounded-full"></div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary-container">BYPASS</span>
+</div>
+<!-- FX 2: DUB DELAY -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-outline uppercase">DUB ECHO</span>
+<div class="w-10 h-10 rounded-full bg-surface-container my-1 shadow-inner flex items-center justify-center">
+<div class="w-1 h-3 bg-secondary-container rounded-full transform rotate-45"></div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary-container">3/16 DOTTED</span>
+</div>
+<!-- FX 3: DRIVE -->
+<div class="bg-surface-container-low rounded p-space-xs flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-outline uppercase">TAPE DRIVE</span>
+<div class="w-10 h-10 rounded-full bg-surface-container my-1 shadow-inner flex items-center justify-center">
+<div class="w-1 h-3 bg-tertiary-fixed-dim rounded-full transform rotate-60"></div>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary-fixed-dim">+4.2 dB</span>
+</div>
+</div>
+</div>
+<!-- 4 DIRECT PUNCH-IN FX PADS (PO-STYLE TACTILE INSTANT TRIGGERS) -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">TACTILE PUNCH-IN PADS</span>
+<button class="px-space-xs py-0.5 rounded font-label-sm text-label-sm bg-surface-variant text-on-surface-variant hover:text-primary-fixed">LATCH FX: OFF</button>
+</div>
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="h-12 bg-surface-container-high rounded p-space-xs flex flex-col justify-between hover:bg-surface-bright active:bg-secondary-container active:text-on-secondary-container transition-all">
+<span class="font-label-sm text-label-sm text-secondary-container font-bold">1/4 BEAT ROLL</span>
+<span class="font-body-sm text-body-sm text-outline">REPEAT LOOP</span>
+</button>
+<button class="h-12 bg-surface-container-high rounded p-space-xs flex flex-col justify-between hover:bg-surface-bright active:bg-secondary-container active:text-on-secondary-container transition-all">
+<span class="font-label-sm text-label-sm text-secondary-container font-bold">HALF-SPEED</span>
+<span class="font-body-sm text-body-sm text-outline">TAPE SLOWDOWN</span>
+</button>
+<button class="h-12 bg-surface-container-high rounded p-space-xs flex flex-col justify-between hover:bg-surface-bright active:bg-primary-container active:text-on-primary-container transition-all">
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold">DUB INFINITY</span>
+<span class="font-body-sm text-body-sm text-outline">FEEDBACK RUN</span>
+</button>
+<button class="h-12 bg-surface-container-high rounded p-space-xs flex flex-col justify-between hover:bg-surface-bright active:bg-tertiary-container active:text-on-tertiary-container transition-all">
+<span class="font-label-sm text-label-sm text-tertiary-fixed-dim font-bold">BUFFER GLITCH</span>
+<span class="font-body-sm text-body-sm text-outline">GRANULAR SLICE</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: DOMINANT 16-STEP MECHANICAL SEQUENCER & VELOCITY AUDITION -->
+<section class="w-full bg-surface-container-lowest rounded-lg p-space-md shadow-xl flex flex-col gap-space-md">
+<!-- Sequencer Controls Header -->
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="h-2 w-2 rounded-full bg-primary-fixed"></span>
+<span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">16-STEP TACTILE SEQUENCER</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary-fixed bg-surface-container px-space-xs py-0.5 rounded">STEP MODE: TB-CORE BASSLINE</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">ACCENT TOGGLE</button>
+<button class="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">SLIDE TOGGLE</button>
+<button class="px-space-sm py-1 rounded bg-surface-container font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface">TRIPLET FILL</button>
+<button class="px-space-sm py-1 rounded bg-surface-variant font-label-sm text-label-sm text-error hover:bg-error-container hover:text-on-error-container">CLEAR T7 STEPS</button>
+</div>
+</div>
+<!-- 16 TACTILE SILICONE-STYLE STEP TRIGGERS (Grouped in 4 Beats of 4) -->
+<div class="grid grid-cols-4 sm:grid-cols-8 lg:grid-cols-16 gap-space-xs w-full">
+<!-- BEAT 1: Steps 01 to 04 -->
+<!-- Step 01 (Active Playhead + Active Trig + Accent) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">01</span>
+<span class="font-label-sm text-label-sm px-1 rounded bg-on-primary-container text-primary-fixed">ACC</span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">C1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 127</span>
+<span>SLD</span>
+</div>
+</button>
+<!-- Step 02 (Off) -->
+<button class="group h-24 bg-surface-container-low text-on-surface-variant rounded p-space-xs flex flex-col justify-between hover:bg-surface-container transition-all">
+<span class="font-label-sm text-label-sm text-outline">02</span>
+<span class="font-label-sm text-label-sm text-outline text-center">- -</span>
+<span class="font-label-sm text-label-sm text-outline">REST</span>
+</button>
+<!-- Step 03 (Active Trig) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">03</span>
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary-container"></span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">C1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 96</span>
+<span class="text-outline">-</span>
+</div>
+</button>
+<!-- Step 04 (Off) -->
+<button class="group h-24 bg-surface-container-low text-on-surface-variant rounded p-space-xs flex flex-col justify-between hover:bg-surface-container transition-all">
+<span class="font-label-sm text-label-sm text-outline">04</span>
+<span class="font-label-sm text-label-sm text-outline text-center">- -</span>
+<span class="font-label-sm text-label-sm text-outline">REST</span>
+</button>
+<!-- BEAT 2: Steps 05 to 08 -->
+<!-- Step 05 (Active Trig + High Note) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">05</span>
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary-container"></span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">D#1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 104</span>
+<span class="text-outline">-</span>
+</div>
+</button>
+<!-- Step 06 (Off) -->
+<button class="group h-24 bg-surface-container-low text-on-surface-variant rounded p-space-xs flex flex-col justify-between hover:bg-surface-container transition-all">
+<span class="font-label-sm text-label-sm text-outline">06</span>
+<span class="font-label-sm text-label-sm text-outline text-center">- -</span>
+<span class="font-label-sm text-label-sm text-outline">REST</span>
+</button>
+<!-- Step 07 (Active Trig + Slide) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">07</span>
+<span class="font-label-sm text-label-sm px-1 rounded bg-secondary-container text-on-secondary-container font-bold">SLD</span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">F1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 112</span>
+<span>GLIDE</span>
+</div>
+</button>
+<!-- Step 08 (Off) -->
+<button class="group h-24 bg-surface-container-low text-on-surface-variant rounded p-space-xs flex flex-col justify-between hover:bg-surface-container transition-all">
+<span class="font-label-sm text-label-sm text-outline">08</span>
+<span class="font-label-sm text-label-sm text-outline text-center">- -</span>
+<span class="font-label-sm text-label-sm text-outline">REST</span>
+</button>
+<!-- BEAT 3: Steps 09 to 12 -->
+<!-- Step 09 (Active Trig + Accent) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">09</span>
+<span class="font-label-sm text-label-sm px-1 rounded bg-on-primary-container text-primary-fixed">ACC</span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">G1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 127</span>
+<span class="text-outline">-</span>
+</div>
+</button>
+<!-- Step 10 (Active Trig) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">10</span>
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary-container"></span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">A#1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 98</span>
+<span class="text-outline">-</span>
+</div>
+</button>
+<!-- Step 11 (Off) -->
+<button class="group h-24 bg-surface-container-low text-on-surface-variant rounded p-space-xs flex flex-col justify-between hover:bg-surface-container transition-all">
+<span class="font-label-sm text-label-sm text-outline">11</span>
+<span class="font-label-sm text-label-sm text-outline text-center">- -</span>
+<span class="font-label-sm text-label-sm text-outline">REST</span>
+</button>
+<!-- Step 12 (Active Trig + Slide) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">12</span>
+<span class="font-label-sm text-label-sm px-1 rounded bg-secondary-container text-on-secondary-container font-bold">SLD</span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">C2</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 118</span>
+<span>GLIDE</span>
+</div>
+</button>
+<!-- BEAT 4: Steps 13 to 16 -->
+<!-- Step 13 (Active Trig) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">13</span>
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary-container"></span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">A#1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 92</span>
+<span class="text-outline">-</span>
+</div>
+</button>
+<!-- Step 14 (Off) -->
+<button class="group h-24 bg-surface-container-low text-on-surface-variant rounded p-space-xs flex flex-col justify-between hover:bg-surface-container transition-all">
+<span class="font-label-sm text-label-sm text-outline">14</span>
+<span class="font-label-sm text-label-sm text-outline text-center">- -</span>
+<span class="font-label-sm text-label-sm text-outline">REST</span>
+</button>
+<!-- Step 15 (Active Trig) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">15</span>
+<span class="w-1.5 h-1.5 rounded-full bg-on-primary-container"></span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">G1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 88</span>
+<span class="text-outline">-</span>
+</div>
+</button>
+<!-- Step 16 (Active Trig + Accent + Fill) -->
+<button class="group h-24 bg-primary-container text-on-primary-container rounded p-space-xs flex flex-col justify-between shadow-md transition-all">
+<div class="flex items-center justify-between w-full">
+<span class="font-label-sm text-label-sm font-bold text-on-primary-container">16</span>
+<span class="font-label-sm text-label-sm px-1 rounded bg-on-primary-container text-primary-fixed">ACC</span>
+</div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-primary-container text-center">F1</div>
+<div class="flex items-center justify-between w-full font-label-sm text-label-sm">
+<span>VEL 127</span>
+<span>FILL</span>
+</div>
+</button>
+</div>
+<!-- TACTILE HORIZONTAL PIANO KEYBED (CHROMATIC PITCH INPUT OCT 01 - 02) -->
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col gap-space-xs border border-surface-variant/40 shadow-inner">
+<!-- Keybed Controls & Telemetry Header -->
+<div class="flex flex-wrap items-center justify-between gap-space-xs pb-1 border-b border-surface-variant/30">
+<div class="flex items-center gap-space-xs">
+<span class="h-2 w-2 rounded-full bg-primary-fixed shadow-[0_0_8px_#caf300] animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-on-surface font-bold tracking-wider">TACTILE HORIZONTAL KEYBED // CHROMATIC PITCH INPUT (OCT 01 - 02)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<div class="flex items-center bg-surface-dim rounded p-0.5 border border-surface-variant/50">
+<button class="px-space-xs py-0.5 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all">[ - OCT ]</button>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold px-space-xs">OCT: C1 - C2</span>
+<button class="px-space-xs py-0.5 rounded font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all">[ + OCT ]</button>
+</div>
+<span class="px-space-xs py-0.5 rounded font-label-sm text-label-sm bg-surface-container text-outline border border-surface-variant/50">[ SCALE LOCK: CHROMATIC ]</span>
+</div>
+<div class="hidden xl:flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline">HOLD STEP PAD + TAP KEY TO P-LOCK NOTE &amp; GLIDE</span>
+</div>
+</div>
+<!-- Horizontal 2-Octave Tactile Piano Slate (C1 to C3, 25 Keys) -->
+<div class="relative w-full h-[76px] bg-surface-container-lowest rounded p-1 flex select-none overflow-x-auto overflow-y-hidden border border-surface-variant/30">
+<!-- 15 Natural / White Keys -->
+<div class="flex w-full h-full gap-0.5 relative z-0">
+<!-- C1 (Active In Acid Pattern) -->
+<button class="flex-1 h-full bg-[#202228] hover:bg-[#282a32] active:bg-[#323640] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-primary-fixed bg-gradient-to-b from-[#1b1b20] to-[#252830] shadow-[inset_0_-8px_16px_rgba(202,243,0,0.12)] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shadow-[0_0_6px_#caf300]"></span>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold tracking-tight">C1</span>
+</button>
+<!-- D1 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">D1</span>
+</button>
+<!-- E1 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">E1</span>
+</button>
+<!-- F1 (Active In Acid Pattern) -->
+<button class="flex-1 h-full bg-[#202228] hover:bg-[#282a32] active:bg-[#323640] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-primary-fixed bg-gradient-to-b from-[#1b1b20] to-[#252830] shadow-[inset_0_-8px_16px_rgba(202,243,0,0.12)] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shadow-[0_0_6px_#caf300]"></span>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold tracking-tight">F1</span>
+</button>
+<!-- G1 (Active In Acid Pattern) -->
+<button class="flex-1 h-full bg-[#202228] hover:bg-[#282a32] active:bg-[#323640] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-primary-fixed bg-gradient-to-b from-[#1b1b20] to-[#252830] shadow-[inset_0_-8px_16px_rgba(202,243,0,0.12)] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shadow-[0_0_6px_#caf300]"></span>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold tracking-tight">G1</span>
+</button>
+<!-- A1 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">A1</span>
+</button>
+<!-- B1 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">B1</span>
+</button>
+<!-- C2 (Active In Acid Pattern) -->
+<button class="flex-1 h-full bg-[#202228] hover:bg-[#282a32] active:bg-[#323640] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-primary-fixed bg-gradient-to-b from-[#1b1b20] to-[#252830] shadow-[inset_0_-8px_16px_rgba(202,243,0,0.12)] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shadow-[0_0_6px_#caf300]"></span>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold tracking-tight">C2</span>
+</button>
+<!-- D2 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">D2</span>
+</button>
+<!-- E2 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">E2</span>
+</button>
+<!-- F2 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">F2</span>
+</button>
+<!-- G2 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">G2</span>
+</button>
+<!-- A2 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">A2</span>
+</button>
+<!-- B2 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">B2</span>
+</button>
+<!-- C3 -->
+<button class="flex-1 h-full bg-[#1b1b20] hover:bg-[#24262d] active:bg-[#2c2f38] rounded-sm flex flex-col justify-between items-center pt-1.5 pb-1 border-b-2 border-surface-variant/60 bg-gradient-to-b from-[#18191d] to-[#1f2026] transition-all group">
+<span class="w-1.5 h-1.5 rounded-full bg-transparent"></span>
+<span class="font-label-sm text-label-sm text-outline-variant group-hover:text-on-surface tracking-tight">C3</span>
+</button>
+</div>
+<!-- 10 Accidental / Black Keys (Elevated Overlay) -->
+<div class="absolute inset-x-1 top-1 h-[42px] pointer-events-none z-10">
+<!-- C#1 / Db1 -->
+<button class="pointer-events-auto absolute left-[4.8%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">C#1</span>
+</button>
+<!-- D#1 / Eb1 (Active In Acid Pattern) -->
+<button class="pointer-events-auto absolute left-[11.5%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-primary-fixed border-x border-b border-primary-fixed/40 shadow-[0_4px_8px_rgba(202,243,0,0.25)] group">
+<div class="w-2.5 h-0.5 bg-primary-fixed shadow-[0_0_4px_#caf300] rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-primary-fixed font-bold">D#1</span>
+</button>
+<!-- F#1 / Gb1 -->
+<button class="pointer-events-auto absolute left-[24.8%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">F#1</span>
+</button>
+<!-- G#1 / Ab1 -->
+<button class="pointer-events-auto absolute left-[31.5%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">G#1</span>
+</button>
+<!-- A#1 / Bb1 (Active In Acid Pattern) -->
+<button class="pointer-events-auto absolute left-[38.2%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-primary-fixed border-x border-b border-primary-fixed/40 shadow-[0_4px_8px_rgba(202,243,0,0.25)] group">
+<div class="w-2.5 h-0.5 bg-primary-fixed shadow-[0_0_4px_#caf300] rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-primary-fixed font-bold">A#1</span>
+</button>
+<!-- C#2 / Db2 -->
+<button class="pointer-events-auto absolute left-[51.5%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">C#2</span>
+</button>
+<!-- D#2 / Eb2 -->
+<button class="pointer-events-auto absolute left-[58.2%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">D#2</span>
+</button>
+<!-- F#2 / Gb2 -->
+<button class="pointer-events-auto absolute left-[71.5%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">F#2</span>
+</button>
+<!-- G#2 / Ab2 -->
+<button class="pointer-events-auto absolute left-[78.2%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">G#2</span>
+</button>
+<!-- A#2 / Bb2 -->
+<button class="pointer-events-auto absolute left-[84.9%] -translate-x-1/2 w-[3.4%] h-full bg-[#0d0e11] hover:bg-[#191b22] active:bg-[#252834] rounded-b flex flex-col justify-between items-center py-1 border-t-2 border-surface-variant border-x border-b border-[#000000] shadow-[0_4px_6px_rgba(0,0,0,0.85)] group">
+<div class="w-2.5 h-0.5 bg-outline-variant group-hover:bg-on-surface rounded-full"></div>
+<span class="font-label-sm text-[8px] leading-[9px] text-outline group-hover:text-on-surface font-semibold">A#2</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<script>
+  // Simple interactive micro-interactions for groovebox tactile feeling
+  const playBtn = document.getElementById('btn-play');
+  const stopBtn = document.getElementById('btn-stop');
+  let isPlaying = true;
+
+  if (playBtn && stopBtn) {
+    playBtn.addEventListener('click', () => {
+      isPlaying = true;
+      playBtn.classList.remove('bg-surface-container');
+      playBtn.classList.add('bg-primary-container', 'text-on-primary-container');
+    });
+
+    stopBtn.addEventListener('click', () => {
+      isPlaying = false;
+      playBtn.classList.remove('bg-primary-container', 'text-on-primary-container');
+      playBtn.classList.add('bg-surface-container', 'text-on-surface');
+    });
+  }
+</script></main><footer class="w-full bg-surface-container-lowest border-t border-surface-container-high py-space-sm"><div class="w-full px-space-lg flex flex-col sm:flex-row items-center justify-between gap-space-xs"><div class="flex items-center gap-space-md"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">PULSE.8 HARDWARE CHASSIS ENGINE</span><span class="font-label-sm text-label-sm text-outline">DSP: 28% @ 96kHz</span></div><div class="flex items-center gap-space-sm"><span class="font-label-sm text-label-sm text-on-surface-variant">MIDI I/O: CH 01-16</span><div class="h-2 w-2 rounded-full bg-secondary-container"></div></div></div></footer></body></html>
