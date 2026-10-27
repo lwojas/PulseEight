@@ -134,14 +134,17 @@ export const TRACKS: readonly TrackSpec[] = [
   {
     id: 6, name: "ACID", short: "ACD", engine: "ACID BASS", role: "bass", kind: InstrumentKind.Bass, accent: "--bass",
     controls: [
-      exp("cutoff", "CUTOFF", BassParam.Cutoff, 80, 3000, 600, "Hz"),
-      lin("reso", "RESO", BassParam.Resonance, 0.1, 0.95, 0.7),
-      lin("bite", "BITE", BassParam.Bite, 0, 1, 0.6),
-      exp("decay", "DECAY", BassParam.Decay, 0.08, 0.9, 0.25, "s"),
-      lin("wave", "WAVE", BassParam.Body, 0, 1, 0.9),
+      exp("cutoff", "FILTER", BassParam.Cutoff, 60, 2500, 250, "Hz"),
+      lin("envmod", "ENV MOD", BassParam.EnvMod, 0, 1, 0.6),
+      exp("decay", "DECAY", BassParam.Decay, 0.1, 0.9, 0.3, "s"),
+      lin("reso", "RES", BassParam.Resonance, 0.1, 1, 0.65),
+      lin("bite", "BITE", BassParam.Bite, 0, 1, 0.5),
+      lin("wave", "WAVE", BassParam.Body, 0, 1, 0.55),
     ],
+    // The filter envelope shape is fixed inside webdsp (instant attack, exponential fall); the
+    // amp envelope is held up so notes stay full and the filter does the plucking.
     fixed: [
-      [BassParam.Tune, 55], [BassParam.Attack, 0.002], [BassParam.Sustain, 0.45],
+      [BassParam.Tune, 55], [BassParam.Attack, 0.001], [BassParam.Sustain, 0.55],
       [BassParam.Release, 0.06], [BassParam.Legato, 0], [BassParam.Slide, 0.08],
     ],
     gainDb: -3, rootMidi: 33, noteLo: 24, noteHi: 59, defaultNote: 24,

@@ -66,10 +66,11 @@ export const KITS: readonly Kit[] = [
 ];
 
 export const BASS_PRESETS: readonly SynthPreset[] = [
-  { name: "ACID 303", values: { cutoff: 600, reso: 0.7, bite: 0.6, decay: 0.25, wave: 1 } },
-  { name: "SQUELCH", values: { cutoff: 350, reso: 0.92, bite: 0.8, decay: 0.18, wave: 1 } },
-  { name: "RUBBER", values: { cutoff: 900, reso: 0.55, bite: 0.5, decay: 0.35, wave: 0.6 } },
-  { name: "SUB PUSH", values: { cutoff: 220, reso: 0.2, bite: 0.3, decay: 0.5, wave: 0.3 } },
+  { name: "ACID 303", values: { cutoff: 250, envmod: 0.65, decay: 0.3, reso: 0.7, bite: 0.5, wave: 0.55 } },
+  { name: "SQUELCH", values: { cutoff: 180, envmod: 0.85, decay: 0.22, reso: 0.9, bite: 0.65, wave: 0.55 } },
+  { name: "SQUARE", values: { cutoff: 220, envmod: 0.7, decay: 0.28, reso: 0.75, bite: 0.5, wave: 1 } },
+  { name: "PUNCH", values: { cutoff: 450, envmod: 0.35, decay: 0.3, reso: 0.4, bite: 0.55, wave: 0.55 } },
+  { name: "SUB PUSH", values: { cutoff: 140, envmod: 0.15, decay: 0.5, reso: 0.15, bite: 0.25, wave: 0.1 } },
 ];
 
 export const TONE_PRESETS: readonly SynthPreset[] = [

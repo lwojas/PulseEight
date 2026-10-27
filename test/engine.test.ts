@@ -18,12 +18,12 @@ describe("control mapping", () => {
     }
     for (const s of defaultSound(TRACKS[0])) expect(s).toBeGreaterThanOrEqual(0);
     for (const k of KITS) for (const s of kitSounds(k).flat()) expect(s).toBeGreaterThanOrEqual(0);
-    for (const p of BASS_PRESETS) expect(synthSound(6, p)).toHaveLength(5);
+    for (const p of BASS_PRESETS) expect(synthSound(6, p)).toHaveLength(6);
   });
   it("has the 6 + 1 + 1 track layout with at most 5 controls each", () => {
     expect(TRACKS).toHaveLength(8);
     expect(TRACKS.filter((t) => t.role === "drum")).toHaveLength(6);
-    for (const t of TRACKS) expect(t.controls.length).toBeLessThanOrEqual(5);
+    for (const t of TRACKS) expect(t.controls.length).toBeLessThanOrEqual(t.role === "bass" ? 6 : 5);
   });
   it("names notes with C1 = MIDI 24", () => {
     expect(noteName(24)).toBe("C1");

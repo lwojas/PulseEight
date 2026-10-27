@@ -20,7 +20,7 @@ const accentStyle = (track: number): CSSProperties => ({ "--acc": `var(${TRACKS[
 function TrackStrip() {
   const focus = useStore((s) => s.focus);
   return (
-    <div className="track-strip" role="tablist" aria-label="Track">
+    <div className="track-strip phone-only" role="tablist" aria-label="Track">
       {TRACKS.map((t) => (
         <button
           key={t.id} type="button" role="tab" aria-selected={focus === t.id} className="strip-btn" data-active={focus === t.id}
@@ -75,7 +75,7 @@ export function SoundPanel() {
         <span className="silk">{spec.engine}</span>
       </header>
       <PresetChips track={track} />
-      <div className="knobs">
+      <div className="knobs" style={{ "--n": spec.controls.length } as CSSProperties}>
         {spec.controls.map((c, i) => (
           <Knob
             key={`${track}-${c.key}`}
@@ -170,9 +170,9 @@ export function WriteControls() {
         ERASE
       </button>
       <button type="button" className="btn" data-active={fxPlay} aria-pressed={fxPlay} onClick={() => setState({ fxPlay: !fxPlay })}>
-        FX PLAY
+        FX ON
       </button>
-      <ConfirmButton label="CLR FX" className="btn" onConfirm={() => controller.clearFxAll()} />
+      <ConfirmButton label="CLR" className="btn" onConfirm={() => controller.clearFxAll()} />
     </div>
   );
 }
@@ -199,9 +199,10 @@ export function ManglerPanel() {
       </header>
       <div className="knobs mangler-knobs">
         <Knob label="ECHO" value={m.fb} def={0.5} readout={`${Math.round(m.fb * 100)}%`} onChange={(v) => setMangler({ fb: v })} />
-        <Knob label="DARK ↔ BRIGHT" value={m.tone} def={0.55} readout={`${Math.round(m.tone * 100)}%`} onChange={(v) => setMangler({ tone: v })} />
+        <Knob label="TONE" value={m.tone} def={0.55} readout={`${Math.round(m.tone * 100)}%`} onChange={(v) => setMangler({ tone: v })} />
         <Knob label="PUNCH AMT" value={m.amt} def={0.6} readout={`${Math.round(m.amt * 100)}%`} onChange={(v) => setMangler({ amt: v })} />
       </div>
+      <div className="mangler-mid">
       <div className="chips" role="group" aria-label="Echo time">
         <span className="silk">ECHO TIME</span>
         {DUB_DIVISIONS.map((d, i) => (
@@ -209,6 +210,7 @@ export function ManglerPanel() {
         ))}
       </div>
       <WriteControls />
+      </div>
       <div className="punch-grid" data-write={write}>
         {PUNCHES.map((p) => <PunchPad key={p.id} id={p.id} />)}
       </div>
@@ -237,13 +239,53 @@ function Slot({ index }: { index: number }) {
   );
 }
 
-export function PatternsPanel() {
+function PatternTools() {
+  const chain = useStore((s) => s.chain);
+  const chainOn = useStore((s) => s.chainOn);
+  const chainEdit = useStore((s) => s.chainEdit);
+  const copyArm = useStore((s) => s.copyArm);
+  return (
+    <div className="ptn-tools">
+      <button type="button" className="btn sm" data-active={copyArm} aria-pressed={copyArm} onClick={() => setState({ copyArm: !copyArm, chainEdit: false })}>
+        {copyArm ? "TAP SLOT" : "COPY"}
+      </button>
+      <ConfirmButton label="CLEAR" onConfirm={clearPattern} />
+      <span className="silk tools-label">CHAIN</span>
+      <button type="button" className="btn sm" data-active={chainEdit} aria-pressed={chainEdit} onClick={() => setState({ chainEdit: !chainEdit, copyArm: false })}>
+        {chainEdit ? "DONE" : "EDIT"}
+      </button>
+      <button type="button" className="btn sm" data-active={chainOn} aria-pressed={chainOn} disabled={chain.length === 0} onClick={() => setState({ chainOn: !chainOn })}>
+        {chainOn ? "ON" : "OFF"}
+      </button>
+      <button type="button" className="btn sm" onClick={clearChain} disabled={chain.length === 0} aria-label="Clear chain">CLR</button>
+    </div>
+  );
+}
+
+function ChainChips() {
   const chain = useStore((s) => s.chain);
   const chainOn = useStore((s) => s.chainOn);
   const chainEdit = useStore((s) => s.chainEdit);
   const chainPos = useStore((s) => s.chainPos);
   const playing = useStore((s) => s.playing);
-  const copyArm = useStore((s) => s.copyArm);
+  return (
+    <div className="chain" aria-label="Chain">
+      {chain.length === 0 && <span className="silk">{chainEdit ? "TAP SLOTS TO ADD" : "EDIT, THEN TAP SLOTS"}</span>}
+      {chain.map((p, i) => (
+        <button
+          key={i} type="button" className="chain-chip" data-now={chainOn && playing && chainPos === i}
+          aria-label={`Chain position ${i + 1}: pattern ${p + 1}, tap to remove`} onClick={() => removeChainEntry(i)}
+        >
+          {String(p + 1).padStart(2, "0")}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Pattern tab on phones. */
+export function PatternsPanel() {
+  const playing = useStore((s) => s.playing);
   return (
     <div className="patterns" style={{ "--acc": "var(--bass)" } as CSSProperties}>
       <header className="panel-title">
@@ -252,31 +294,21 @@ export function PatternsPanel() {
         <span className="silk">{playing ? "TAP TO CUE" : "TAP TO SELECT"}</span>
       </header>
       <div className="slots">{Array.from({ length: 16 }, (_, i) => <Slot key={i} index={i} />)}</div>
-      <div className="ptn-tools">
-        <button type="button" className="btn sm" data-active={copyArm} aria-pressed={copyArm} onClick={() => setState({ copyArm: !copyArm, chainEdit: false })}>
-          {copyArm ? "TAP SLOT" : "COPY"}
-        </button>
-        <ConfirmButton label="CLEAR" onConfirm={clearPattern} />
-        <span className="silk grow">CHAIN</span>
-        <button type="button" className="btn sm" data-active={chainEdit} aria-pressed={chainEdit} onClick={() => setState({ chainEdit: !chainEdit, copyArm: false })}>
-          {chainEdit ? "DONE" : "EDIT"}
-        </button>
-        <button type="button" className="btn sm" data-active={chainOn} aria-pressed={chainOn} disabled={chain.length === 0} onClick={() => setState({ chainOn: !chainOn })}>
-          {chainOn ? "ON" : "OFF"}
-        </button>
-        <button type="button" className="btn sm" onClick={clearChain} disabled={chain.length === 0} aria-label="Clear chain">CLR</button>
-      </div>
-      <div className="chain" aria-label="Chain">
-        {chain.length === 0 && <span className="silk">{chainEdit ? "TAP SLOTS TO ADD" : "EDIT, THEN TAP SLOTS"}</span>}
-        {chain.map((p, i) => (
-          <button
-            key={i} type="button" className="chain-chip" data-now={chainOn && playing && chainPos === i}
-            aria-label={`Chain position ${i + 1}: pattern ${p + 1}, tap to remove`} onClick={() => removeChainEntry(i)}
-          >
-            {String(p + 1).padStart(2, "0")}
-          </button>
-        ))}
-      </div>
+      <PatternTools />
+      <ChainChips />
+    </div>
+  );
+}
+
+/** Pattern navigation on wide screens: a single row under the transport. */
+export function PatternBar() {
+  const playing = useStore((s) => s.playing);
+  return (
+    <div className="patternbar" role="group" aria-label="Patterns" style={{ "--acc": "var(--bass)" } as CSSProperties}>
+      <span className="silk bar-label">{playing ? "PTN · CUE" : "PTN"}</span>
+      <div className="slots">{Array.from({ length: 16 }, (_, i) => <Slot key={i} index={i} />)}</div>
+      <PatternTools />
+      <ChainChips />
     </div>
   );
 }

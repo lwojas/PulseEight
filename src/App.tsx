@@ -62,20 +62,20 @@ export function App() {
     <div className="app" data-tab={tab}>
       <Header />
       <main className="layout">
+        <div className="band">
+          <section className="panel sound-panel" aria-label="Sound"><SoundPanel /></section>
+          <section className="panel fx-panel" aria-label="FX mangler"><ManglerPanel /></section>
+        </div>
         <div className="col col-a">
           <section className="panel seq" aria-label="Sequencer">
             <SequencerPanel />
             <PunchBar />
           </section>
         </div>
-        <div className="col col-b">
-          <section className="panel sound-panel" aria-label="Sound"><SoundPanel /></section>
-          <section className="panel fx-panel" aria-label="FX mangler"><ManglerPanel /></section>
-        </div>
         <div className="col col-c">
           <section className="panel mix-panel" aria-label="Mixer"><MixerPanel /></section>
-          <section className="panel ptn-panel" aria-label="Patterns"><PatternsPanel /></section>
         </div>
+        <section className="panel ptn-panel" aria-label="Patterns"><PatternsPanel /></section>
       </main>
       <nav className="tabs" aria-label="Screens">
         {TABS.map((t) => (

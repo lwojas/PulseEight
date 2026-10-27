@@ -3,6 +3,7 @@ import { useRef, type CSSProperties } from "react";
 import { controller } from "../engine/controller";
 import { setState, useStore } from "../engine/store";
 import { Knob } from "./controls";
+import { PatternBar } from "./Panels";
 import { usePlayheadEffect } from "./usePlayhead";
 
 /** The step counter: updated by the playhead directly, never through React. */
@@ -29,6 +30,7 @@ export function Header() {
   const nudge = (d: number) => setState({ bpm: Math.min(200, Math.max(60, Math.round((bpm + d) * 10) / 10)) });
   return (
     <header className="topbar">
+      <div className="transport">
       <div className="logo">PULSE<span>.8</span></div>
       <button
         type="button" className="btn play" data-active={playing} aria-pressed={playing}
@@ -45,7 +47,7 @@ export function Header() {
         </div>
         <button type="button" className="oled-btn" aria-label="Faster" onClick={() => nudge(1)}>+</button>
       </div>
-      <div className="oled ptn" aria-label="Pattern">
+      <button type="button" className="oled ptn" aria-label="Pattern, tap to open the pattern list" onClick={() => setState({ tab: "ptn" })}>
         <div className="oled-main">
           <span className="silk">PTN{cue !== null ? " → " + String(cue + 1).padStart(2, "0") : ""}</span>
           <b>{String(pattern + 1).padStart(2, "0")}</b>
@@ -54,13 +56,15 @@ export function Header() {
           <span className="silk">STEP</span>
           <StepReadout />
         </div>
-      </div>
+      </button>
       <div className="swing" style={{ "--acc": "var(--tone)" } as CSSProperties}>
         <Knob
           label="SWING" value={(swing - 0.5) / 0.25} def={0} accent="var(--tone)"
           readout={`${Math.round(swing * 100)}%`} onChange={(v) => setState({ swing: 0.5 + v * 0.25 })}
         />
       </div>
+      </div>
+      <PatternBar />
     </header>
   );
 }

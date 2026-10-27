@@ -1,6 +1,6 @@
 // Saves patterns, the chain and the transport settings to localStorage. Performance state
 // (mutes, solos, FX arming, the screen) is deliberately not saved.
-import { NUM_TRACKS, TRACKS } from "./spec";
+import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { MAX_STEPS, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { getState, observe, setState } from "./store";
 
@@ -29,7 +29,13 @@ export function loadProject(): void {
     const raw = localStorage.getItem(KEY);
     if (!raw) return;
     const s = JSON.parse(raw) as Saved;
-    if (!Array.isArray(s.patterns) || s.patterns.length !== NUM_PATTERNS || !s.patterns.every(valid)) return;
+    if (!Array.isArray(s.patterns) || s.patterns.length !== NUM_PATTERNS) return;
+    // The bass gained a control (ENV MOD): older saves get its default sound, the rest is kept.
+    for (const p of s.patterns) {
+      const t = p?.tracks?.[BASS_TRACK];
+      if (t && Array.isArray(t.sound) && t.sound.length !== TRACKS[BASS_TRACK].controls.length) t.sound = defaultSound(TRACKS[BASS_TRACK]);
+    }
+    if (!s.patterns.every(valid)) return;
     setState({
       patterns: s.patterns,
       chain: Array.isArray(s.chain) ? s.chain.filter((n) => n >= 0 && n < NUM_PATTERNS) : [],

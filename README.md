@@ -23,6 +23,14 @@ npm test        # pure-logic tests
   (EDIT, tap slots, CHAIN ON). Everything autosaves to localStorage.
 - Desktop keys: `Space` play/stop, `1-8` track, `[` `]` page.
 
+## Screen composition
+- **Wide (1100px+):** transport and pattern navigation across the top (pattern slots, copy, chain). Under it a
+  full-width band holds the instrument knobs (left) and the FX Mangler (right). Below that the sequencer takes
+  nearly the whole width (track rail with mute/solo, one 16-step row, written-FX lane, a two-octave keyboard for
+  the bass and FM tracks; drums get a 2x8 block of big pads) with a slim mixer column beside it.
+- **Phone:** the same pieces as five tabs; the sequencer tab is track strip, steps, keyboard and punch pads.
+- The first prototype (panel layout with the 8-lane overview) is kept on the `prototype-v1` branch.
+
 ## Layout
 ```
 src/engine/   spec.ts (tracks + macro controls)  state.ts  store.ts  presets.ts  mangler.ts

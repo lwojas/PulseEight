@@ -1,6 +1,6 @@
 // The sequencer surface: page selector, the 8-lane overview, the focused track's big pads and the
 // step editor (accent / slide / note keys).
-import { memo, useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   clearTrack, holdStep, randomize, setLength, setOctave, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
@@ -8,9 +8,10 @@ import { controller } from "../engine/controller";
 import { PUNCHES } from "../engine/mangler";
 import { noteName, TRACKS } from "../engine/spec";
 import { LENGTHS, PAGE } from "../engine/state";
-import { setState, useStore } from "../engine/store";
+import { getState, setState, useStore } from "../engine/store";
 import { usePress } from "./controls";
 import { usePlayheadCell, usePlayheadEffect } from "./usePlayhead";
+import { useMedia, WIDE } from "./useMedia";
 
 const accentStyle = (track: number): CSSProperties => ({ "--acc": `var(${TRACKS[track].accent})` }) as CSSProperties;
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -70,48 +71,7 @@ export function PageBar() {
   );
 }
 
-// --- overview matrix ---------------------------------------------------------------------------
-
-interface CellProps {
-  track: number;
-  abs: number;
-  on: boolean;
-  acc: boolean;
-  slide: boolean;
-  selected: boolean;
-  big?: boolean;
-  note?: string;
-}
-
-const Cell = memo(function Cell({ track, abs, on, acc, slide, selected, big, note }: CellProps) {
-  const press = usePress(() => tapStep(track, abs), () => holdStep(track, abs));
-  const playRef = usePlayheadCell(abs);
-  const num = pad2(abs + 1);
-  return (
-    <button
-      type="button"
-      className={big ? "pad" : "cell"}
-      data-on={on}
-      data-acc={acc}
-      data-slide={slide}
-      data-sel={selected}
-      data-beat={abs % 4 === 0}
-      aria-pressed={on}
-      ref={playRef}
-      aria-label={`${TRACKS[track].name} step ${abs + 1}${on ? (note ? ` ${note}` : "") : " off"}${acc ? " accent" : ""}${slide ? " slide" : ""}`}
-      {...press}
-    >
-      {big && (
-        <>
-          <span className="pad-num">{num}</span>
-          {on && acc && <span className="pad-tag">ACC</span>}
-          {on && slide && <span className="pad-tag slide">SLD</span>}
-          <span className="pad-main">{on ? note ?? (acc ? "●●" : "●") : "--"}</span>
-        </>
-      )}
-    </button>
-  );
-});
+// --- fx lane (written punch-ins, one slim row under the pads) -----------------------------------
 
 function FxCell({ abs }: { abs: number }) {
   const id = useStore((s) => s.patterns[s.pattern].fx[abs]);
@@ -130,53 +90,121 @@ function FxCell({ abs }: { abs: number }) {
   );
 }
 
-function Lane({ track }: { track: number }) {
+function FxStrip() {
   const page = useStore((s) => s.page);
-  const tp = useStore((s) => s.patterns[s.pattern].tracks[track]);
-  const focused = useStore((s) => s.focus === track);
-  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
-  const muted = useStore((s) => (s.solos.some(Boolean) ? !s.solos[track] : s.mutes[track]));
-  const spec = TRACKS[track];
   return (
-    <div className="lane" style={accentStyle(track)} data-focus={focused} data-muted={muted}>
+    <div className="fx-strip" role="group" aria-label="Written FX for this page">
+      <span className="silk fx-strip-tag">FX</span>
+      <div className="fx-strip-cells">
+        {Array.from({ length: PAGE }, (_, i) => <FxCell key={i} abs={page * PAGE + i} />)}
+      </div>
+    </div>
+  );
+}
+
+// --- track rail: select / mute / solo ---------------------------------------------------------------
+
+function RailItem({ track }: { track: number }) {
+  const spec = TRACKS[track];
+  const focused = useStore((s) => s.focus === track);
+  const muted = useStore((s) => s.mutes[track]);
+  const solo = useStore((s) => s.solos[track]);
+  const dim = useStore((s) => (s.solos.some(Boolean) ? !s.solos[track] : s.mutes[track]));
+  return (
+    <div className="rail-item" style={accentStyle(track)} data-focus={focused} data-dim={dim}>
       <button
-        type="button"
-        className="lane-tag"
-        aria-label={`Focus ${spec.name}`}
+        type="button" className="rail-main" aria-pressed={focused} aria-label={`Select ${spec.name}`}
         onClick={() => {
           setState({ focus: track, selStep: -1 });
-          controller.audition(track);
+          if (!getState().playing) controller.audition(track);
         }}
       >
-        {spec.short}
+        <span className="rail-no">{track + 1}</span>
+        <span className="rail-name">
+          <b className="long">{spec.name}</b>
+          <b className="short">{spec.short}</b>
+          <small>{spec.engine}</small>
+        </span>
       </button>
-      <div className="lane-cells">
-        {Array.from({ length: PAGE }, (_, i) => {
-          const abs = page * PAGE + i;
-          const s = tp.steps[abs];
-          return <Cell key={i} track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs} />;
-        })}
-      </div>
+      <span className="rail-ms">
+        <button type="button" className="btn sm" data-active={muted} aria-pressed={muted} aria-label={`Mute ${spec.name}`} onClick={() => toggleMute(track)}>M</button>
+        <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} aria-label={`Solo ${spec.name}`} onClick={() => toggleSolo(track)}>S</button>
+      </span>
     </div>
   );
 }
 
-export function Matrix() {
-  const page = useStore((s) => s.page);
+function TrackRail() {
   return (
-    <div className="matrix" role="group" aria-label="All tracks, 16 steps">
-      {TRACKS.map((t) => <Lane key={t.id} track={t.id} />)}
-      <div className="lane fx-lane">
-        <span className="lane-tag fx-tag">FX</span>
-        <div className="lane-cells">
-          {Array.from({ length: PAGE }, (_, i) => <FxCell key={i} abs={page * PAGE + i} />)}
-        </div>
-      </div>
+    <div className="rail" role="group" aria-label="Tracks">
+      {TRACKS.map((t) => <RailItem key={t.id} track={t.id} />)}
     </div>
   );
 }
 
-// --- focused track ---------------------------------------------------------------------------------
+// --- step pad ------------------------------------------------------------------------------------------
+
+interface PadProps {
+  track: number;
+  abs: number;
+  on: boolean;
+  acc: boolean;
+  slide: boolean;
+  selected: boolean;
+  note?: string;
+}
+
+/** One step. Tap toggles/selects, hold accents/selects. The playhead lights it via data-play (see playhead.ts). */
+const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, note }: PadProps) {
+  const press = usePress(() => tapStep(track, abs), () => holdStep(track, abs));
+  const playRef = usePlayheadCell(abs);
+  return (
+    <button
+      type="button"
+      className="pad"
+      data-on={on}
+      data-acc={acc}
+      data-slide={slide}
+      data-sel={selected}
+      data-beat={abs % 4 === 0}
+      aria-pressed={on}
+      ref={playRef}
+      aria-label={`${TRACKS[track].name} step ${abs + 1}${on ? (note ? ` ${note}` : "") : " off"}${acc ? " accent" : ""}${slide ? " slide" : ""}`}
+      {...press}
+    >
+      <span className="pad-num">{pad2(abs + 1)}</span>
+      <span className="pad-main">{on ? note ?? (acc ? "●●" : "●") : "--"}</span>
+      <span className="pad-tags">
+        {on && acc && <i>ACC</i>}
+        {on && slide && <i className="slide">SLD</i>}
+      </span>
+    </button>
+  );
+});
+
+function Pads({ track }: { track: number }) {
+  const page = useStore((s) => s.page);
+  const tp = useStore((s) => s.patterns[s.pattern].tracks[track]);
+  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
+  const spec = TRACKS[track];
+  const melodic = spec.role !== "drum";
+  return (
+    <div className="pads" style={accentStyle(track)} role="group" aria-label={`${spec.name} steps`}>
+      {Array.from({ length: PAGE }, (_, i) => {
+        const abs = page * PAGE + i;
+        const s = tp.steps[abs];
+        return (
+          <Pad
+            key={i} track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs}
+            note={melodic && s.on ? noteName(s.note + 12 * tp.oct) : undefined}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// --- the focused track: header, steps, FX lane, keyboard ---------------------------------------------------
 
 function TrackHeader({ track }: { track: number }) {
   const spec = TRACKS[track];
@@ -192,8 +220,8 @@ function TrackHeader({ track }: { track: number }) {
       </div>
       <div className="track-btns">
         <button type="button" className="btn sm" onClick={() => controller.audition(track)} aria-label={`Hit ${spec.name}`}>HIT</button>
-        <button type="button" className="btn sm" data-active={muted} aria-pressed={muted} onClick={() => toggleMute(track)}>M</button>
-        <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} onClick={() => toggleSolo(track)}>S</button>
+        <button type="button" className="btn sm track-ms" data-active={muted} aria-pressed={muted} onClick={() => toggleMute(track)}>M</button>
+        <button type="button" className="btn sm solo track-ms" data-active={solo} aria-pressed={solo} onClick={() => toggleSolo(track)}>S</button>
         <button type="button" className="btn sm" onClick={() => randomize(track)}>RND</button>
         <ConfirmButton label="CLR" onConfirm={() => clearTrack(track)} />
       </div>
@@ -224,131 +252,127 @@ export function ConfirmButton({ label, onConfirm, className = "btn sm" }: { labe
   );
 }
 
-function Pads({ track }: { track: number }) {
-  const page = useStore((s) => s.page);
-  const tp = useStore((s) => s.patterns[s.pattern].tracks[track]);
-  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
-  const spec = TRACKS[track];
-  const melodic = spec.role !== "drum";
+// --- keyboard ------------------------------------------------------------------------------------------
+
+const WHITE_SEMIS = [0, 2, 4, 5, 7, 9, 11];
+const BLACK_AFTER = new Set([0, 1, 3, 4, 5]); // a black key follows these white keys (C D F G A)
+
+function OctaveControl({ track }: { track: number }) {
+  const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
   return (
-    <div className="pads" style={accentStyle(track)} role="group" aria-label={`${spec.name} steps`}>
-      {Array.from({ length: PAGE }, (_, i) => {
-        const abs = page * PAGE + i;
-        const s = tp.steps[abs];
-        return (
-          <Cell
-            key={i} big track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs}
-            note={melodic && s.on ? noteName(s.note + 12 * tp.oct) : undefined}
-          />
-        );
-      })}
-    </div>
+    <span className="oct">
+      <span className="silk">OCT</span>
+      <button type="button" className="btn sm" onClick={() => setOctave(track, oct - 1)} aria-label="Octave down">−</button>
+      <b>{oct > 0 ? `+${oct}` : oct}</b>
+      <button type="button" className="btn sm" onClick={() => setOctave(track, oct + 1)} aria-label="Octave up">+</button>
+    </span>
   );
 }
 
-// --- step editor -----------------------------------------------------------------------------------
-
-const WHITE = [0, 2, 4, 5, 7, 9, 11, 12];
-const BLACK: Array<[semi: number, left: number]> = [[1, 0], [3, 1], [6, 3], [8, 4], [10, 5]];
-
+/** Playable keys. With a step selected a key writes that step's note; without one it just plays the
+ * instrument. Two octaves on wide screens, one on phones. */
 function Keys({ track, step }: { track: number; step: number }) {
   const spec = TRACKS[track];
-  const note = useStore((s) => s.patterns[s.pattern].tracks[track].steps[step].note);
+  const wide = useMedia(WIDE);
+  const octaves = wide ? 2 : 1;
+  const span = octaves * 12;
+  const note = useStore((s) => (step >= 0 ? s.patterns[s.pattern].tracks[track].steps[step].note : -1));
+  const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
   const lo = spec.noteLo ?? 24;
   const hi = spec.noteHi ?? 59;
-  const [base, setBase] = useState(() => Math.floor(note / 12) * 12);
-  const octBase = Math.min(Math.max(base, Math.floor(lo / 12) * 12), Math.floor(hi / 12) * 12);
-  const press = (semi: number) => {
-    const n = Math.min(hi, octBase + semi);
-    if (n >= lo) setStepNote(track, step, n);
+  const minBase = Math.floor(lo / 12) * 12;
+  const maxBase = Math.max(minBase, Math.floor(hi / 12) * 12 - (octaves - 1) * 12);
+  const [base, setBase] = useState(() => Math.min(maxBase, Math.max(minBase, Math.floor((spec.defaultNote ?? lo) / 12) * 12)));
+  // keep the selected note on screen
+  useEffect(() => {
+    if (note >= 0 && (note < base || note > base + span)) setBase(Math.min(maxBase, Math.max(minBase, Math.floor(note / 12) * 12)));
+  }, [note, base, span, minBase, maxBase]);
+  const view = Math.min(maxBase, Math.max(minBase, base));
+
+  const whites: number[] = [];
+  for (let o = 0; o < octaves; o++) for (const w of WHITE_SEMIS) whites.push(view + o * 12 + w);
+  whites.push(view + span);
+  const blacks = whites.slice(0, -1).flatMap((n, i) => (BLACK_AFTER.has(i % 7) ? [{ n: n + 1, i }] : []));
+  const W = whites.length;
+
+  const press = (n: number) => {
+    if (n < lo || n > hi) return;
+    if (step >= 0) setStepNote(track, step, n);
+    else controller.audition(track, n);
   };
+  const label = (n: number) => noteName(n + 12 * oct);
+
   return (
     <div className="keys-wrap">
-      <button type="button" className="btn sm" aria-label="Keys octave down" onClick={() => setBase(octBase - 12)}>◀</button>
-      <div className="keys" role="group" aria-label="Note keys">
-        {WHITE.map((semi, i) => (
+      <button type="button" className="btn sm key-shift" aria-label="Keys down an octave" disabled={view <= minBase} onClick={() => setBase(view - 12)}>◀</button>
+      <div className="keys" role="group" aria-label="Note keys" style={{ gridTemplateColumns: `repeat(${W}, 1fr)` }}>
+        {whites.map((n, i) => (
           <button
-            key={semi} type="button" className="key white" data-on={note === octBase + semi} style={{ gridColumn: i + 1 }}
-            aria-label={noteName(octBase + semi)} onClick={() => press(semi)}
+            key={n} type="button" className="key white" data-on={note === n} data-c={n % 12 === 0}
+            style={{ gridColumn: i + 1 }} aria-label={label(n)} onClick={() => press(n)}
           >
-            {noteName(octBase + semi)}
+            {n % 12 === 0 || !wide ? label(n) : ""}
           </button>
         ))}
-        {BLACK.map(([semi, left]) => (
+        {blacks.map(({ n, i }) => (
           <button
-            key={semi} type="button" className="key black" data-on={note === octBase + semi}
-            style={{ left: `calc(${(left + 1) * 12.5}% - 4.5%)` }}
-            aria-label={noteName(octBase + semi)} onClick={() => press(semi)}
-          >
-          </button>
+            key={n} type="button" className="key black" data-on={note === n}
+            style={{ left: `${((i + 1) / W) * 100}%`, width: `${(0.6 / W) * 100}%` }}
+            aria-label={label(n)} onClick={() => press(n)}
+          />
         ))}
       </div>
-      <button type="button" className="btn sm" aria-label="Keys octave up" onClick={() => setBase(octBase + 12)}>▶</button>
+      <button type="button" className="btn sm key-shift" aria-label="Keys up an octave" disabled={view >= maxBase} onClick={() => setBase(view + 12)}>▶</button>
     </div>
   );
 }
 
 function StepEditor({ track }: { track: number }) {
   const spec = TRACKS[track];
-  const selStep = useStore((s) => s.selStep);
-  const step = useStore((s) => (s.selStep >= 0 ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
+  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
+  const step = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
   const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
-  const melodic = spec.role !== "drum";
-  const hint = useMemo(
-    () => (melodic ? "TAP A STEP TO PLACE A NOTE · TAP AGAIN TO REMOVE" : "TAP = TOGGLE · HOLD = ACCENT"),
-    [melodic],
-  );
-  if (!melodic || !step || selStep < 0) {
+  if (spec.role === "drum") {
     return (
       <div className="step-editor hint" style={accentStyle(track)}>
-        <span className="silk">{hint}</span>
-        {melodic && (
-          <span className="oct">
-            <span className="silk">OCT</span>
-            <button type="button" className="btn sm" onClick={() => setOctave(track, oct - 1)} aria-label="Octave down">−</button>
-            <b>{oct > 0 ? `+${oct}` : oct}</b>
-            <button type="button" className="btn sm" onClick={() => setOctave(track, oct + 1)} aria-label="Octave up">+</button>
-          </span>
-        )}
+        <span className="silk">TAP A STEP TO TOGGLE · HOLD FOR ACCENT</span>
       </div>
     );
   }
   return (
     <div className="step-editor" style={accentStyle(track)}>
       <div className="step-editor-top">
-        <span className="silk">STEP {pad2(selStep + 1)}</span>
-        <b className="note-readout">{noteName(step.note + 12 * oct)}</b>
-        <button type="button" className="btn sm" data-active={step.acc} aria-pressed={step.acc} onClick={() => toggleStepFlag(track, selStep, "acc")}>ACCENT</button>
-        <button type="button" className="btn sm" data-active={step.slide} aria-pressed={step.slide} onClick={() => toggleStepFlag(track, selStep, "slide")}>SLIDE</button>
-        <span className="oct">
-          <span className="silk">OCT</span>
-          <button type="button" className="btn sm" onClick={() => setOctave(track, oct - 1)} aria-label="Octave down">−</button>
-          <b>{oct > 0 ? `+${oct}` : oct}</b>
-          <button type="button" className="btn sm" onClick={() => setOctave(track, oct + 1)} aria-label="Octave up">+</button>
-        </span>
+        {step ? (
+          <>
+            <span className="silk">STEP {pad2(selStep + 1)}</span>
+            <b className="note-readout">{noteName(step.note + 12 * oct)}</b>
+            <button type="button" className="btn sm" data-active={step.acc} aria-pressed={step.acc} onClick={() => toggleStepFlag(track, selStep, "acc")}>ACCENT</button>
+            <button type="button" className="btn sm" data-active={step.slide} aria-pressed={step.slide} onClick={() => toggleStepFlag(track, selStep, "slide")}>SLIDE</button>
+          </>
+        ) : (
+          <span className="silk">PLAY THE KEYS · TAP A STEP TO ENTER NOTES</span>
+        )}
+        <OctaveControl track={track} />
       </div>
-      <Keys key={track} track={track} step={selStep} />
-    </div>
-  );
-}
-
-export function FocusTrack() {
-  const track = useStore((s) => s.focus);
-  return (
-    <div className="focus-track">
-      <TrackHeader track={track} />
-      <Pads track={track} />
-      <StepEditor track={track} />
+      <Keys track={track} step={selStep} />
     </div>
   );
 }
 
 export function SequencerPanel() {
+  const track = useStore((s) => s.focus);
   return (
     <>
       <PageBar />
-      <Matrix />
-      <FocusTrack />
+      <div className="seq-body" style={accentStyle(track)}>
+        <TrackRail />
+        <div className="stage" data-drum={TRACKS[track].role === "drum"}>
+          <TrackHeader track={track} />
+          <Pads track={track} />
+          <FxStrip />
+          <StepEditor track={track} />
+        </div>
+      </div>
     </>
   );
 }
