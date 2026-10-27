@@ -60,7 +60,7 @@ export function PageBar() {
       </div>
       <button
         type="button" className="chip" aria-label={`Pattern length ${length} steps, tap to change`}
-        onClick={() => setLength(LENGTHS[(LENGTHS.indexOf(length as (typeof LENGTHS)[number]) + 1) % LENGTHS.length])}
+        onClick={() => setLength(LENGTHS[(LENGTHS.indexOf(length as (typeof LENGTHS)[number]) + 1) % LENGTHS.length], getState().page)}
       >
         LEN {length}
       </button>

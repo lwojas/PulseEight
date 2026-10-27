@@ -150,8 +150,20 @@ export function loadSynthPreset(track: number, index: number): void {
 
 // --- pattern -------------------------------------------------------------------------------------
 
-export function setLength(length: number): void {
-  editPattern((p) => { p.length = length; });
+/** Set the pattern length. With `copyPage`, newly added bars are filled with a copy of that page. */
+export function setLength(length: number, copyPage?: number): void {
+  editPattern((p) => {
+    if (copyPage !== undefined && length > p.length) {
+      const from = copyPage * PAGE;
+      for (let i = p.length; i < length; i++) {
+        const src = from + (i % PAGE);
+        for (const t of p.tracks) t.steps[i] = { ...t.steps[src] };
+        p.fx[i] = p.fx[src];
+        p.fxLvl[i] = p.fxLvl[src];
+      }
+    }
+    p.length = length;
+  });
   setState((s) => ({ page: Math.min(s.page, length / PAGE - 1), selStep: -1 }));
 }
 
