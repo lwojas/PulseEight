@@ -2,6 +2,9 @@
 // This is the only MIDI module that imports the app.
 import { hasEmbeddedHost } from "webdsp";
 import { controller } from "../engine/controller";
+import { setStepNote } from "../engine/actions";
+import { flashKey } from "../engine/keyhl";
+import { TRACKS } from "../engine/spec";
 import { cleanValue, getParam, onParamChange, paramInfo, setParam } from "../engine/params";
 import { getState, setState } from "../engine/store";
 import { createClockFollower } from "./clock";
@@ -16,17 +19,26 @@ const CLOCK_TIMEOUT_MS = 1000;
 
 export interface MidiSettings extends PortChoice {
   enabled: boolean;
+  /** Device for controllers, program changes and clock: "all" or a port id. */
+  input: string;
   /** Follow incoming MIDI clock, Start/Stop/Continue and Song Position Pointer. */
   clock: boolean;
+  /** Device whose notes, on any channel, play the selected track: "off", "all" or a port id. */
+  keyboard: string;
+  /** Octave shift applied to keyboard notes, -4..4. */
+  keyboardOctave: number;
 }
 
 const KEY = "pulse8.midi";
-const DEFAULTS: MidiSettings = { enabled: false, input: "all", output: "all", clock: false };
+const DEFAULTS: MidiSettings = { enabled: false, input: "all", output: "all", clock: false, keyboard: "off", keyboardOctave: 0 };
 
 function loadSettings(): MidiSettings {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<MidiSettings> | null;
-    return { ...DEFAULTS, ...raw };
+    const merged = { ...DEFAULTS, ...raw };
+    // an earlier build stored keyboard mode as a boolean
+    if (typeof merged.keyboard !== "string") merged.keyboard = merged.keyboard ? "all" : "off";
+    return merged;
   } catch {
     return { ...DEFAULTS };
   }
@@ -88,17 +100,58 @@ setInterval(() => {
   }
 }, 250);
 
-function onMessage(data: Uint8Array, stamp: number): void {
+// --- keyboard mode -----------------------------------------------------------------------------------
+
+/** Notes held by the keyboard, per track, so they can be released if the mode ends. */
+const held = new Map<number, Set<number>>();
+
+function releaseHeld(): void {
+  for (const [track, notes] of held) for (const n of notes) controller.arpUp(track, n);
+  held.clear();
+}
+
+/** Note On/Off on any channel plays the selected track (`focus`), as the on-screen keys do. */
+function keyboardNote(data: Uint8Array): boolean {
+  const type = data[0] & 0xf0;
+  if (type !== 0x90 && type !== 0x80) return false;
+  const on = type === 0x90 && (data[2] & 0x7f) > 0;
+  const st = getState();
+  const track = st.focus;
+  if (TRACKS[track].role === "drum") {
+    if (on) controller.audition(track);
+    return true;
+  }
+  const spec = TRACKS[track];
+  const note = (data[1] & 0x7f) + 12 * settings.keyboardOctave;
+  if (note < (spec.noteLo ?? 24) || note > (spec.noteHi ?? 59)) return true;
+  const useArp = st.arp[track].on && st.selStep < 0;
+  if (!on) {
+    // release whatever this note was held on, even if the selection moved meanwhile
+    for (const [t, notes] of held) if (notes.delete(note)) controller.arpUp(t, note);
+    return true;
+  }
+  flashKey(track, note);
+  if (useArp) {
+    (held.get(track) ?? held.set(track, new Set()).get(track)!).add(note);
+    controller.arpDown(track, note);
+  } else if (st.selStep >= 0) setStepNote(track, st.selStep, note);
+  else controller.audition(track, note);
+  return true;
+}
+
+function onMessage(data: Uint8Array, stamp: number, from: string): void {
   const status = data[0];
   if (status >= 0xf0) {
-    if (!settings.clock) return;
+    if (!settings.clock || !(settings.input === "all" || settings.input === from)) return;
     const t = audioTime(stamp);
     if (t === null) return;
     if (status === 0xf8) lastPulseWall = performance.now();
     clock.handle(data, t);
     return;
   }
-  control?.handle(data);
+  const isNote = (data[0] & 0xe0) === 0x80 && (data[0] & 0xf0) <= 0x90;
+  if (isNote && settings.keyboard !== "off" && (settings.keyboard === "all" || settings.keyboard === from) && keyboardNote(data)) return;
+  if (settings.input === "all" || settings.input === from) control?.handle(data);
 }
 
 // --- lifecycle -----------------------------------------------------------------------------------------
@@ -107,7 +160,8 @@ ports.onMessage(onMessage);
 ports.onPortsChanged(() => control?.sendAll());
 
 function apply(): void {
-  ports.choose({ input: settings.input, output: settings.output });
+  if (!settings.enabled || settings.keyboard === "off") releaseHeld();
+  ports.choose({ output: settings.output });
   if (settings.enabled) {
     control ??= createMidiControl({ mapping: midiMapping, bus, send: (b) => ports.send(b) });
     if (control.compiled.warnings.length) console.warn("MIDI mapping:", control.compiled.warnings);

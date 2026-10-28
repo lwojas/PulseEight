@@ -36,6 +36,13 @@ Stepped knobs (FM COLOR) split 0-127 into equal bands. CC 10 is unassigned: the 
 Patterns: **Bank Select (CC 0) + Program Change** on the default channel, 4 banks x 16 = 64 patterns. While playing the pattern
 is cued for the next loop (as tapping a slot does). Volume, sends and knobs edit the pattern on screen, as the UI does.
 
+## Keyboard (MIDI settings: KEYBOARD, KEY OCTAVE)
+`midi/setup.ts` only. Ports listen to every input and tag each message with its port id; `setup.ts` filters: control (CC, program,
+clock) from `input`, notes from `keyboard` (`off | all | id`). Notes are taken before the CC engine, on any channel, and routed to `focus`:
+drum = `audition`; melodic = `arpDown/arpUp` if the arp is on and no step is selected, `setStepNote` if a step is selected, else
+`audition`. Notes shift by `keyboardOctave` and are ignored outside `noteLo..noteHi` (folding into range made a 2-octave keybed repeat
+one octave). Held arp notes are released when the keyboard or MIDI is turned off.
+
 ## Echo
 Changes carry their origin. Output skips `midi`. The engine also remembers the last 7-bit value per controller, so an
 unchanged value is not resent. Known: a Program Change cues; the pattern then changes later by the scheduler (`internal`)

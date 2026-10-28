@@ -1,8 +1,7 @@
 # MIDI
 
 Pulse.8 takes MIDI **control** from a controller or a DAW, sends the same controls back so motorised faders and
-displays follow, and can **follow an external clock**. It does not play notes from MIDI: you play the sequencer and the
-on-screen keys.
+displays follow, and can **follow an external clock**. Notes can also play the selected track in **Keyboard mode**.
 
 MIDI needs a browser with Web MIDI (Chrome and Edge have it). The browser asks permission the first time.
 
@@ -12,11 +11,25 @@ MIDI needs a browser with Web MIDI (Chrome and Edge have it). The browser asks p
 
 | Setting | Options |
 |---|---|
-| **Input** | All inputs, or one device |
+| **Control input** | All inputs, or one device |
+| **Keyboard** | Off, all inputs, or one device |
+| **Key octave** | Shift for keyboard notes |
 | **Output** | All outputs, None, or one device |
 | **Follow MIDI clock** | Sync tempo and transport to an external clock |
 
 The settings are remembered in the browser.
+
+## Keyboard
+
+Choose a **Keyboard** device and it plays the **selected track**, whatever channel it sends on. It is separate from the
+**Control input**, so a keyboard and a fader controller can be different devices. It behaves like the on-screen keys:
+
+- a drum track plays its hit on any key
+- a melodic track plays the note; with the arpeggiator on, held keys feed the arp
+- with a step selected, the note is written into that step
+- notes outside the track's range are ignored; use **Key octave** (-4 to +4) to move the keybed into range
+
+Notes from the keyboard device never reach the CC map. Controllers, program changes and clock come from the Control input only.
 
 ## Channels and controllers
 

@@ -28,7 +28,7 @@ const MIDI_STATUS = {
 function MidiGroup() {
   const snap = useSyncExternalStore(midi.subscribe, ports.snapshot);
   const settings = useSyncExternalStore(midi.subscribe, midi.settings);
-  const { enabled, clock, input, output } = settings;
+  const { enabled, clock, keyboard, keyboardOctave, input, output } = settings;
   return (
     <section className="menu-group" aria-label="MIDI">
       <span className="silk">MIDI</span>
@@ -40,7 +40,7 @@ function MidiGroup() {
           <p className="modal-note">{MIDI_STATUS[snap.status]}</p>
           <div className="menu-row">
             <div className="menu-field">
-              <label className="silk" htmlFor="midi-in">INPUT</label>
+              <label className="silk" htmlFor="midi-in">CONTROL INPUT</label>
               <select id="midi-in" className="modal-input modal-select" value={input} onChange={(e) => midi.update({ input: e.target.value })}>
                 <option value="all">All inputs</option>
                 {snap.inputs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -58,7 +58,23 @@ function MidiGroup() {
           <button type="button" className="btn" data-active={clock} role="switch" aria-checked={clock} onClick={() => midi.update({ clock: !clock })}>
             FOLLOW MIDI CLOCK: {clock ? "ON" : "OFF"}
           </button>
-          <p className="modal-note">Controllers, program changes and clock use the map in <code>src/midi/mapping.ts</code>. Following the clock takes tempo, start/stop and song position from the sender.</p>
+          <div className="menu-row">
+            <div className="menu-field">
+              <label className="silk" htmlFor="midi-kb">KEYBOARD</label>
+              <select id="midi-kb" className="modal-input modal-select" value={keyboard} onChange={(e) => midi.update({ keyboard: e.target.value })}>
+                <option value="off">Off</option>
+                <option value="all">All inputs</option>
+                {snap.inputs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="menu-field">
+              <label className="silk" htmlFor="midi-kb-oct">KEY OCTAVE</label>
+              <select id="midi-kb-oct" className="modal-input modal-select" value={keyboardOctave} onChange={(e) => midi.update({ keyboardOctave: Number(e.target.value) })}>
+                {[-4, -3, -2, -1, 0, 1, 2, 3, 4].map((o) => <option key={o} value={o}>{o > 0 ? `+${o}` : o}</option>)}
+              </select>
+            </div>
+          </div>
+          <p className="modal-note">Keyboard plays the selected track. Out-of-range notes are skipped; use KEY OCTAVE to shift.</p>
         </>
       )}
     </section>

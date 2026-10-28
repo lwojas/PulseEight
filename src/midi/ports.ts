@@ -20,12 +20,11 @@ export interface PortsSnapshot {
 }
 
 export interface PortChoice {
-  /** "all", or a port id; outputs also accept "none". */
-  input: string;
+  /** "all", "none", or a port id. Inputs are always all listened to: each message says where it came from. */
   output: string;
 }
 
-export type MessageHandler = (data: Uint8Array, timeStamp: number) => void;
+export type MessageHandler = (data: Uint8Array, timeStamp: number, inputId: string) => void;
 
 type Access = {
   inputs: Map<string, MIDIInput>;
@@ -51,7 +50,7 @@ export function createPorts({
 }: { requestMIDIAccess?: (() => Promise<unknown>) | undefined } = {}): MidiPorts {
   let access: Access | null = null;
   let snap: PortsSnapshot = { status: "off", inputs: [], outputs: [] };
-  let choice: PortChoice = { input: "all", output: "all" };
+  let choice: PortChoice = { output: "all" };
   const wired = new Set<MIDIInput>();
   const handlers = new Set<MessageHandler>();
   const subs = new Set<() => void>();
@@ -65,14 +64,15 @@ export function createPorts({
 
   const onMessage = (e: Event) => {
     const m = e as MIDIMessageEvent;
-    if (m.data) handlers.forEach((h) => h(m.data!, m.timeStamp));
+    const id = (m.target as MIDIInput | null)?.id ?? "";
+    if (m.data) handlers.forEach((h) => h(m.data!, m.timeStamp, id));
   };
 
   function refresh() {
     if (!access) return;
     const inputs = [...access.inputs.values()];
     const outputs = [...access.outputs.values()];
-    const wanted = new Set(inputs.filter((p) => p.state !== "disconnected" && (choice.input === "all" || choice.input === p.id)));
+    const wanted = new Set(inputs.filter((p) => p.state !== "disconnected"));
     for (const p of [...wired]) {
       if (!wanted.has(p)) { p.removeEventListener("midimessage", onMessage); wired.delete(p); }
     }
