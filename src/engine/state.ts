@@ -2,7 +2,7 @@
 // Nothing here touches audio or React.
 import { defaultSound, DRUM_TRACKS, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
 import { defaultMangler } from "./mangler";
-import { defaultScale, type ProjectScale } from "./scale";
+import { defaultScale, isChromatic, notesInRange, rootAtOrAbove, type ProjectScale } from "./scale";
 import { newDelay, newReverb, type DelaySend, type ReverbSend } from "./trackfx";
 
 export const MAX_STEPS = 64;
@@ -178,7 +178,7 @@ export function clearTrackSteps(p: Pattern, track: number) {
 }
 
 /** A quick, musical starting point for one track (the RND button). */
-export function randomizeTrack(p: Pattern, track: number, rnd: () => number = Math.random) {
+export function randomizeTrack(p: Pattern, track: number, rnd: () => number = Math.random, key?: ProjectScale) {
   const spec = TRACKS[track];
   const len = p.length;
   clearTrackSteps(p, track);
@@ -201,17 +201,25 @@ export function randomizeTrack(p: Pattern, track: number, rnd: () => number = Ma
     }
     return;
   }
-  const scale = [0, 0, 3, 5, 7, 10, 12, 0, 7];
-  const base = spec.role === "bass" ? 24 : 48;
   const lo = spec.noteLo ?? 0;
   const hi = spec.noteHi ?? 127;
+  let notes: number[];
+  if (key && !isChromatic(key)) {
+    // the project's scale over one octave from its root, with the root favoured
+    const root = rootAtOrAbove(key, lo + (spec.role === "bass" ? 0 : 12));
+    const inRange = notesInRange(key, root, root + 12).filter((n) => n >= lo && n <= hi);
+    notes = inRange.length ? [root, root, ...inRange] : [root];
+  } else {
+    const base = spec.role === "bass" ? 24 : 48;
+    notes = [0, 0, 3, 5, 7, 10, 12, 0, 7].map((o) => Math.min(hi, Math.max(lo, base + o)));
+  }
   let prev = false;
   for (let i = 0; i < len; i++) {
     const on = rnd() < (i % 4 === 0 ? 0.85 : i % 2 === 0 ? 0.55 : 0.4);
     const s = steps[i];
     s.on = on;
     if (!on) { prev = false; continue; }
-    s.note = Math.min(hi, Math.max(lo, base + pick(scale)));
+    s.note = pick(notes);
     s.acc = rnd() < 0.25;
     s.slide = prev && rnd() < 0.3;
     prev = true;

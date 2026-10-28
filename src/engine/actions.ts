@@ -173,7 +173,7 @@ export function clearTrack(track: number): void {
 }
 
 export function randomize(track: number): void {
-  editPattern((p) => randomizeTrack(p, track));
+  editPattern((p) => randomizeTrack(p, track, Math.random, getState().scale));
   setState({ selStep: -1 });
 }
 

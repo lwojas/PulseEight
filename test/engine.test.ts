@@ -3,7 +3,7 @@ import { baseValues, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/ma
 import { BEAT_DIVISIONS, freeDelaySeconds } from "../src/engine/trackfx";
 import { KITS, kitSounds, BASS_PRESETS, synthSound } from "../src/engine/presets";
 import { defaultSound, normToUnits, TRACKS, unitsToNorm, noteName } from "../src/engine/spec";
-import { defaultScale, isChromatic, normalizeScale, notesInRange, rootAtOrAbove, rootAtOrBelow, SCALE_PRESETS, SCALES, withPreset, withRoot } from "../src/engine/scale";
+import { isInScale, defaultScale, isChromatic, normalizeScale, notesInRange, rootAtOrAbove, rootAtOrBelow, SCALE_PRESETS, SCALES, withPreset, withRoot } from "../src/engine/scale";
 import { demoPattern, newPattern, randomizeTrack } from "../src/engine/state";
 
 describe("control mapping", () => {
@@ -158,5 +158,18 @@ describe("scales", () => {
   it("normalises junk from old or hand-edited saves", () => {
     expect(normalizeScale(undefined)).toEqual(defaultScale());
     expect(normalizeScale({ root: 14, scale: "nope", preset: "x" })).toEqual({ root: 2, scale: "chromatic", preset: "" });
+  });
+});
+
+describe("randomize follows the project scale", () => {
+  it("only writes in-scale notes", () => {
+    const key = { root: 2, scale: "minor", preset: "" };
+    for (const track of [6, 7]) {
+      const p = newPattern();
+      randomizeTrack(p, track, Math.random, key);
+      const on = p.tracks[track].steps.filter((s) => s.on);
+      expect(on.length).toBeGreaterThan(0);
+      for (const s of on) expect(isInScale(key, s.note)).toBe(true);
+    }
   });
 });
