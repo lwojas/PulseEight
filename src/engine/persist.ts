@@ -3,6 +3,7 @@
 // saved. Project files (export / import) are separate and unchanged.
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { MAX_CHAIN, MAX_STEPS, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
+import { normalizeArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { newDelay, newReverb } from "./trackfx";
 import { normalizeScale, type ProjectScale } from "./scale";
@@ -22,6 +23,8 @@ interface Saved {
   pattern: number;
   /** Absent in saves from before scales existed. */
   scale?: ProjectScale;
+  /** Per-track arpeggiator settings; absent in older saves. */
+  arp?: ArpSettings[];
 }
 
 function valid(p: unknown): p is Pattern {
@@ -68,6 +71,7 @@ function parseProject(s: Saved): (Saved & { patterns: Pattern[] }) | null {
     swing: Number.isFinite(s.swing) ? s.swing : 0.5,
     pattern: s.pattern >= 0 && s.pattern < NUM_PATTERNS ? s.pattern : 0,
     scale: normalizeScale(s.scale),
+    arp: Array.from({ length: NUM_TRACKS }, (_, i) => normalizeArp(Array.isArray(s.arp) ? s.arp[i] : undefined)),
   };
 }
 
@@ -79,7 +83,7 @@ function sparse(patterns: Pattern[]): Array<Pattern | null> {
 
 function snapshot(): Saved {
   const s = getState();
-  return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
+  return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale, arp: s.arp };
 }
 
 /** Restores the autosave slot into the store. Resolves once done; a missing or damaged slot just
@@ -198,7 +202,7 @@ export async function importProject(file: File): Promise<string> {
 export function autosave(): void {
   let timer: number | undefined;
   let dirty = false;
-  const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName, s.scale];
+  const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName, s.scale, s.arp];
   const flush = () => {
     window.clearTimeout(timer);
     if (!dirty) return;

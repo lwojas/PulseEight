@@ -203,7 +203,11 @@ button.oled { cursor: pointer; text-align: left; }
 .step-editor:not(.hint) .keys { height: auto; }
 .step-editor-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; min-height: 34px; }
 .note-readout { font-family: var(--font-mono); font-size: 18px; color: var(--acc); min-width: 44px; }
-.oct { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.step-editor-tools { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; flex: none; }
+.oct { display: inline-flex; align-items: center; gap: 4px; }
+.arp-ctl { display: inline-flex; gap: 2px; }
+.arp-ctl .btn.sm { min-width: 0; padding: 0 8px; }
+.arp-toggle[data-active="true"] { background: var(--acc); border-color: var(--acc); color: var(--ink); }
 .oct b { font-family: var(--font-mono); min-width: 22px; text-align: center; }
 .keys-wrap { display: grid; grid-template-columns: 34px 1fr 34px; gap: 4px; align-items: stretch; }
 .keys-wrap .btn { min-height: 0; }
@@ -511,6 +515,13 @@ button.oled { cursor: pointer; text-align: left; }
 .modal-backdrop[data-anchored="true"] .modal { position: fixed; max-width: calc(100vw - 16px); box-shadow: 0 0 0 1px #000; }
 
 /* pattern bank + chain dialog (wide screens): 64 slots as four rows of 16, then the chain box */
+.arp-modal { width: min(340px, 100%); }
+.arp-form { display: flex; flex-direction: column; gap: 10px; }
+.arp-power { min-height: 36px; }
+.arp-power[data-active="true"] { background: var(--acc); border-color: var(--acc); color: var(--ink); }
+.arp-group { display: flex; flex-direction: column; gap: 4px; }
+.arp-group .chip { min-height: 30px; flex: 1 1 0; padding: 0 6px; }
+.arp-knobs { margin-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ptn-modal { width: min(760px, calc(100vw - 16px)); }
 .ptn-modal .slots { grid-template-columns: repeat(16, 1fr); gap: 3px; }
 .ptn-modal .slot { height: 34px; font-size: 11px; min-width: 0; }

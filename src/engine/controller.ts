@@ -1,12 +1,13 @@
 // The groovebox controller: transport, lookahead step scheduler, pattern switching/chaining and
 // the FX punch-in/write logic. It owns the Groovebox (audio) and keeps the store in sync with what
 // is *audible* (the scheduler runs ~120 ms ahead of the speakers).
+import { Arpeggiator } from "./arp";
 import { Groovebox, type MixInput } from "./audio";
 import { manglerTarget, sweepLevel, VERB_ID, VERB_TAIL } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { NUM_TRACKS, TRACKS } from "./spec";
 import { MAX_CHAIN, type Pattern } from "./state";
-import { clearLit, setLit } from "./keyhl";
+import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { startTicker } from "./ticker";
 
@@ -52,6 +53,13 @@ class Controller {
   /** Keep the reverb return open until this audio time so a released VERB rings out. */
   private verbUntil = 0;
 
+  // arpeggiators: one per melodic track, all fed by the same transport grid
+  private arps = new Map<number, Arpeggiator>(MELODIC.map((t) => [t, new Arpeggiator()]));
+  /** While the transport is stopped the arps walk a free grid of the same step length (tempo-driven),
+   * started by the first held key. -1 = not running. */
+  private arpFreeTime = -1;
+  private arpFreeStep = 0;
+
   constructor() {
     observe((next, prev) => this.onState(next, prev));
   }
@@ -90,6 +98,7 @@ class Controller {
     this.gridTime = gb.now + 0.06;
     this.events = [];
     this.punchScheduled = -1;
+    this.realignArps();
     gb.resetManglerSchedule();
     this.audibleSince = this.gridTime;
     gb.setTempo(st.bpm, this.gridTime);
@@ -104,6 +113,7 @@ class Controller {
     if (!gb) return;
     gb.silence();
     gb.clearPending();
+    this.realignArps();
     this.events = [];
     this.punchScheduled = -1;
     gb.resetManglerSchedule();
@@ -132,6 +142,68 @@ class Controller {
     } else {
       const n = note ?? spec.defaultNote ?? spec.rootMidi ?? 0;
       gb.note(track, { velocity: 0.9, pitch: n - (spec.rootMidi ?? 0) + 12 * tp.oct, duration: 0.28 });
+    }
+  }
+
+  // --- arpeggiator ---------------------------------------------------------------------------
+  // The arp is a shared processor between the keyboard and the instrument: held keys go in
+  // (`arpDown` / `arpUp`), timed notes come out through the same `gb.note` the sequencer uses.
+  // Playing, its notes are generated inside each scheduled transport step; stopped, on a free grid
+  // with the same step length. Both read the project tempo as they go, so there is one clock.
+
+  arpDown(track: number, note: number): void {
+    this.arps.get(track)?.noteDown(note);
+  }
+
+  arpUp(track: number, note: number): void {
+    this.arps.get(track)?.noteUp(note);
+  }
+
+  private realignArps(): void {
+    for (const a of this.arps.values()) a.realign();
+    this.arpFreeTime = -1;
+  }
+
+  /** Generate the arp notes of every track that has them for the step window starting at `t`. */
+  private scheduleArps(t: number, stepDur: number, gridPos: number): void {
+    const gb = this.gb!;
+    const st = getState();
+    for (const [track, arp] of this.arps) {
+      if (!arp.active) continue;
+      const cfg = st.arp[track];
+      if (!cfg.on) { arp.clear(); continue; }
+      const spec = TRACKS[track];
+      const oct = this.soundPattern().tracks[track].oct;
+      for (const e of arp.advance(cfg, gridPos)) {
+        const time = t + e.offset * stepDur;
+        gb.note(track, {
+          time,
+          velocity: e.velocity,
+          pitch: e.note - (spec.rootMidi ?? 0) + 12 * oct,
+          duration: e.length * stepDur,
+        });
+        gb.when(time, () => flashKey(track, e.note, Math.min(180, e.length * stepDur * 1000)));
+      }
+    }
+  }
+
+  /** Stopped transport: keep the held arps going on their own grid. */
+  private runFreeArps(now: number): void {
+    const st = getState();
+    const live = [...this.arps.values()].some((a) => a.active);
+    if (!live) {
+      this.arpFreeTime = -1;
+      return;
+    }
+    if (this.arpFreeTime < 0) {
+      this.arpFreeTime = now + 0.005;
+      this.arpFreeStep = 0;
+    }
+    while (this.arpFreeTime < now + LOOKAHEAD) {
+      const stepDur = 15 / st.bpm;
+      this.scheduleArps(this.arpFreeTime, stepDur, this.arpFreeStep);
+      this.arpFreeTime += stepDur;
+      this.arpFreeStep++;
     }
   }
 
@@ -221,6 +293,9 @@ class Controller {
     ) {
       this.syncNow();
     }
+    if (next.arp !== prev.arp) {
+      next.arp.forEach((a, t) => { if (!a.on && prev.arp[t].on) this.arps.get(t)?.clear(); });
+    }
     if (next.bpm !== prev.bpm && next.playing) this.gb.setTempo(next.bpm, this.gridTime, this.gridTime);
     if (next.fxPlay !== prev.fxPlay && next.punch === 0) {
       const on = next.fxPlay && next.playing && this.audibleStep >= 0;
@@ -296,7 +371,10 @@ class Controller {
     if (!gb) return;
     gb.tick();
     this.sweepHeldPunch(gb.now);
-    if (!getState().playing) return;
+    if (!getState().playing) {
+      this.runFreeArps(gb.now);
+      return;
+    }
     while (this.gridTime < gb.now + LOOKAHEAD) this.scheduleStep();
     this.publishAudible(gb.now);
   }
@@ -348,6 +426,8 @@ class Controller {
         tie: s.slide && prev.on,
       });
     }
+
+    this.scheduleArps(t, stepDur, step);
 
     // Written FX. A punch the player is holding right now wins over the written lane.
     if (st.punch !== 0) {

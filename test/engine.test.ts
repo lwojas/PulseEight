@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ARP_RATES, Arpeggiator, arpIndex, arpPool, normalizeArp, type ArpDirection, type ArpSettings } from "../src/engine/arp";
 import { baseValues, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/mangler";
 import { BEAT_DIVISIONS, freeDelaySeconds } from "../src/engine/trackfx";
 import { KITS, kitSounds, BASS_PRESETS, synthSound } from "../src/engine/presets";
@@ -171,5 +172,59 @@ describe("randomize follows the project scale", () => {
       expect(on.length).toBeGreaterThan(0);
       for (const s of on) expect(isInScale(key, s.note)).toBe(true);
     }
+  });
+});
+
+describe("arpeggiator", () => {
+  const cfg = (patch: Partial<ArpSettings> = {}) => normalizeArp({ on: true, ...patch });
+  const run = (arp: Arpeggiator, s: ArpSettings, steps: number, from = 0) =>
+    Array.from({ length: steps }, (_, i) => arp.advance(s, from + i).map((e) => e.note)).flat();
+
+  it("orders notes by direction across octaves", () => {
+    expect(arpPool([64, 60, 67], 2)).toEqual([60, 64, 67, 72, 76, 79]);
+    const idx = (dir: ArpDirection, n: number) => Array.from({ length: n }, (_, c) => arpIndex(dir, 3, c));
+    expect(idx("up", 6)).toEqual([0, 1, 2, 0, 1, 2]);
+    expect(idx("down", 6)).toEqual([2, 1, 0, 2, 1, 0]);
+    expect(idx("updown", 8)).toEqual([0, 1, 2, 1, 0, 1, 2, 1]);
+    expect(arpIndex("random", 4, 0, () => 0.99)).toBe(3);
+  });
+  it("plays held notes on the rate and stops when released", () => {
+    const a = new Arpeggiator();
+    const s = cfg({ rate: 3 }); // 1/16: one note per step
+    expect(run(a, s, 2)).toEqual([]);
+    a.noteDown(60); a.noteDown(64);
+    expect(run(a, s, 4)).toEqual([60, 64, 60, 64]);
+    a.noteUp(60); a.noteUp(64);
+    // both were heard, so the arp goes quiet straight away
+    expect(run(a, s, 2)).toEqual([]);
+  });
+  it("lets a tap released before it was scheduled sound once", () => {
+    const a = new Arpeggiator();
+    a.noteDown(60); a.noteUp(60);
+    expect(run(a, cfg(), 3)).toEqual([60]);
+  });
+  it("fits several notes in a step at fast rates and lines slow rates up with the grid", () => {
+    const fast = new Arpeggiator();
+    fast.noteDown(60);
+    const evs = fast.advance(cfg({ rate: 5 }), 0); // 1/32: two per step
+    expect(evs.map((e) => e.offset)).toEqual([0, 0.5]);
+    const slow = new Arpeggiator();
+    slow.noteDown(60);
+    const s = cfg({ rate: 0 }); // 1/4: one note every 4 steps
+    const pos: number[] = [];
+    for (let i = 5; i < 17; i++) if (slow.advance(s, i).length) pos.push(i);
+    expect(pos).toEqual([8, 12, 16]);
+  });
+  it("keeps triplets on a drift-free grid", () => {
+    const a = new Arpeggiator();
+    a.noteDown(60);
+    const s = cfg({ rate: 2 }); // 1/8T: 3 notes per 4 steps
+    expect(run(a, s, 12).length).toBe(9);
+  });
+  it("sanitises settings", () => {
+    expect(normalizeArp(undefined)).toEqual(normalizeArp({}));
+    const n = normalizeArp({ on: true, rate: 99, dir: "x", octaves: 9, velocity: 5, gate: -1 });
+    expect(n).toMatchObject({ on: true, rate: ARP_RATES.length - 1, dir: "up", octaves: 4, velocity: 1 });
+    expect(n.gate).toBeGreaterThan(0);
   });
 });

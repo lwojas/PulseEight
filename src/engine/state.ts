@@ -1,6 +1,7 @@
 // The whole application state, and the pure functions that edit a pattern.
 // Nothing here touches audio or React.
 import { defaultSound, DRUM_TRACKS, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
+import { defaultArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { defaultScale, isChromatic, notesInRange, rootAtOrAbove, type ProjectScale } from "./scale";
 import { newDelay, newReverb, type DelaySend, type ReverbSend } from "./trackfx";
@@ -68,6 +69,8 @@ export interface AppState {
   pattern: number;
   /** The project key: shapes the synth keyboards. */
   scale: ProjectScale;
+  /** Arpeggiator settings per track (only the melodic tracks use theirs). */
+  arp: ArpSettings[];
   // performance state
   mutes: boolean[];
   solos: boolean[];
@@ -246,6 +249,7 @@ export function initialState(): AppState {
     swing: 0.5,
     pattern: 0,
     scale: defaultScale(),
+    arp: Array.from({ length: NUM_TRACKS }, defaultArp),
     mutes: new Array(NUM_TRACKS).fill(false),
     solos: new Array(NUM_TRACKS).fill(false),
     focus: BASS_TRACK,

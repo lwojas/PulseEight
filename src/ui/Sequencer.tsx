@@ -11,6 +11,7 @@ import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectSc
 import { noteName, TRACKS } from "../engine/spec";
 import { LENGTHS, PAGE } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
+import { ArpControl } from "./ArpControl";
 import { usePress } from "./controls";
 import { usePlayheadCell, usePlayheadEffect } from "./usePlayhead";
 import { useMedia, WIDE } from "./useMedia";
@@ -286,6 +287,22 @@ function OctaveControl({ track }: { track: number }) {
   );
 }
 
+/** What a key does when pressed. With the arp on and no step selected, keys are *held* (pointer down
+ * to up) and feed the arp; otherwise a press is a single tap, as before. */
+function useKeyPress(track: number, step: number, press: (n: number) => void) {
+  const arpOn = useStore((s) => s.arp[track].on);
+  return (n: number) => {
+    if (!arpOn || step >= 0) return { onClick: () => press(n) };
+    const down = () => controller.arpDown(track, n);
+    const up = () => controller.arpUp(track, n);
+    return {
+      onPointerDown: (e: { button: number }) => e.button === 0 && down(),
+      onPointerUp: up, onPointerLeave: up, onPointerCancel: up,
+      onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+    };
+  };
+}
+
 /** A piano key; the keyhl module lights it directly (no re-render) when its note sounds. */
 function PianoKey({ track, note, ...rest }: { track: number; note: number } & ButtonHTMLAttributes<HTMLButtonElement> & { "data-on"?: boolean; "data-c"?: boolean }) {
   const off = useRef<(() => void) | undefined>(undefined);
@@ -332,6 +349,7 @@ function Keys({ track, step }: { track: number; step: number }) {
     else controller.audition(track, n);
   };
   const label = (n: number) => noteName(n + 12 * oct);
+  const keyProps = useKeyPress(track, step, press);
 
   return (
     <div className="keys-wrap">
@@ -340,7 +358,7 @@ function Keys({ track, step }: { track: number; step: number }) {
         {whites.map((n, i) => (
           <PianoKey
             key={n} track={track} note={n} className="key white" data-on={note === n} data-c={n % 12 === 0}
-            style={{ gridColumn: i + 1 }} aria-label={label(n)} onClick={() => press(n)}
+            style={{ gridColumn: i + 1 }} aria-label={label(n)} {...keyProps(n)}
           >
             {n % 12 === 0 || !wide ? label(n) : ""}
           </PianoKey>
@@ -349,7 +367,7 @@ function Keys({ track, step }: { track: number; step: number }) {
           <PianoKey
             key={n} track={track} note={n} className="key black" data-on={note === n}
             style={{ left: `${((i + 1) / W) * 100}%`, width: `${(0.6 / W) * 100}%` }}
-            aria-label={label(n)} onClick={() => press(n)}
+            aria-label={label(n)} {...keyProps(n)}
           />
         ))}
       </div>
@@ -385,6 +403,7 @@ function ScaleKeys({ track, step, scale }: { track: number; step: number; scale:
     if (step >= 0) setStepNote(track, step, n);
     else controller.audition(track, n);
   };
+  const keyProps = useKeyPress(track, step, press);
 
   return (
     <div className="keys-wrap">
@@ -393,7 +412,7 @@ function ScaleKeys({ track, step, scale }: { track: number; step: number; scale:
         {keys.map((n) => (
           <PianoKey
             key={n} track={track} note={n} className="key white" data-on={note === n} data-c={(n - scale.root) % 12 === 0}
-            aria-label={noteName(n + 12 * oct)} onClick={() => press(n)}
+            aria-label={noteName(n + 12 * oct)} {...keyProps(n)}
           >
             {noteName(n + 12 * oct)}
           </PianoKey>
@@ -430,7 +449,10 @@ function StepEditor({ track }: { track: number }) {
         ) : (
           <span className="silk">PLAY THE KEYS · TAP A STEP TO ENTER NOTES</span>
         )}
-        <OctaveControl track={track} />
+        <span className="step-editor-tools">
+          <ArpControl track={track} />
+          <OctaveControl track={track} />
+        </span>
       </div>
       {isChromatic(scale)
         ? <Keys track={track} step={selStep} />

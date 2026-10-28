@@ -1,5 +1,6 @@
 // User-level edits. UI components call these; they edit the store and (for immediate feedback)
 // audition sounds. No React here.
+import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { TRACKS } from "./spec";
@@ -106,6 +107,11 @@ export function setReverb(track: number, patch: Partial<ReverbSend>): void {
 
 export function setOctave(track: number, oct: number): void {
   editPattern((p) => { p.tracks[track].oct = Math.max(-2, Math.min(2, oct)); });
+}
+
+/** Edit one track's arpeggiator settings (kept per track, saved with the project). */
+export function setArp(track: number, patch: Partial<ArpSettings>): void {
+  setState((s) => ({ arp: s.arp.map((a, i) => (i === track ? normalizeArp({ ...a, ...patch }) : a)) }));
 }
 
 export function toggleMute(track: number): void {
