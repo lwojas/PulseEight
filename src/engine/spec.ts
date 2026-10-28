@@ -147,7 +147,7 @@ export const TRACKS: readonly TrackSpec[] = [
       pow("envmod", "ENV MOD", BassParam.EnvMod, 0, 1, 0.6, 1.7),
       exp("decay", "DECAY", BassParam.Decay, 0.06, 1.1, 0.3, "s"),
       lin("reso", "RES", BassParam.Resonance, 0.1, 0.95, 0.65),
-      lin("bite", "BITE", BassParam.Bite, 0, 0.75, 0.5),
+      lin("bite", "BITE", BassParam.Bite, 0, 1, 0.5),
       lin("wave", "WAVE", BassParam.Body, 0, 1, 0.55),
     ],
     // The filter envelope shape is fixed inside webdsp (instant attack, exponential fall); the
