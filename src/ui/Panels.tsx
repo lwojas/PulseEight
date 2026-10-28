@@ -66,6 +66,8 @@ export function SoundPanel() {
   const track = useStore((s) => s.focus);
   const sound = useStore((s) => s.patterns[s.pattern].tracks[track].sound);
   const playing = useStore((s) => s.playing);
+  const dlySend = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
+  const revSend = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
   const spec = TRACKS[track];
   const defaults = defaultSound(spec);
   return (
@@ -90,6 +92,19 @@ export function SoundPanel() {
             onTouch={() => { if (!playing) controller.audition(track); }}
           />
         ))}
+      </div>
+      <div className="sends" role="group" aria-label="FX sends">
+        <span className="silk">SENDS</span>
+        <div className="knobs sends-knobs">
+          <Knob
+            label="DLY" value={dlySend} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)"
+            readout={`${Math.round(dlySend * 100)}%`} onChange={(v) => setDelay(track, { send: v })}
+          />
+          <Knob
+            label="REV" value={revSend} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)"
+            readout={`${Math.round(revSend * 100)}%`} onChange={(v) => setReverb(track, { send: v })}
+          />
+        </div>
       </div>
     </div>
   );
@@ -127,7 +142,7 @@ export function MixerPanel() {
   );
 }
 
-// --- track FX: delay + reverb sends (mixing) ------------------------------------------------------
+// --- track FX: delay time/mode + reverb size (the sends live in the sound panel) ------------------------------------------------------
 
 export function TrackFxPanel() {
   const track = useStore((s) => s.focus);
@@ -141,7 +156,7 @@ export function TrackFxPanel() {
       <header className="panel-title">
         <span className="dot" />
         <h2>TRACK FX</h2>
-        <span className="silk">{spec.name} · SENDS</span>
+        <span className="silk">{spec.name} · DELAY / REVERB</span>
       </header>
       <div className="tfx-groups">
         <section className="tfx-group" aria-label="Delay send">
@@ -155,11 +170,7 @@ export function TrackFxPanel() {
               ))}
             </div>
           </div>
-          <div className="knobs tfx-knobs" style={{ "--n": 2 } as CSSProperties}>
-            <Knob
-              label="SEND" value={dly.send} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)"
-              readout={`${Math.round(dly.send * 100)}%`} onChange={(v) => setDelay(track, { send: v })}
-            />
+          <div className="knobs tfx-knobs" style={{ "--n": 1 } as CSSProperties}>
             {beat ? (
               <Knob
                 key="beat" label="TIME" value={dly.div / (divN - 1)} def={1 / (divN - 1)} steps={divN} accent="var(--fx)"
@@ -175,11 +186,7 @@ export function TrackFxPanel() {
         </section>
         <section className="tfx-group" aria-label="Reverb send">
           <div className="tfx-head"><span className="silk">REVERB</span></div>
-          <div className="knobs tfx-knobs" style={{ "--n": 2 } as CSSProperties}>
-            <Knob
-              label="SEND" value={rev.send} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)"
-              readout={`${Math.round(rev.send * 100)}%`} onChange={(v) => setReverb(track, { send: v })}
-            />
+          <div className="knobs tfx-knobs" style={{ "--n": 1 } as CSSProperties}>
             <Knob
               label="SIZE" value={rev.size} def={0.5} accent="var(--fx)"
               readout={`${Math.round(rev.size * 100)}%`} onChange={(v) => setReverb(track, { size: v })}
