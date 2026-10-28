@@ -255,7 +255,9 @@ export class Groovebox {
     for (const key of MANGLER_KEYS) {
       if (this.manglerCache[key] === values[key]) continue;
       this.manglerCache[key] = values[key];
-      this.scheduled[key] = values[key];
+      // An immediate write says nothing about where the already-queued events will leave the chain, so
+      // forget the scheduled value: the next scheduled step must send this key rather than assume it.
+      delete this.scheduled[key];
       const { fx, param } = MANGLER_PARAMS[key];
       const range = this.effectRange.get(param);
       const v = range ? Math.min(range.max, Math.max(range.min, values[key])) : values[key];
