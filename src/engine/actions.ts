@@ -118,6 +118,15 @@ export function toggleMute(track: number): void {
   setState((s) => ({ mutes: s.mutes.map((m, i) => (i === track ? !m : m)) }));
 }
 
+/** Set (not toggle) mute and solo: what an external control sends. */
+export function setMute(track: number, on: boolean): void {
+  setState((s) => (s.mutes[track] === on ? {} : { mutes: s.mutes.map((m, i) => (i === track ? on : m)) }));
+}
+
+export function setSolo(track: number, on: boolean): void {
+  setState((s) => (s.solos[track] === on ? {} : { solos: s.solos.map((m, i) => (i === track ? on : m)) }));
+}
+
 export function toggleSolo(track: number): void {
   setState((s) => ({ solos: s.solos.map((m, i) => (i === track ? !m : m)) }));
 }

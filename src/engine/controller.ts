@@ -9,6 +9,8 @@ import { NUM_TRACKS, TRACKS } from "./spec";
 import { MAX_CHAIN, type Pattern } from "./state";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
+import { locateSong } from "./song";
+import { withSource } from "./source";
 import { startTicker } from "./ticker";
 
 const LOOKAHEAD = 0.12; // seconds of audio scheduled ahead
@@ -33,6 +35,8 @@ class Controller {
   // scheduler cursor
   private gridTime = 0;
   private step = 0;
+  /** Steps scheduled since the transport started (plus the song step it started at): never wraps. */
+  private stepCount = 0;
   private schedPattern = 0;
   private chainPos = 0;
   private events: StepEvent[] = [];
@@ -86,16 +90,20 @@ class Controller {
 
   // --- transport -----------------------------------------------------------------------------
 
-  play(): void {
+  /** Start the transport. `from` (an external clock) starts at a song step with step 0 of that position
+   * sounding at audio time `time`; without it, from the top, a moment from now. */
+  play(from?: { songStep: number; time: number }): void {
     const gb = this.gb;
     const st = getState();
     if (!gb || st.playing) return;
-    let idx = st.pattern;
-    this.chainPos = 0;
-    if (st.chainOn && st.chain.length) idx = st.chain[0];
+    const at = from ? locateSong(st, from.songStep) : { pattern: st.pattern, chainPos: 0, step: 0 };
+    let idx = at.pattern;
+    if (!from && st.chainOn && st.chain.length) idx = st.chain[0];
+    this.chainPos = at.chainPos;
     this.schedPattern = idx;
-    this.step = 0;
-    this.gridTime = gb.now + 0.06;
+    this.step = at.step;
+    this.stepCount = from?.songStep ?? 0;
+    this.gridTime = from ? Math.max(from.time, gb.now + 0.03) : gb.now + 0.06;
     this.events = [];
     this.punchScheduled = -1;
     this.realignArps();
@@ -104,8 +112,24 @@ class Controller {
     gb.setTempo(st.bpm, this.gridTime);
     this.audibleStep = -1;
     setAudible(-1, -1);
-    setState({ playing: true, playPattern: idx, pattern: idx, cue: null, chainPos: 0 });
+    setState({ playing: true, playPattern: idx, pattern: idx, cue: null, chainPos: this.chainPos });
     this.syncNow();
+  }
+
+  /** Audio time now, or null before the engine is up. */
+  get audioNow(): number | null {
+    return this.gb ? this.gb.now : null;
+  }
+
+  /** External clock: nudge the step grid towards where the clock says song step `songStep` begins
+   * (`time`). Only the next steps to be scheduled move; a fraction per call, so clock jitter averages out. */
+  followPhase(songStep: number, time: number): void {
+    const st = getState();
+    if (!st.playing) return;
+    const ideal = time + (this.stepCount - songStep) * (15 / st.bpm);
+    const err = ideal - this.gridTime;
+    const limit = (15 / st.bpm) * 0.5;
+    this.gridTime += Math.max(-limit, Math.min(limit, err)) * 0.25;
   }
 
   stop(): void {
@@ -226,6 +250,12 @@ class Controller {
       }
       return;
     }
+    this.cuePattern(i);
+  }
+
+  /** Go to pattern `i`: cued for the next loop while playing, at once when stopped. */
+  cuePattern(i: number): void {
+    const st = getState();
     if (st.playing) {
       setState({ cue: i === st.playPattern ? null : i });
     } else {
@@ -444,6 +474,7 @@ class Controller {
 
     this.gridTime += stepDur;
     this.step++;
+    this.stepCount++;
     if (this.step >= len) {
       this.step = 0;
       this.advancePattern(this.gridTime);
@@ -502,7 +533,8 @@ class Controller {
     if (st.pattern !== latest.pattern) patch.pattern = latest.pattern;
     if (st.cue !== null && st.cue === latest.pattern) patch.cue = null;
     if (st.follow && st.page !== Math.floor(latest.step / 16)) patch.page = Math.floor(latest.step / 16);
-    if (Object.keys(patch).length) setState(patch);
+    // the scheduler, not a person, moved these: say so, so MIDI output can follow the pattern change
+    if (Object.keys(patch).length) withSource("internal", () => setState(patch));
   }
 }
 

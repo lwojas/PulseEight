@@ -1,12 +1,13 @@
 // Top-right project controls: SAVE and LOAD (named projects kept in the browser) and a menu with
 // file IMPORT / EXPORT.
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { controller } from "../engine/controller";
 import { deleteSave, exportProject, importProject, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
 import { refreshKeys } from "../engine/keyhl";
 import { ROOT_NAMES, SCALES, SCALE_PRESETS, withPreset, withRoot, withScale } from "../engine/scale";
 import { saveKeyHighlight } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
+import { midi, ports } from "../midi/setup";
 import { Modal } from "./Modal";
 
 const icon = (d: ReactNode) => (
@@ -19,6 +20,50 @@ const MENU_ICON = icon(<path d="M2.5 4h11M2.5 8h11M2.5 12h11" />);
 type Dialog = "save" | "load" | "menu" | "blocked" | null;
 
 const stamp = (t: number) => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+const MIDI_STATUS = {
+  off: "Off", starting: "Starting…", ready: "Ready", unsupported: "This browser has no Web MIDI", denied: "MIDI access was refused",
+} as const;
+
+function MidiGroup() {
+  const snap = useSyncExternalStore(midi.subscribe, ports.snapshot);
+  const settings = useSyncExternalStore(midi.subscribe, midi.settings);
+  const { enabled, clock, input, output } = settings;
+  return (
+    <section className="menu-group" aria-label="MIDI">
+      <span className="silk">MIDI</span>
+      <button type="button" className="btn" data-active={enabled} role="switch" aria-checked={enabled} onClick={() => midi.update({ enabled: !enabled })}>
+        MIDI: {enabled ? "ON" : "OFF"}
+      </button>
+      {enabled && (
+        <>
+          <p className="modal-note">{MIDI_STATUS[snap.status]}</p>
+          <div className="menu-row">
+            <div className="menu-field">
+              <label className="silk" htmlFor="midi-in">INPUT</label>
+              <select id="midi-in" className="modal-input modal-select" value={input} onChange={(e) => midi.update({ input: e.target.value })}>
+                <option value="all">All inputs</option>
+                {snap.inputs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="menu-field">
+              <label className="silk" htmlFor="midi-out">OUTPUT</label>
+              <select id="midi-out" className="modal-input modal-select" value={output} onChange={(e) => midi.update({ output: e.target.value })}>
+                <option value="all">All outputs</option>
+                <option value="none">None</option>
+                {snap.outputs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <button type="button" className="btn" data-active={clock} role="switch" aria-checked={clock} onClick={() => midi.update({ clock: !clock })}>
+            FOLLOW MIDI CLOCK: {clock ? "ON" : "OFF"}
+          </button>
+          <p className="modal-note">Controllers, program changes and clock use the map in <code>src/midi/mapping.ts</code>. Following the clock takes tempo, start/stop and song position from the sender.</p>
+        </>
+      )}
+    </section>
+  );
+}
 
 export function ProjectMenu() {
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -141,6 +186,7 @@ export function ProjectMenu() {
             <span className="silk">DISPLAY</span>
             <button type="button" className="btn" data-active={keyHl} role="switch" aria-checked={keyHl} onClick={toggleKeyHl}>KEY HIGHLIGHT: {keyHl ? "ON" : "OFF"}</button>
           </section>
+          <MidiGroup />
           <section className="menu-group" aria-label="Project file">
             <span className="silk">PROJECT FILE</span>
             <div className="menu-row">
