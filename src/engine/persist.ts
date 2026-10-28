@@ -1,7 +1,7 @@
 // Saves patterns, the chain and the transport settings to localStorage. Performance state
 // (mutes, solos, FX arming, the screen) is deliberately not saved.
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
-import { MAX_STEPS, NUM_PATTERNS, type AppState, type Pattern } from "./state";
+import { MAX_CHAIN, MAX_STEPS, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { defaultMangler } from "./mangler";
 import { newDelay, newReverb } from "./trackfx";
 import { normalizeScale, type ProjectScale } from "./scale";
@@ -11,7 +11,8 @@ const KEY = "pulse8.project.v1";
 
 interface Saved {
   projectName?: string;
-  patterns: Pattern[];
+  /** `null` stands for an untouched pattern (see `snapshot`); older saves hold only 16 entries. */
+  patterns: Array<Pattern | null>;
   chain: number[];
   chainOn: boolean;
   bpm: number;
@@ -45,19 +46,21 @@ function migrate(p: Pattern): void {
 }
 
 /** Validates and normalises a saved project (any age); null if it is not a usable project. */
-function parseProject(s: Saved): Saved | null {
-  if (!s || !Array.isArray(s.patterns) || s.patterns.length !== NUM_PATTERNS) return null;
+function parseProject(s: Saved): (Saved & { patterns: Pattern[] }) | null {
+  if (!s || !Array.isArray(s.patterns) || s.patterns.length < 1 || s.patterns.length > NUM_PATTERNS) return null;
+  // Untouched patterns are saved as null, and saves from before the bank grew to 64 are short.
+  const patterns: Pattern[] = Array.from({ length: NUM_PATTERNS }, (_, i) => s.patterns[i] ?? newPattern());
   // The bass gained a control (ENV MOD): older saves get its default sound, the rest is kept.
-  for (const p of s.patterns) {
+  for (const p of patterns) {
     const t = p?.tracks?.[BASS_TRACK];
     if (t && Array.isArray(t.sound) && t.sound.length !== TRACKS[BASS_TRACK].controls.length) t.sound = defaultSound(TRACKS[BASS_TRACK]);
   }
-  for (const p of s.patterns) migrate(p);
-  if (!s.patterns.every(valid)) return null;
+  for (const p of patterns) migrate(p);
+  if (!patterns.every(valid)) return null;
   return {
     projectName: typeof s.projectName === "string" ? s.projectName.slice(0, 40) : "",
-    patterns: s.patterns,
-    chain: Array.isArray(s.chain) ? s.chain.filter((n) => n >= 0 && n < NUM_PATTERNS) : [],
+    patterns,
+    chain: Array.isArray(s.chain) ? s.chain.filter((n) => n >= 0 && n < NUM_PATTERNS).slice(0, MAX_CHAIN) : [],
     chainOn: !!s.chainOn,
     bpm: Number.isFinite(s.bpm) ? s.bpm : 128,
     swing: Number.isFinite(s.swing) ? s.swing : 0.5,
@@ -66,9 +69,15 @@ function parseProject(s: Saved): Saved | null {
   };
 }
 
+/** 64 patterns are ~1.7 MB of JSON, so patterns still equal to a fresh one are saved as null. */
+function sparse(patterns: Pattern[]): Array<Pattern | null> {
+  const blank = JSON.stringify(newPattern());
+  return patterns.map((p) => (JSON.stringify(p) === blank ? null : p));
+}
+
 function snapshot(): Saved {
   const s = getState();
-  return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
+  return { projectName: s.projectName, patterns: sparse(s.patterns), chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
 }
 
 export function loadProject(): void {

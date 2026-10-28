@@ -5,7 +5,7 @@ import { Groovebox, type MixInput } from "./audio";
 import { manglerTarget, sweepLevel, VERB_ID, VERB_TAIL } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { NUM_TRACKS, TRACKS } from "./spec";
-import type { Pattern } from "./state";
+import { MAX_CHAIN, type Pattern } from "./state";
 import { clearLit, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { startTicker } from "./ticker";
@@ -140,7 +140,7 @@ class Controller {
   selectPattern(i: number): void {
     const st = getState();
     if (st.chainEdit) {
-      if (st.chain.length < 16) setState({ chain: [...st.chain, i] });
+      if (st.chain.length < MAX_CHAIN) setState({ chain: [...st.chain, i] });
       return;
     }
     if (st.copyArm) {

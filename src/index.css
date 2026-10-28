@@ -272,6 +272,7 @@ button.oled { cursor: pointer; text-align: left; }
 
 /* ---- patterns --------------------------------------------------------------------------------- */
 
+.ptn-panel { overflow-y: auto; }
 .patterns { flex: none; }
 .slots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
 .slot { position: relative; overflow: hidden; height: var(--slot-h); border-radius: var(--radius); background: var(--cap); border: 1px solid var(--rule); font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--silk); }
@@ -334,8 +335,6 @@ button.oled { cursor: pointer; text-align: left; }
   .patternbar .slot { height: 32px; font-size: 11px; min-width: 0; }
   .patternbar .slot-chain { display: none; }
   .patternbar .ptn-tools { margin: 0; flex: none; }
-  .patternbar .chain { flex: 1 1 0; min-width: 0; min-height: 32px; flex-wrap: nowrap; overflow: hidden; padding: 3px; }
-  .patternbar .chain-chip { flex: 0 1 30px; min-width: 20px; height: 24px; padding: 0 2px; font-size: 10px; }
   .patternbar .btn.sm { min-height: 32px; }
 
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "band band" "seq mix"; gap: var(--gap); padding: var(--gap) 12px 12px; }
@@ -495,3 +494,9 @@ button.oled { cursor: pointer; text-align: left; }
 .modal-item:hover { border-color: var(--tone); }
 .modal-backdrop[data-anchored="true"] { display: block; background: transparent; padding: 0; }
 .modal-backdrop[data-anchored="true"] .modal { position: fixed; max-width: calc(100vw - 16px); box-shadow: 0 0 0 1px #000; }
+
+/* pattern bank + chain dialog (wide screens): 64 slots as four rows of 16, then the chain box */
+.ptn-modal { width: min(760px, calc(100vw - 16px)); }
+.ptn-modal .slots { grid-template-columns: repeat(16, 1fr); gap: 3px; }
+.ptn-modal .slot { height: 34px; font-size: 11px; min-width: 0; }
+.ptn-modal .chain { max-height: 168px; overflow-y: auto; align-content: flex-start; }

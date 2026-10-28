@@ -7,8 +7,10 @@ import { newDelay, newReverb, type DelaySend, type ReverbSend } from "./trackfx"
 
 export const MAX_STEPS = 64;
 export const PAGE = 16;
-export const NUM_PATTERNS = 16;
-export const MAX_CHAIN = 16;
+export const NUM_PATTERNS = 64;
+/** The desktop pattern bar shows one bank of this many patterns at a time. */
+export const BANK_SIZE = 16;
+export const MAX_CHAIN = 64;
 export const LENGTHS = [16, 32, 48, 64] as const;
 
 export interface Step {

@@ -28,10 +28,12 @@ interface ModalProps {
   open: boolean;
   title: string;
   onClose: () => void;
+  /** Extra class on the dialog box, e.g. to widen it. */
+  className?: string;
   children: ReactNode;
 }
 
-export function Modal({ open, title, onClose, anchor, children }: ModalProps) {
+export function Modal({ open, title, onClose, anchor, className, children }: ModalProps) {
   const titleId = useId();
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<CSSProperties>();
@@ -64,7 +66,7 @@ export function Modal({ open, title, onClose, anchor, children }: ModalProps) {
   if (!open) return null;
   return createPortal(
     <div className="modal-backdrop" data-anchored={!!anchor} onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={box} style={anchor ? pos : undefined}>
+      <div className={className ? `modal ${className}` : "modal"} role="dialog" aria-modal="true" aria-labelledby={titleId} ref={box} style={anchor ? pos : undefined}>
         <div className="modal-head">
           <h2 id={titleId}>{title}</h2>
           <button type="button" className="btn sm modal-x" aria-label="Close" onClick={onClose}>✕</button>

@@ -1,5 +1,5 @@
 // Sound, mixer, FX mangler and pattern panels.
-import { type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import {
   clearChain, clearPattern, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPunchParam, setReverb,
   setSound, setSweep, toggleMute, toggleSolo,
@@ -8,10 +8,11 @@ import { controller } from "../engine/controller";
 import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
-import { DEFAULT_LEVELS } from "../engine/state";
+import { BANK_SIZE, DEFAULT_LEVELS, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
 import { BEAT_DIVISIONS, DEFAULT_DELAY_SENDS, DEFAULT_REVERB_SENDS, DELAY_MODES, formatFreeDelay } from "../engine/trackfx";
 import { setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
+import { Modal } from "./Modal";
 import { ConfirmButton } from "./Sequencer";
 
 const accentStyle = (track: number): CSSProperties => ({ "--acc": `var(${TRACKS[track].accent})` }) as CSSProperties;
@@ -316,7 +317,7 @@ function Slot({ index }: { index: number }) {
   );
 }
 
-function PatternTools() {
+function PatternTools({ chainControls = true }: { chainControls?: boolean }) {
   const chain = useStore((s) => s.chain);
   const chainOn = useStore((s) => s.chainOn);
   const chainEdit = useStore((s) => s.chainEdit);
@@ -327,14 +328,18 @@ function PatternTools() {
         {copyArm ? "TAP SLOT" : "COPY"}
       </button>
       <ConfirmButton label="CLEAR" onConfirm={clearPattern} />
-      <span className="silk tools-label">CHAIN</span>
-      <button type="button" className="btn sm" data-active={chainEdit} aria-pressed={chainEdit} onClick={() => setState({ chainEdit: !chainEdit, copyArm: false })}>
-        {chainEdit ? "DONE" : "EDIT"}
-      </button>
-      <button type="button" className="btn sm" data-active={chainOn} aria-pressed={chainOn} disabled={chain.length === 0} onClick={() => setState({ chainOn: !chainOn })}>
-        {chainOn ? "ON" : "OFF"}
-      </button>
-      <button type="button" className="btn sm" onClick={clearChain} disabled={chain.length === 0} aria-label="Clear chain">CLR</button>
+      {chainControls && (
+        <>
+          <span className="silk tools-label">CHAIN</span>
+          <button type="button" className="btn sm" data-active={chainEdit} aria-pressed={chainEdit} onClick={() => setState({ chainEdit: !chainEdit, copyArm: false })}>
+            {chainEdit ? "DONE" : "EDIT"}
+          </button>
+          <button type="button" className="btn sm" data-active={chainOn} aria-pressed={chainOn} disabled={chain.length === 0} onClick={() => setState({ chainOn: !chainOn })}>
+            {chainOn ? "ON" : "OFF"}
+          </button>
+          <button type="button" className="btn sm" onClick={clearChain} disabled={chain.length === 0} aria-label="Clear chain">CLR</button>
+        </>
+      )}
     </div>
   );
 }
@@ -346,7 +351,7 @@ function ChainChips() {
   const chainPos = useStore((s) => s.chainPos);
   const playing = useStore((s) => s.playing);
   return (
-    <div className="chain" aria-label="Chain">
+    <div className="chain" aria-label={`Chain, ${chain.length} of ${MAX_CHAIN}`}>
       {chain.length === 0 && <span className="silk">{chainEdit ? "TAP SLOTS TO ADD" : "EDIT, THEN TAP SLOTS"}</span>}
       {chain.map((p, i) => (
         <button
@@ -360,7 +365,9 @@ function ChainChips() {
   );
 }
 
-/** Pattern tab on phones. */
+const range = (from: number, n: number) => Array.from({ length: n }, (_, i) => from + i);
+
+/** Pattern tab on phones: all 64 patterns, the tools and the chain. */
 export function PatternsPanel() {
   const playing = useStore((s) => s.playing);
   return (
@@ -370,22 +377,43 @@ export function PatternsPanel() {
         <h2>PATTERNS</h2>
         <span className="silk">{playing ? "TAP TO CUE" : "TAP TO SELECT"}</span>
       </header>
-      <div className="slots">{Array.from({ length: 16 }, (_, i) => <Slot key={i} index={i} />)}</div>
+      <div className="slots">{range(0, NUM_PATTERNS).map((i) => <Slot key={i} index={i} />)}</div>
       <PatternTools />
       <ChainChips />
     </div>
   );
 }
 
-/** Pattern navigation on wide screens: a single row under the transport. */
+const CHEVRON = (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+);
+
+/** Pattern navigation on wide screens: one bank of 16 under the transport (the bank holding the
+ * current pattern), and MORE for the full 64 and the chain. */
 export function PatternBar() {
   const playing = useStore((s) => s.playing);
+  const bank = useStore((s) => Math.floor(s.pattern / BANK_SIZE));
+  const [open, setOpen] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const close = () => {
+    setOpen(false);
+    setState({ chainEdit: false, copyArm: false });
+  };
   return (
     <div className="patternbar" role="group" aria-label="Patterns" style={{ "--acc": "var(--bass)" } as CSSProperties}>
       <span className="silk bar-label">{playing ? "PTN · CUE" : "PTN"}</span>
-      <div className="slots">{Array.from({ length: 16 }, (_, i) => <Slot key={i} index={i} />)}</div>
-      <PatternTools />
-      <ChainChips />
+      <div className="slots">{range(bank * BANK_SIZE, BANK_SIZE).map((i) => <Slot key={i} index={i} />)}</div>
+      <PatternTools chainControls={false} />
+      <button ref={more} type="button" className="btn sm more" aria-haspopup="dialog" aria-expanded={open} onClick={() => (open ? close() : setOpen(true))}>
+        MORE {CHEVRON}
+      </button>
+      <Modal open={open} title="Patterns & chain" onClose={close} className="ptn-modal" anchor={{ to: more, placement: "bottom", offset: 6 }}>
+        <div className="patterns" style={{ "--acc": "var(--bass)" } as CSSProperties}>
+          <div className="slots">{range(0, NUM_PATTERNS).map((i) => <Slot key={i} index={i} />)}</div>
+          <PatternTools />
+          <ChainChips />
+        </div>
+      </Modal>
     </div>
   );
 }
