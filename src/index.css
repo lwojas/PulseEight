@@ -220,9 +220,11 @@ button.oled { cursor: pointer; text-align: left; }
 /* ---- mixer ------------------------------------------------------------------------------------ */
 
 .mixer { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.mix-row { flex: 1 1 0; min-height: 30px; max-height: 46px; display: grid; grid-template-columns: 50px 1fr 1fr 1fr 34px 34px; gap: 6px; align-items: stretch; padding: 2px 0; border-bottom: 1px solid var(--rule-2); }
+.mix-row { flex: 1 1 0; min-height: 30px; max-height: 46px; display: grid; grid-template-columns: 50px 1fr 34px; gap: 6px; align-items: stretch; padding: 2px 0; border-bottom: 1px solid var(--rule-2); }
 .mix-row[data-dim="true"] { opacity: 0.55; }
 .mix-row .btn.sm { min-height: 0; min-width: 0; padding: 0; }
+.mix-ms { display: flex; flex-direction: column; gap: 3px; }
+.mix-ms .btn.sm { flex: 1 1 0; width: 100%; }
 .mix-name { text-align: left; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--acc); }
 .slider { position: relative; border-radius: var(--radius); background: var(--cap); border: 1px solid var(--rule); overflow: hidden; touch-action: none; cursor: ew-resize; --k: var(--acc); }
 .slider-fill { position: absolute; inset: 0; background: color-mix(in srgb, var(--k) 85%, #000); transform-origin: 0 50%; will-change: transform; }
@@ -419,8 +421,8 @@ button.oled { cursor: pointer; text-align: left; }
   /* mixer column */
   .mix-panel, .app[data-tab] .mix-panel { flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .mix-panel .panel-title .silk { display: none; }
-  .mix-row { max-height: 64px; grid-template-columns: 38px repeat(3, minmax(0, 1fr)) 28px 28px; gap: 4px; }
-  .mix-row .slider-value { display: none; }
+  .mix-row { max-height: 64px; grid-template-columns: 38px minmax(0, 1fr) 28px; gap: 4px; }
+  .mix-row .slider-value { right: 5px; font-size: 9px; letter-spacing: 0.04em; }
   .mix-row .slider-label { left: 5px; font-size: 9px; letter-spacing: 0.04em; }
   .mix-name { font-size: 9px; }
   .app .ptn-panel, .app[data-tab] .ptn-panel { display: none; }

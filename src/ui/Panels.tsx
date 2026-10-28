@@ -99,18 +99,16 @@ export function SoundPanel() {
 function MixRow({ track }: { track: number }) {
   const spec = TRACKS[track];
   const level = useStore((s) => s.patterns[s.pattern].tracks[track].level);
-  const dly = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
-  const rev = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
   const mute = useStore((s) => s.mutes[track]);
   const solo = useStore((s) => s.solos[track]);
   return (
     <div className="mix-row" style={accentStyle(track)} data-dim={mute}>
       <button type="button" className="mix-name" onClick={() => setState({ focus: track, selStep: -1 })}>{spec.name}</button>
       <Slider label="LVL" value={level} def={DEFAULT_LEVELS[track]} onChange={(v) => setLevel(track, v)} />
-      <Slider label="DLY" value={dly} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)" onChange={(v) => setDelay(track, { send: v })} />
-      <Slider label="REV" value={rev} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)" onChange={(v) => setReverb(track, { send: v })} />
-      <button type="button" className="btn sm" data-active={mute} aria-pressed={mute} aria-label={`Mute ${spec.name}`} onClick={() => toggleMute(track)}>M</button>
-      <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} aria-label={`Solo ${spec.name}`} onClick={() => toggleSolo(track)}>S</button>
+      <span className="mix-ms">
+        <button type="button" className="btn sm" data-active={mute} aria-pressed={mute} aria-label={`Mute ${spec.name}`} onClick={() => toggleMute(track)}>M</button>
+        <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} aria-label={`Solo ${spec.name}`} onClick={() => toggleSolo(track)}>S</button>
+      </span>
     </div>
   );
 }
@@ -121,7 +119,7 @@ export function MixerPanel() {
       <header className="panel-title">
         <span className="dot" />
         <h2>MIXER</h2>
-        <span className="silk">LEVEL · DELAY + REVERB SENDS</span>
+        <span className="silk">LEVEL · MUTE · SOLO</span>
       </header>
       {TRACKS.map((t) => <MixRow key={t.id} track={t.id} />)}
     </div>
