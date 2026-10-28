@@ -8,7 +8,7 @@
 //   pattern.select                                                     (0-based pattern slot)
 //
 // Ids are 1-based for tracks (what a person calls them) and never change once shipped: they are the
-// external contract (see docs/MIDI.md). Volume, sends and sound belong to the pattern on screen, as
+// external contract (see docs/dev/midi.md). Volume, sends and sound belong to the pattern on screen, as
 // they do in the UI.
 //
 // A parameter's value is in its own domain, `kind` says which:
