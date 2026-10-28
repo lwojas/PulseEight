@@ -432,14 +432,14 @@ button.oled { cursor: pointer; text-align: left; }
   .mangler .knobs { grid-area: knobs; grid-template-columns: repeat(1, 76px); margin: 0; align-self: center; }
   .mangler-mid { grid-area: mid; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; }
   .mangler .knob-label { font-size: 9px; letter-spacing: 0.06em; }
-  .mangler .chip { min-height: 28px; padding: 0 6px; font-size: 10px; flex: 1 1 0; min-width: 0; }
+  .mangler .chip { min-height: 28px; padding: 0 8px; font-size: 10px; flex: 1 1 auto; min-width: 0; }
   .mangler .chips .silk { display: none; }
-  .mangler .chips { flex-wrap: nowrap; }
   .mangler .write-controls { margin: 0; }
   .mangler .write-controls .btn { min-height: 30px; padding: 0 8px; font-size: 10px; flex: 1 1 auto; }
   .mangler .hint { display: none; }
   .mangler .punch-grid { grid-area: pads; align-self: stretch; grid-auto-rows: 1fr; max-height: none; }
   .punch { min-height: 0; }
+  .punch b { letter-spacing: 0.02em; }
   .punch small { display: none; }
 
   /* mixer column */
@@ -470,16 +470,32 @@ button.oled { cursor: pointer; text-align: left; }
 }
 
 @media (min-width: 1100px) and (max-width: 1299px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 264px; }
   .sound { grid-template-columns: 130px minmax(0, 1fr) 64px; column-gap: 8px; }
   .sound .sends-knobs { grid-template-columns: 46px; --ks: 30px; gap: 2px; }
   .sends { padding: 4px 6px; }
-  .sound .knobs { --ks: 46px; }
-  .layout { grid-template-columns: minmax(0, 1fr) 264px; }
-  .mangler { column-gap: 8px; }
-  .mangler .knobs { grid-template-columns: repeat(1, 60px); }
-  .mangler .chip { padding: 0 2px; font-size: 9px; letter-spacing: 0; }
-  .mangler .write-controls .btn { padding: 0 4px; }
   .mix-row .btn.sm { min-width: 0; }
+}
+
+@media (min-width: 1100px) and (max-width: 1499px) {
+  .band { grid-template-columns: minmax(0, 1.5fr) minmax(176px, 0.55fr) minmax(0, 1.15fr); }
+  .sound .knobs { --ks: 46px; }
+  .sound .knob-label { font-size: 9px; letter-spacing: 0.04em; }
+
+  /* track FX: delay and reverb stack, each a row of heading + knob, so the BEAT toggle never overlaps */
+  .tfx-groups { flex-direction: column; gap: 6px; }
+  .tfx-group { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 2px 6px; }
+  .tfx-head { flex-direction: column; align-items: flex-start; flex-wrap: nowrap; min-height: 0; }
+  .tfx-knobs { margin: 0; width: auto; flex: none; grid-template-columns: 56px; }
+
+  /* punch FX: controls wrap in flex rows above a full-width pad grid; vertical space is plentiful here */
+  .mangler { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "knobs mid" "pads pads"; column-gap: 10px; row-gap: 8px; }
+  .mangler .knobs { grid-template-columns: repeat(1, 60px); }
+  .mangler .chips { flex-wrap: wrap; }
+  .mangler .chip { padding: 0 6px; font-size: 10px; }
+  .mangler .write-controls { flex-wrap: wrap; }
+  .mangler .write-controls .btn { padding: 0 8px; }
+  .mangler .punch-grid { grid-auto-rows: minmax(34px, 1fr); min-height: 120px; }
 }
 
 /* ---- project menu and modal ------------------------------------------------------------------- */
