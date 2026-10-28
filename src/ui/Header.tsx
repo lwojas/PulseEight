@@ -32,39 +32,39 @@ export function Header() {
   return (
     <header className="topbar">
       <div className="transport">
-      <div className="logo">PULSE<span>.8</span></div>
-      <button
-        type="button" className="btn play" data-active={playing} aria-pressed={playing}
-        onClick={() => controller.togglePlay()}
-      >
-        <span aria-hidden="true">{playing ? "■" : "▶"}</span>
-        <span className="lbl">{playing ? "STOP" : "PLAY"}</span>
-      </button>
-      <div className="oled" aria-label="Tempo">
-        <button type="button" className="oled-btn" aria-label="Slower" onClick={() => nudge(-1)}>−</button>
-        <div className="oled-main">
-          <span className="silk">BPM</span>
-          <b>{bpm.toFixed(1)}</b>
+        <div className="logo">PULSE<span>.8</span></div>
+        <button
+          type="button" className="btn play" data-active={playing} aria-pressed={playing}
+          onClick={() => controller.togglePlay()}
+        >
+          <span aria-hidden="true">{playing ? "■" : "▶"}</span>
+          <span className="lbl">{playing ? "STOP" : "PLAY"}</span>
+        </button>
+        <div className="oled" aria-label="Tempo">
+          <button type="button" className="oled-btn" aria-label="Slower" onClick={() => nudge(-1)}>−</button>
+          <div className="oled-main">
+            <span className="silk">BPM</span>
+            <b>{bpm.toFixed(1)}</b>
+          </div>
+          <button type="button" className="oled-btn" aria-label="Faster" onClick={() => nudge(1)}>+</button>
         </div>
-        <button type="button" className="oled-btn" aria-label="Faster" onClick={() => nudge(1)}>+</button>
-      </div>
-      <button type="button" className="oled ptn" aria-label="Pattern, tap to open the pattern list" onClick={() => setState({ tab: "ptn" })}>
-        <div className="oled-main">
-          <span className="silk">PTN{cue !== null ? " → " + String(cue + 1).padStart(2, "0") : ""}</span>
-          <b>{String(pattern + 1).padStart(2, "0")}</b>
+        <button type="button" className="oled ptn" aria-label="Pattern, tap to open the pattern list" onClick={() => setState({ tab: "ptn" })}>
+          <div className="oled-main">
+            <span className="silk">PTN{cue !== null ? " → " + String(cue + 1).padStart(2, "0") : ""}</span>
+            <b>{String(pattern + 1).padStart(2, "0")}</b>
+          </div>
+          <div className="oled-main">
+            <span className="silk">STEP</span>
+            <StepReadout />
+          </div>
+        </button>
+        <div className="swing" style={{ "--acc": "var(--tone)" } as CSSProperties}>
+          <Knob
+            label="SWING" value={(swing - 0.5) / 0.25} def={0} accent="var(--tone)"
+            readout={`${Math.round(swing * 100)}%`} onChange={(v) => setState({ swing: 0.5 + v * 0.25 })}
+          />
         </div>
-        <div className="oled-main">
-          <span className="silk">STEP</span>
-          <StepReadout />
-        </div>
-      </button>
-      <div className="swing" style={{ "--acc": "var(--tone)" } as CSSProperties}>
-        <Knob
-          label="SWING" value={(swing - 0.5) / 0.25} def={0} accent="var(--tone)"
-          readout={`${Math.round(swing * 100)}%`} onChange={(v) => setState({ swing: 0.5 + v * 0.25 })}
-        />
-      </div>
-      <ProjectMenu />
+        <ProjectMenu />
       </div>
       <PatternBar />
     </header>

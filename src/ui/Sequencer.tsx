@@ -1,6 +1,6 @@
 // The sequencer surface: page selector, the 8-lane overview, the focused track's big pads and the
 // step editor (accent / slide / note keys).
-import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import {
   clearTrack, holdStep, randomize, setLength, setOctave, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
@@ -295,18 +295,22 @@ function TrackHeader({ track }: { track: number }) {
 /** A destructive button that needs a second tap within two seconds. */
 export function ConfirmButton({ label, onConfirm, className = "btn sm" }: { label: string; onConfirm: () => void; className?: string }) {
   const [armed, setArmed] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  // one pending disarm at a time, and none after unmount (a stale one would cut a later arming short)
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   return (
     <button
       type="button"
       className={className}
       data-armed={armed}
       onClick={() => {
+        window.clearTimeout(timer.current);
         if (armed) {
           setArmed(false);
           onConfirm();
         } else {
           setArmed(true);
-          window.setTimeout(() => setArmed(false), 2000);
+          timer.current = window.setTimeout(() => setArmed(false), 2000);
         }
       }}
     >
@@ -361,9 +365,9 @@ function PianoKey({ track, note, ...rest }: { track: number; note: number } & Bu
   return <button ref={ref} type="button" data-track={track} {...rest} />;
 }
 
-/** Playable keys. With a step selected a key writes that step's note; without one it just plays the
- * instrument. Two octaves on wide screens, one on phones. */
-function Keys({ track, step }: { track: number; step: number }) {
+/** The window of the keyboard on screen (two octaves wide, one on phones), kept on the selected note,
+ * and what the shift arrows move between. Chromatic windows start on a C, scale windows on the root. */
+function useKeyWindow(track: number, step: number, scale: ProjectScale) {
   const spec = TRACKS[track];
   const wide = useMedia(WIDE);
   const octaves = wide ? 2 : 1;
@@ -372,20 +376,23 @@ function Keys({ track, step }: { track: number; step: number }) {
   const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
   const lo = spec.noteLo ?? 24;
   const hi = spec.noteHi ?? 59;
-  const minBase = Math.floor(lo / 12) * 12;
-  const maxBase = Math.max(minBase, Math.floor(hi / 12) * 12 - (octaves - 1) * 12);
-  const [base, setBase] = useState(() => Math.min(maxBase, Math.max(minBase, Math.floor((spec.defaultNote ?? lo) / 12) * 12)));
+  const chromatic = isChromatic(scale);
+  const floorTo = (n: number) => (chromatic ? Math.floor(n / 12) * 12 : rootAtOrBelow(scale, n));
+  const minBase = chromatic ? Math.floor(lo / 12) * 12 : rootAtOrAbove(scale, lo);
+  const maxBase = Math.max(minBase, floorTo(hi) - (octaves - 1) * 12);
+  const clamp = (n: number) => Math.min(maxBase, Math.max(minBase, n));
+  const [base, setBase] = useState(() => clamp(floorTo(spec.defaultNote ?? lo)));
   // keep the selected note on screen
   useEffect(() => {
-    if (note >= 0 && (note < base || note > base + span)) setBase(Math.min(maxBase, Math.max(minBase, Math.floor(note / 12) * 12)));
-  }, [note, base, span, minBase, maxBase]);
-  const view = Math.min(maxBase, Math.max(minBase, base));
+    if (note >= 0 && (note < base || note > base + span)) setBase(clamp(floorTo(note)));
+  }, [note, base, span, minBase, maxBase, scale]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { wide, span, note, oct, lo, hi, chromatic, view: clamp(base), minBase, maxBase, setBase };
+}
 
-  const whites: number[] = [];
-  for (let o = 0; o < octaves; o++) for (const w of WHITE_SEMIS) whites.push(view + o * 12 + w);
-  whites.push(view + span);
-  const blacks = whites.slice(0, -1).flatMap((n, i) => (BLACK_AFTER.has(i % 7) ? [{ n: n + 1, i }] : []));
-  const W = whites.length;
+/** Playable keys. With a step selected a key writes that step's note; without one it just plays the
+ * instrument. Chromatic scale: a piano. Any other: only the scale's notes, root first, as one flat row. */
+function Keys({ track, step, scale }: { track: number; step: number; scale: ProjectScale }) {
+  const { wide, span, note, oct, lo, hi, chromatic, view, minBase, maxBase, setBase } = useKeyWindow(track, step, scale);
 
   const press = (n: number) => {
     if (n < lo || n > hi) return;
@@ -396,10 +403,16 @@ function Keys({ track, step }: { track: number; step: number }) {
   const label = (n: number) => noteName(n + 12 * oct);
   const keyProps = useKeyPress(track, step, press);
 
-  return (
-    <div className="keys-wrap">
-      <button type="button" className="btn sm key-shift" aria-label="Keys down an octave" disabled={view <= minBase} onClick={() => setBase(view - 12)}>◀</button>
-      <div className="keys" role="group" aria-label="Note keys" style={{ gridTemplateColumns: `repeat(${W}, 1fr)` }}>
+  let columns: number;
+  let keys: ReactNode;
+  if (chromatic) {
+    const whites: number[] = [];
+    for (let o = 0; o < span / 12; o++) for (const w of WHITE_SEMIS) whites.push(view + o * 12 + w);
+    whites.push(view + span);
+    const blacks = whites.slice(0, -1).flatMap((n, i) => (BLACK_AFTER.has(i % 7) ? [{ n: n + 1, i }] : []));
+    columns = whites.length;
+    keys = (
+      <>
         {whites.map((n, i) => (
           <PianoKey
             key={n} track={track} note={n} className="key white" data-on={note === n} data-c={n % 12 === 0}
@@ -411,57 +424,33 @@ function Keys({ track, step }: { track: number; step: number }) {
         {blacks.map(({ n, i }) => (
           <PianoKey
             key={n} track={track} note={n} className="key black" data-on={note === n}
-            style={{ left: `${((i + 1) / W) * 100}%`, width: `${(0.6 / W) * 100}%` }}
+            style={{ left: `${((i + 1) / columns) * 100}%`, width: `${(0.6 / columns) * 100}%` }}
             aria-label={label(n)} {...keyProps(n)}
           />
         ))}
-      </div>
-      <button type="button" className="btn sm key-shift" aria-label="Keys up an octave" disabled={view >= maxBase} onClick={() => setBase(view + 12)}>▶</button>
-    </div>
-  );
-}
-
-/** Keys for a scale: only the scale's notes, starting on the root, as one flat row. The arrows still
- * move the view an octave (root to root). */
-function ScaleKeys({ track, step, scale }: { track: number; step: number; scale: ProjectScale }) {
-  const spec = TRACKS[track];
-  const wide = useMedia(WIDE);
-  const octaves = wide ? 2 : 1;
-  const span = octaves * 12;
-  const note = useStore((s) => (step >= 0 ? s.patterns[s.pattern].tracks[track].steps[step].note : -1));
-  const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
-  const lo = spec.noteLo ?? 24;
-  const hi = spec.noteHi ?? 59;
-  const minBase = rootAtOrAbove(scale, lo);
-  const maxBase = Math.max(minBase, rootAtOrBelow(scale, hi) - (octaves - 1) * 12);
-  const clamp = (n: number) => Math.min(maxBase, Math.max(minBase, n));
-  const [base, setBase] = useState(() => clamp(rootAtOrBelow(scale, spec.defaultNote ?? lo)));
-  // keep the selected note on screen
-  useEffect(() => {
-    if (note >= 0 && (note < base || note > base + span)) setBase(clamp(rootAtOrBelow(scale, note)));
-  }, [note, base, span, minBase, maxBase, scale]); // eslint-disable-line react-hooks/exhaustive-deps
-  const view = clamp(base);
-  const keys = notesInRange(scale, view, view + span).filter((n) => n >= lo && n <= hi);
-
-  const press = (n: number) => {
-    flashKey(track, n);
-    if (step >= 0) setStepNote(track, step, n);
-    else controller.audition(track, n);
-  };
-  const keyProps = useKeyPress(track, step, press);
+      </>
+    );
+  } else {
+    const inScale = notesInRange(scale, view, view + span).filter((n) => n >= lo && n <= hi);
+    columns = Math.max(1, inScale.length);
+    keys = inScale.map((n) => (
+      <PianoKey
+        key={n} track={track} note={n} className="key white" data-on={note === n} data-c={(n - scale.root) % 12 === 0}
+        aria-label={label(n)} {...keyProps(n)}
+      >
+        {label(n)}
+      </PianoKey>
+    ));
+  }
 
   return (
     <div className="keys-wrap">
       <button type="button" className="btn sm key-shift" aria-label="Keys down an octave" disabled={view <= minBase} onClick={() => setBase(view - 12)}>◀</button>
-      <div className="keys scale-keys" role="group" aria-label="Scale note keys" style={{ gridTemplateColumns: `repeat(${Math.max(1, keys.length)}, 1fr)` }}>
-        {keys.map((n) => (
-          <PianoKey
-            key={n} track={track} note={n} className="key white" data-on={note === n} data-c={(n - scale.root) % 12 === 0}
-            aria-label={noteName(n + 12 * oct)} {...keyProps(n)}
-          >
-            {noteName(n + 12 * oct)}
-          </PianoKey>
-        ))}
+      <div
+        className={chromatic ? "keys" : "keys scale-keys"} role="group" aria-label={chromatic ? "Note keys" : "Scale note keys"}
+        style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+      >
+        {keys}
       </div>
       <button type="button" className="btn sm key-shift" aria-label="Keys up an octave" disabled={view >= maxBase} onClick={() => setBase(view + 12)}>▶</button>
     </div>
@@ -496,9 +485,7 @@ function StepEditor({ track }: { track: number }) {
           <OctaveControl track={track} />
         </span>
       </div>
-      {isChromatic(scale)
-        ? <Keys track={track} step={selStep} />
-        : <ScaleKeys key={`${scale.root}-${scale.scale}`} track={track} step={selStep} scale={scale} />}
+      <Keys key={isChromatic(scale) ? "chromatic" : `${scale.root}-${scale.scale}`} track={track} step={selStep} scale={scale} />
     </div>
   );
 }

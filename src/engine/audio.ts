@@ -96,6 +96,9 @@ export class Groovebox {
     runtime.setEffectParameter(this.manglerBus, this.fx.filter, NodeParam.FilterMode, FilterMode.LowPass);
     runtime.setEffectParameter(this.manglerBus, this.fx.phaser, NodeParam.PhaserStages, 6);
 
+    for (const kind of [EffectKind.Delay, EffectKind.DubDelay, EffectKind.Reverb]) {
+      for (const p of runtime.getEffectParams(kind)) this.effectRange.set(p.id, { min: p.min, max: p.max });
+    }
     for (const spec of TRACKS) {
       const bus = runtime.createBus();
       const b = runtime.createBus();
@@ -125,9 +128,6 @@ export class Groovebox {
       const verb = runtime.addEffect(rev, EffectKind.Reverb);
       runtime.setEffectParameter(rev, verb, NodeParam.ReverbMix, 1);
       this.reverbFx.push(verb);
-      for (const kind of [EffectKind.Delay, EffectKind.DubDelay, EffectKind.Reverb]) {
-        for (const p of runtime.getEffectParams(kind)) this.effectRange.set(p.id, { min: p.min, max: p.max });
-      }
       const inst = runtime.createInstrument(spec.kind, { bus });
       this.inst.push(inst);
       runtime.setInstrumentParameter(inst, InstrumentCommonParam.Gain, spec.gainDb);

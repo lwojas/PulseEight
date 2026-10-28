@@ -10,7 +10,7 @@ import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
 import { BANK_SIZE, DEFAULT_LEVELS, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
 import { BEAT_DIVISIONS, DEFAULT_DELAY_SENDS, DEFAULT_REVERB_SENDS, DELAY_MODES, formatFreeDelay } from "../engine/trackfx";
-import { setState, useStore } from "../engine/store";
+import { getState, setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
 import { Modal } from "./Modal";
 import { ConfirmButton } from "./Sequencer";
@@ -230,8 +230,8 @@ export function PunchPad({ id, compact }: { id: number; compact?: boolean }) {
         e.currentTarget.setPointerCapture(e.pointerId);
         controller.punchDown(id);
       }}
-      onPointerUp={() => { if (held) controller.punchUp(); }}
-      onPointerCancel={() => { if (held) controller.punchUp(); }}
+      onPointerUp={() => { if (getState().punch === id) controller.punchUp(); }}
+      onPointerCancel={() => { if (getState().punch === id) controller.punchUp(); }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <b>{def.label}</b>

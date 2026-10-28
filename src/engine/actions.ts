@@ -4,7 +4,7 @@ import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { TRACKS } from "./spec";
-import { clearTrackSteps, GATES, newPattern, newTrackPattern, PAGE, randomizeTrack } from "./state";
+import { clearTrackSteps, GATES, newPattern, PAGE, randomizeTrack } from "./state";
 import { BEAT_DIVISIONS, type DelaySend, type ReverbSend } from "./trackfx";
 import { editPattern, getState, setState } from "./store";
 
@@ -208,10 +208,6 @@ export function clearPattern(): void {
   const patterns = st.patterns.slice();
   patterns[st.pattern] = newPattern();
   setState({ patterns, selStep: -1 });
-}
-
-export function resetTrackSound(track: number): void {
-  editPattern((p) => { p.tracks[track].sound = newTrackPattern(track).sound; p.tracks[track].preset = ""; });
 }
 
 // --- chain ---------------------------------------------------------------------------------------

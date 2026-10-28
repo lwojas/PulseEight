@@ -1,6 +1,6 @@
 // The whole application state, and the pure functions that edit a pattern.
 // Nothing here touches audio or React.
-import { defaultSound, DRUM_TRACKS, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
+import { defaultSound, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
 import { defaultArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { defaultScale, isChromatic, notesInRange, rootAtOrAbove, type ProjectScale } from "./scale";
@@ -269,10 +269,6 @@ export function randomizeTrack(p: Pattern, track: number, rnd: () => number = Ma
     s.slide = prev && rnd() < 0.3;
     prev = true;
   }
-}
-
-export function isDrum(track: number): boolean {
-  return DRUM_TRACKS.includes(track);
 }
 
 // --- app state -------------------------------------------------------------------------------

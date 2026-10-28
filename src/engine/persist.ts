@@ -98,14 +98,14 @@ function snapshot(): Saved {
 /** Restores the autosave slot into the store. Resolves once done; a missing or damaged slot just
  * leaves the default project, and an unreachable store also raises `storageBlocked`. */
 export async function loadProject(): Promise<void> {
+  let db: IDBDatabase;
   try {
-    await openDb();
+    db = await openDb();
   } catch {
     setState({ storageBlocked: true });
     return;
   }
   try {
-    const db = await openDb();
     const record = await idbRequest<{ id: string; project: Saved } | undefined>(db.transaction(CURRENT_STORE).objectStore(CURRENT_STORE).get(CURRENT_ID));
     const project = record ? parseProject(record.project) : null;
     if (project) setState(project);
@@ -170,11 +170,16 @@ export async function deleteSave(id: string): Promise<void> {
   }
 }
 
+/** Puts a parsed project in the store. The view resets too: the old page or selected step may not exist in it. */
+function replaceProject(project: Saved & { patterns: Pattern[] }, projectName: string): void {
+  setState({ ...project, projectName, cue: null, page: 0, selStep: -1 });
+}
+
 /** Replaces the current project. The caller stops playback first. */
 export function loadSaved(entry: SavedProject): boolean {
   const project = parseProject(structuredClone(entry.project));
   if (!project) return false;
-  setState({ ...project, projectName: entry.name, cue: null });
+  replaceProject(project, entry.name);
   return true;
 }
 
@@ -202,7 +207,7 @@ export async function importProject(file: File): Promise<string> {
   const project = parseProject((data?.project ?? data) as Saved);
   if (!project) throw new Error("That file is not a Pulse.8 project.");
   const name = (typeof data.name === "string" && data.name ? data.name : file.name.replace(/\.pulse8\.json$|\.json$/i, "")).slice(0, 40);
-  setState({ ...project, projectName: name, cue: null });
+  replaceProject(project, name);
   return name;
 }
 

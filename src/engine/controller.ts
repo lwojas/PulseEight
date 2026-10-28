@@ -19,7 +19,9 @@ const VEL_NORMAL = 0.7;
 const VEL_ACCENT = 1;
 const MELODIC = TRACKS.filter((t) => t.role !== "drum").map((t) => t.id);
 
-const heldLayers = (id: number, lvl: number): PunchLayer[] => (id ? [{ id, lvl }] : []);
+/** A step's gate length in steps (saves from before gates existed have none; so can a stale index). */
+const gateSteps = (gate: number | undefined): number => (GATES[gate ?? DEFAULT_GATE] ?? GATES[DEFAULT_GATE]).len;
+const heldLayers =(id: number, lvl: number): PunchLayer[] => (id ? [{ id, lvl }] : []);
 /** The punches the written lanes hold at `step`, in lane order. */
 const laneLayers = (pat: Pattern, step: number): PunchLayer[] =>
   pat.fxLanes.flatMap((l) => (l.fx[step] ? [{ id: l.fx[step], lvl: l.fxLvl[step] }] : []));
@@ -493,9 +495,8 @@ class Controller {
       if (st.arp[track].on) {
         // With the arp on, a step is not played directly: it is held into the arp for its gate, so
         // long gates stack into chords that the arp then walks.
-        const len = GATES[s.gate ?? DEFAULT_GATE]?.len ?? GATES[DEFAULT_GATE].len;
         const holds = this.seqHolds.get(track) ?? [];
-        holds.push({ note: s.note, end: this.stepCount + Math.max(1, Math.ceil(len)) });
+        holds.push({ note: s.note, end: this.stepCount + Math.max(1, Math.ceil(gateSteps(s.gate))) });
         this.seqHolds.set(track, holds);
         this.arps.get(track)?.noteDown(s.note);
         continue;
@@ -507,7 +508,7 @@ class Controller {
         time: t,
         velocity: s.acc ? VEL_ACCENT : VEL_NORMAL,
         pitch: s.note - (spec.rootMidi ?? 0) + 12 * tp.oct,
-        duration: holdsIntoNext ? nextStart - t + 0.015 : stepDur * (GATES[s.gate ?? DEFAULT_GATE]?.len ?? GATES[DEFAULT_GATE].len),
+        duration: holdsIntoNext ? nextStart - t + 0.015 : stepDur * gateSteps(s.gate),
         tie: s.slide && prev.on,
       });
     }

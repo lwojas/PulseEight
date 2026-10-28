@@ -56,5 +56,5 @@ export function flashKey(track: number, note: number, ms = 180): void {
 export function refreshKeys(): void {
   const on = getState().keyHighlight;
   for (const [t, notes] of lit) for (const n of notes) set(t, n, on);
-  if (!on) for (const [k] of keys) for (const el of keys.get(k)!) el.removeAttribute("data-hl");
+  if (!on) for (const els of keys.values()) for (const el of els) el.removeAttribute("data-hl");
 }

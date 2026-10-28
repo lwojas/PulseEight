@@ -53,7 +53,6 @@ button:disabled { opacity: 0.4; cursor: default; }
 h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
 :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .silk { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--silk); }
-.grow { margin-left: auto; }
 
 /* ---- shell: one fixed screen ------------------------------------------------------------------ */
 
@@ -203,7 +202,6 @@ button.oled { cursor: pointer; text-align: left; }
 .track-btns { display: flex; align-items: center; gap: 4px; flex: none; }
 .step-gate { display: inline-flex; align-items: center; gap: 3px; margin-right: 4px; }
 .step-gate .btn.sm { min-width: 38px; }
-.step-gate .btn:disabled { opacity: 0.4; }
 .track-btns .btn.sm { min-width: 34px; padding: 0 6px; min-height: 32px; }
 
 .step-editor { flex: none; margin-top: var(--gap); padding: 6px 8px; background: #0d0e11; border: 1px solid var(--rule-2); border-radius: var(--radius); }
@@ -347,7 +345,7 @@ button.oled { cursor: pointer; text-align: left; }
 @media (min-width: 1100px) {
   :root { --gap: 8px; }
   .app[data-tab="fx"] .layout { overflow: visible; }
-  .tabs, .punchbar, .ptn-panel, .phone-only, .app[data-tab] .ptn-panel { display: none; }
+  .tabs, .punchbar, .phone-only { display: none; }
   .topbar { padding-left: 4px; padding-right: 4px; }
   .transport { padding: 8px 12px; gap: 8px; }
   .logo { margin-right: 20px; font-size: 20px; }
@@ -399,7 +397,6 @@ button.oled { cursor: pointer; text-align: left; }
   .stage[data-drum="true"] .pad-tags i { font-size: 9px; line-height: 12px; padding: 0 4px; }
   .pad-num { font-size: 10px; }
   .pad-main { font-size: 15px; }
-  .pad-tag { font-size: 8px; }
   .fx-lane-cells { gap: 8px; max-height: none; }
   .fx-lane-cells > .fx-cell:nth-child(8n+4):not(:nth-child(8n)) { margin-right: 6px; }
   .fx-cell-name { font-size: 13px; }
@@ -541,7 +538,6 @@ button.oled { cursor: pointer; text-align: left; }
 .modal-backdrop[data-anchored="true"] { display: block; background: transparent; padding: 0; }
 .modal-backdrop[data-anchored="true"] .modal { position: fixed; max-width: calc(100vw - 16px); box-shadow: 0 0 0 1px #000; }
 
-/* pattern bank + chain dialog (wide screens): 64 slots as four rows of 16, then the chain box */
 .arp-modal { width: min(340px, 100%); }
 .arp-form { display: flex; flex-direction: column; gap: 10px; }
 .arp-power { min-height: 36px; }
@@ -549,6 +545,7 @@ button.oled { cursor: pointer; text-align: left; }
 .arp-group { display: flex; flex-direction: column; gap: 4px; }
 .arp-group .chip { min-height: 30px; flex: 1 1 0; padding: 0 6px; }
 .arp-knobs { margin-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* pattern bank + chain dialog (wide screens): 64 slots as four rows of 16, then the chain box */
 .ptn-modal { width: min(760px, calc(100vw - 16px)); }
 .ptn-modal .slots { grid-template-columns: repeat(16, 1fr); gap: 3px; }
 .ptn-modal .slot { height: 34px; font-size: 11px; min-width: 0; }

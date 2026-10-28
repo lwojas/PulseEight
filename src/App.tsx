@@ -42,7 +42,7 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest("input, textarea")) return;
+      if (target.closest("input, textarea, select")) return;
       if (e.code === "Space" && target.tagName !== "BUTTON") {
         e.preventDefault();
         controller.togglePlay();
