@@ -26,7 +26,9 @@ export interface ControlSpec {
   /** Sweet-spot range in engine units. */
   lo: number;
   hi: number;
-  curve: "lin" | "exp";
+  curve: "lin" | "exp" | "pow";
+  /** `pow` only: value = lo + (hi - lo) * n^gamma. gamma > 1 spends more travel on low values. */
+  gamma?: number;
   unit: Unit;
   /** Default in engine units. */
   def: number;
@@ -64,6 +66,10 @@ const lin = (key: string, label: string, param: number, lo: number, hi: number, 
 });
 const exp = (key: string, label: string, param: number, lo: number, hi: number, def: number, unit: Unit): ControlSpec => ({
   key, label, param, lo, hi, curve: "exp", unit, def,
+});
+
+const pow = (key: string, label: string, param: number, lo: number, hi: number, def: number, gamma: number, unit: Unit = "%"): ControlSpec => ({
+  key, label, param, lo, hi, curve: "pow", gamma, unit, def,
 });
 
 export const FM_COLORS = ["SUB", "FULL", "HOLLOW", "THIRDS", "THIN", "FIFTHS", "METAL", "BELL"] as const;
@@ -134,11 +140,14 @@ export const TRACKS: readonly TrackSpec[] = [
   {
     id: 6, name: "ACID", short: "ACD", engine: "ACID BASS", role: "bass", kind: InstrumentKind.Bass, accent: "--bass",
     controls: [
-      exp("cutoff", "FILTER", BassParam.Cutoff, 60, 2500, 250, "Hz"),
-      lin("envmod", "ENV MOD", BassParam.EnvMod, 0, 1, 0.6),
-      exp("decay", "DECAY", BassParam.Decay, 0.1, 0.9, 0.3, "s"),
-      lin("reso", "RES", BassParam.Resonance, 0.1, 1, 0.65),
-      lin("bite", "BITE", BassParam.Bite, 0, 1, 0.5),
+      // Ranges set from offline renders of the unchanged webdsp bass (see git log): above ~1 kHz the
+      // filter adds nothing at bass pitches, ENV MOD saturates by ~0.5 on low notes, BITE past
+      // ~0.75 trades onset brightness and body level for onset loudness, DECAY below 0.1 s is shorter than needed.
+      exp("cutoff", "FILTER", BassParam.Cutoff, 90, 1000, 250, "Hz"),
+      pow("envmod", "ENV MOD", BassParam.EnvMod, 0, 1, 0.6, 1.7),
+      exp("decay", "DECAY", BassParam.Decay, 0.06, 1.1, 0.3, "s"),
+      lin("reso", "RES", BassParam.Resonance, 0.1, 0.95, 0.65),
+      lin("bite", "BITE", BassParam.Bite, 0, 0.75, 0.5),
       lin("wave", "WAVE", BassParam.Body, 0, 1, 0.55),
     ],
     // The filter envelope shape is fixed inside webdsp (instant attack, exponential fall); the
@@ -178,13 +187,16 @@ const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
 export function normToUnits(c: ControlSpec, n: number): number {
   n = clamp01(n);
   if (c.steps) return Math.round(n * (c.steps.length - 1));
-  return c.curve === "exp" ? c.lo * Math.pow(c.hi / c.lo, n) : c.lo + n * (c.hi - c.lo);
+  if (c.curve === "exp") return c.lo * Math.pow(c.hi / c.lo, n);
+  if (c.curve === "pow") return c.lo + (c.hi - c.lo) * Math.pow(n, c.gamma ?? 1);
+  return c.lo + n * (c.hi - c.lo);
 }
 
 export function unitsToNorm(c: ControlSpec, v: number): number {
   if (c.steps) return c.steps.length > 1 ? clamp01(v / (c.steps.length - 1)) : 0;
-  const n = c.curve === "exp" ? Math.log(v / c.lo) / Math.log(c.hi / c.lo) : (v - c.lo) / (c.hi - c.lo);
-  return clamp01(n);
+  if (c.curve === "exp") return clamp01(Math.log(v / c.lo) / Math.log(c.hi / c.lo));
+  const lin = clamp01((v - c.lo) / (c.hi - c.lo));
+  return c.curve === "pow" ? Math.pow(lin, 1 / (c.gamma ?? 1)) : lin;
 }
 
 export function defaultSound(track: TrackSpec): number[] {
