@@ -7,6 +7,7 @@ import {
 import { controller } from "../engine/controller";
 import { flashKey, registerKey } from "../engine/keyhl";
 import { PUNCHES } from "../engine/mangler";
+import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
 import { noteName, TRACKS } from "../engine/spec";
 import { LENGTHS, PAGE } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
@@ -357,11 +358,58 @@ function Keys({ track, step }: { track: number; step: number }) {
   );
 }
 
+/** Keys for a scale: only the scale's notes, starting on the root, as one flat row. The arrows still
+ * move the view an octave (root to root). */
+function ScaleKeys({ track, step, scale }: { track: number; step: number; scale: ProjectScale }) {
+  const spec = TRACKS[track];
+  const wide = useMedia(WIDE);
+  const octaves = wide ? 2 : 1;
+  const span = octaves * 12;
+  const note = useStore((s) => (step >= 0 ? s.patterns[s.pattern].tracks[track].steps[step].note : -1));
+  const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
+  const lo = spec.noteLo ?? 24;
+  const hi = spec.noteHi ?? 59;
+  const minBase = rootAtOrAbove(scale, lo);
+  const maxBase = Math.max(minBase, rootAtOrBelow(scale, hi) - (octaves - 1) * 12);
+  const clamp = (n: number) => Math.min(maxBase, Math.max(minBase, n));
+  const [base, setBase] = useState(() => clamp(rootAtOrBelow(scale, spec.defaultNote ?? lo)));
+  // keep the selected note on screen
+  useEffect(() => {
+    if (note >= 0 && (note < base || note > base + span)) setBase(clamp(rootAtOrBelow(scale, note)));
+  }, [note, base, span, minBase, maxBase, scale]); // eslint-disable-line react-hooks/exhaustive-deps
+  const view = clamp(base);
+  const keys = notesInRange(scale, view, view + span).filter((n) => n >= lo && n <= hi);
+
+  const press = (n: number) => {
+    flashKey(track, n);
+    if (step >= 0) setStepNote(track, step, n);
+    else controller.audition(track, n);
+  };
+
+  return (
+    <div className="keys-wrap">
+      <button type="button" className="btn sm key-shift" aria-label="Keys down an octave" disabled={view <= minBase} onClick={() => setBase(view - 12)}>◀</button>
+      <div className="keys scale-keys" role="group" aria-label="Scale note keys" style={{ gridTemplateColumns: `repeat(${Math.max(1, keys.length)}, 1fr)` }}>
+        {keys.map((n) => (
+          <PianoKey
+            key={n} track={track} note={n} className="key white" data-on={note === n} data-c={(n - scale.root) % 12 === 0}
+            aria-label={noteName(n + 12 * oct)} onClick={() => press(n)}
+          >
+            {noteName(n + 12 * oct)}
+          </PianoKey>
+        ))}
+      </div>
+      <button type="button" className="btn sm key-shift" aria-label="Keys up an octave" disabled={view >= maxBase} onClick={() => setBase(view + 12)}>▶</button>
+    </div>
+  );
+}
+
 function StepEditor({ track }: { track: number }) {
   const spec = TRACKS[track];
   const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
   const step = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
   const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
+  const scale = useStore((s) => s.scale);
   if (spec.role === "drum") {
     return (
       <div className="step-editor hint" style={accentStyle(track)}>
@@ -384,7 +432,9 @@ function StepEditor({ track }: { track: number }) {
         )}
         <OctaveControl track={track} />
       </div>
-      <Keys track={track} step={selStep} />
+      {isChromatic(scale)
+        ? <Keys track={track} step={selStep} />
+        : <ScaleKeys key={`${scale.root}-${scale.scale}`} track={track} step={selStep} scale={scale} />}
     </div>
   );
 }

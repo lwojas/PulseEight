@@ -4,6 +4,7 @@ import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { MAX_STEPS, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { defaultMangler } from "./mangler";
 import { newDelay, newReverb } from "./trackfx";
+import { normalizeScale, type ProjectScale } from "./scale";
 import { getState, observe, setState } from "./store";
 
 const KEY = "pulse8.project.v1";
@@ -16,6 +17,8 @@ interface Saved {
   bpm: number;
   swing: number;
   pattern: number;
+  /** Absent in saves from before scales existed. */
+  scale?: ProjectScale;
 }
 
 function valid(p: unknown): p is Pattern {
@@ -59,12 +62,13 @@ function parseProject(s: Saved): Saved | null {
     bpm: Number.isFinite(s.bpm) ? s.bpm : 128,
     swing: Number.isFinite(s.swing) ? s.swing : 0.5,
     pattern: s.pattern >= 0 && s.pattern < NUM_PATTERNS ? s.pattern : 0,
+    scale: normalizeScale(s.scale),
   };
 }
 
 function snapshot(): Saved {
   const s = getState();
-  return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern };
+  return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
 }
 
 export function loadProject(): void {
@@ -167,7 +171,7 @@ export async function importProject(file: File): Promise<string> {
 
 export function autosave(): void {
   let timer: number | undefined;
-  const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName];
+  const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName, s.scale];
   observe((next, prev) => {
     const a = persisted(next);
     const b = persisted(prev);

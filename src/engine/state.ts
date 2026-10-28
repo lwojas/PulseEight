@@ -2,6 +2,7 @@
 // Nothing here touches audio or React.
 import { defaultSound, DRUM_TRACKS, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
 import { defaultMangler } from "./mangler";
+import { defaultScale, type ProjectScale } from "./scale";
 import { newDelay, newReverb, type DelaySend, type ReverbSend } from "./trackfx";
 
 export const MAX_STEPS = 64;
@@ -63,6 +64,8 @@ export interface AppState {
   bpm: number;
   swing: number;
   pattern: number;
+  /** The project key: shapes the synth keyboards. */
+  scale: ProjectScale;
   // performance state
   mutes: boolean[];
   solos: boolean[];
@@ -230,6 +233,7 @@ export function initialState(): AppState {
     bpm: 128,
     swing: 0.5,
     pattern: 0,
+    scale: defaultScale(),
     mutes: new Array(NUM_TRACKS).fill(false),
     solos: new Array(NUM_TRACKS).fill(false),
     focus: BASS_TRACK,

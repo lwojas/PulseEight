@@ -3,6 +3,7 @@ import { baseValues, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/ma
 import { BEAT_DIVISIONS, freeDelaySeconds } from "../src/engine/trackfx";
 import { KITS, kitSounds, BASS_PRESETS, synthSound } from "../src/engine/presets";
 import { defaultSound, normToUnits, TRACKS, unitsToNorm, noteName } from "../src/engine/spec";
+import { defaultScale, isChromatic, normalizeScale, notesInRange, rootAtOrAbove, rootAtOrBelow, SCALE_PRESETS, SCALES, withPreset, withRoot } from "../src/engine/scale";
 import { demoPattern, newPattern, randomizeTrack } from "../src/engine/state";
 
 describe("control mapping", () => {
@@ -133,5 +134,29 @@ describe("patterns", () => {
     const d = demoPattern();
     expect(d.tracks[0].steps.filter((s) => s.on).length).toBe(4);
     expect(d.tracks[6].steps.some((s) => s.slide)).toBe(true);
+  });
+});
+
+describe("scales", () => {
+  it("lists in-scale notes from the root upward", () => {
+    const dMinor = { root: 2, scale: "minor", preset: "" };
+    expect(notesInRange(dMinor, 38, 50).map((n) => n % 12)).toEqual([2, 4, 5, 7, 9, 10, 0, 2]);
+    expect(rootAtOrAbove(dMinor, 36)).toBe(38);
+    expect(rootAtOrBelow(dMinor, 49)).toBe(38);
+    expect(rootAtOrAbove(dMinor, 38)).toBe(38);
+  });
+  it("is chromatic by default, with every note", () => {
+    expect(isChromatic(defaultScale())).toBe(true);
+    expect(notesInRange(defaultScale(), 24, 35)).toHaveLength(12);
+  });
+  it("applies genre presets and clears the label on a manual change", () => {
+    for (const p of SCALE_PRESETS) expect(SCALES.some((s) => s.id === p.scale)).toBe(true);
+    const acid = withPreset(defaultScale(), "acid");
+    expect(acid).toEqual({ root: 9, scale: "pentatonicMinor", preset: "acid" });
+    expect(withRoot(acid, 2).preset).toBe("");
+  });
+  it("normalises junk from old or hand-edited saves", () => {
+    expect(normalizeScale(undefined)).toEqual(defaultScale());
+    expect(normalizeScale({ root: 14, scale: "nope", preset: "x" })).toEqual({ root: 2, scale: "chromatic", preset: "" });
   });
 });

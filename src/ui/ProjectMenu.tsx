@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { controller } from "../engine/controller";
 import { deleteSave, exportProject, importProject, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
 import { refreshKeys } from "../engine/keyhl";
+import { ROOT_NAMES, SCALES, SCALE_PRESETS, withPreset, withRoot, withScale } from "../engine/scale";
 import { saveKeyHighlight } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { Modal } from "./Modal";
@@ -28,6 +29,7 @@ export function ProjectMenu() {
   const menuBtn = useRef<HTMLButtonElement>(null);
   const projectName = useStore((s) => s.projectName);
   const keyHl = useStore((s) => s.keyHighlight);
+  const scale = useStore((s) => s.scale);
   const toggleKeyHl = () => {
     setState({ keyHighlight: !keyHl });
     saveKeyHighlight(!keyHl);
@@ -99,11 +101,44 @@ export function ProjectMenu() {
 
       <Modal open={dialog === "menu"} title="Menu" onClose={close} anchor={{ to: menuBtn, placement: "bottom", offset: 6 }}>
         <div className="modal-menu">
-          <button type="button" className="btn" data-active={keyHl} role="switch" aria-checked={keyHl} onClick={toggleKeyHl}>KEY HIGHLIGHT: {keyHl ? "ON" : "OFF"}</button>
-          <button type="button" className="btn" onClick={() => { exportProject(getState().projectName); close(); }}>EXPORT TO FILE</button>
-          <button type="button" className="btn" onClick={() => file.current?.click()}>IMPORT FROM FILE</button>
-          {note && <p className="modal-note err" role="alert">{note}</p>}
-          <input ref={file} type="file" accept=".json,application/json" hidden onChange={(e) => { void doImport(e.target.files?.[0]); e.target.value = ""; }} />
+          <section className="menu-group" aria-label="Key and scale">
+            <span className="silk">KEY &amp; SCALE</span>
+            <div className="menu-field">
+              <label className="silk" htmlFor="scale-preset">GENRE PRESET</label>
+              <select id="scale-preset" className="modal-input modal-select" value={scale.preset} onChange={(e) => setState({ scale: withPreset(scale, e.target.value) })}>
+                <option value="" disabled>Custom</option>
+                {SCALE_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label} · {ROOT_NAMES[p.root]} {SCALES.find((x) => x.id === p.scale)?.label}</option>)}
+              </select>
+            </div>
+            <div className="menu-row">
+              <div className="menu-field">
+                <label className="silk" htmlFor="scale-root">ROOT</label>
+                <select id="scale-root" className="modal-input modal-select" value={scale.root} onChange={(e) => setState({ scale: withRoot(scale, Number(e.target.value)) })}>
+                  {ROOT_NAMES.map((n, i) => <option key={n} value={i}>{n}</option>)}
+                </select>
+              </div>
+              <div className="menu-field">
+                <label className="silk" htmlFor="scale-mode">SCALE</label>
+                <select id="scale-mode" className="modal-input modal-select" value={scale.scale} onChange={(e) => setState({ scale: withScale(scale, e.target.value) })}>
+                  {SCALES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <p className="modal-note">Synth keyboards show only the scale's notes, starting on the root. Chromatic shows every key.</p>
+          </section>
+          <section className="menu-group" aria-label="Display">
+            <span className="silk">DISPLAY</span>
+            <button type="button" className="btn" data-active={keyHl} role="switch" aria-checked={keyHl} onClick={toggleKeyHl}>KEY HIGHLIGHT: {keyHl ? "ON" : "OFF"}</button>
+          </section>
+          <section className="menu-group" aria-label="Project file">
+            <span className="silk">PROJECT FILE</span>
+            <div className="menu-row">
+              <button type="button" className="btn" onClick={() => { exportProject(getState().projectName); close(); }}>EXPORT</button>
+              <button type="button" className="btn" onClick={() => file.current?.click()}>IMPORT</button>
+            </div>
+            {note && <p className="modal-note err" role="alert">{note}</p>}
+            <input ref={file} type="file" accept=".json,application/json" hidden onChange={(e) => { void doImport(e.target.files?.[0]); e.target.value = ""; }} />
+          </section>
         </div>
       </Modal>
     </div>
