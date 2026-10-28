@@ -26,7 +26,7 @@ npm test        # pure-logic tests
   **ERASE** (hold) clears as the playhead passes, tapping an FX cell clears one step, **FX ON** toggles playback,
   **CLR** wipes the lane.
 - **Patterns:** 16 slots. While playing a tap *cues* the pattern for the next loop. COPY, CLEAR, and a simple CHAIN
-  (EDIT, tap slots, CHAIN ON). Everything autosaves to localStorage.
+  (EDIT, tap slots, CHAIN ON). Everything autosaves to IndexedDB (named saves too).
 - Desktop keys: `Space` play/stop, `1-8` track, `[` `]` page.
 
 ## Screen composition

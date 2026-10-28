@@ -4,11 +4,13 @@ import { App } from "./App";
 import { autosave, loadProject } from "./engine/persist";
 import "./index.css";
 
-loadProject();
-autosave();
-
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+// Restore the autosave before the first render so the default project never flashes, and before
+// autosave starts so it cannot overwrite what is being restored.
+void loadProject().then(() => {
+  autosave();
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});

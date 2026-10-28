@@ -38,15 +38,15 @@ export function ProjectMenu() {
 
   const open = (d: Dialog) => {
     setNote("");
-    if (d === "load") setSaves(listSaves());
+    if (d === "load") void listSaves().then(setSaves);
     if (d === "save") setName(getState().projectName);
     setDialog(d);
   };
   const close = () => setDialog(null);
   const stopFirst = () => getState().playing && controller.stop();
 
-  const doSave = () => {
-    if (saveProject(name)) close();
+  const doSave = async () => {
+    if (await saveProject(name)) close();
     else setNote("Could not save: browser storage is full or blocked.");
   };
   const doLoad = (entry: SavedProject) => {
@@ -73,7 +73,7 @@ export function ProjectMenu() {
       <button ref={menuBtn} type="button" className="btn sm" aria-label="Menu" aria-haspopup="dialog" onClick={() => open("menu")}>{MENU_ICON}</button>
 
       <Modal open={dialog === "save"} title="Save project" onClose={close}>
-        <form className="modal-form" onSubmit={(e) => { e.preventDefault(); doSave(); }}>
+        <form className="modal-form" onSubmit={(e) => { e.preventDefault(); void doSave(); }}>
           <label className="silk" htmlFor="save-name">NAME</label>
           <input id="save-name" className="modal-input" value={name} maxLength={40} autoComplete="off" placeholder="My groove" onChange={(e) => setName(e.target.value)} />
           <p className="modal-note">Saving under an existing name replaces it.</p>
@@ -90,7 +90,7 @@ export function ProjectMenu() {
                 <button type="button" className="modal-item" onClick={() => doLoad(e)}>
                   <b>{e.name}</b><small>{stamp(e.savedAt)}</small>
                 </button>
-                <button type="button" className="btn sm" aria-label={`Delete ${e.name}`} onClick={() => { deleteSave(e.id); setSaves(listSaves()); }}>✕</button>
+                <button type="button" className="btn sm" aria-label={`Delete ${e.name}`} onClick={() => { void deleteSave(e.id).then(listSaves).then(setSaves); }}>✕</button>
               </li>
             ))}
           </ul>

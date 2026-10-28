@@ -1,17 +1,19 @@
-// Saves patterns, the chain and the transport settings to localStorage. Performance state
-// (mutes, solos, FX arming, the screen) is deliberately not saved.
+// Saves patterns, the chain and the transport settings to IndexedDB (db.ts): an autosave slot
+// plus named saves. Performance state (mutes, solos, FX arming, the screen) is deliberately not
+// saved. Project files (export / import) are separate and unchanged.
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { MAX_CHAIN, MAX_STEPS, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { defaultMangler } from "./mangler";
 import { newDelay, newReverb } from "./trackfx";
 import { normalizeScale, type ProjectScale } from "./scale";
+import { CURRENT_STORE, idbRequest, openDb, SAVES_STORE, txDone } from "./db";
 import { getState, observe, setState } from "./store";
 
-const KEY = "pulse8.project.v1";
+const CURRENT_ID = "current";
 
 interface Saved {
   projectName?: string;
-  /** `null` stands for an untouched pattern (see `snapshot`); older saves hold only 16 entries. */
+  /** `null` stands for an untouched pattern (see `sparse`); older files hold only 16 entries. */
   patterns: Array<Pattern | null>;
   chain: number[];
   chainOn: boolean;
@@ -69,7 +71,7 @@ function parseProject(s: Saved): (Saved & { patterns: Pattern[] }) | null {
   };
 }
 
-/** 64 patterns are ~1.7 MB of JSON, so patterns still equal to a fresh one are saved as null. */
+/** Files hold JSON, and 64 patterns are ~1.7 MB of it: patterns still equal to a fresh one are written as null. */
 function sparse(patterns: Pattern[]): Array<Pattern | null> {
   const blank = JSON.stringify(newPattern());
   return patterns.map((p) => (JSON.stringify(p) === blank ? null : p));
@@ -77,14 +79,16 @@ function sparse(patterns: Pattern[]): Array<Pattern | null> {
 
 function snapshot(): Saved {
   const s = getState();
-  return { projectName: s.projectName, patterns: sparse(s.patterns), chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
+  return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
 }
 
-export function loadProject(): void {
+/** Restores the autosave slot into the store. Resolves once done; a missing, damaged or
+ * unreachable store just leaves the default project. */
+export async function loadProject(): Promise<void> {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return;
-    const project = parseProject(JSON.parse(raw) as Saved);
+    const db = await openDb();
+    const record = await idbRequest<{ id: string; project: Saved } | undefined>(db.transaction(CURRENT_STORE).objectStore(CURRENT_STORE).get(CURRENT_ID));
+    const project = record ? parseProject(record.project) : null;
     if (project) setState(project);
   } catch {
     /* unreadable or blocked storage: start from the default project */
@@ -93,7 +97,6 @@ export function loadProject(): void {
 
 // ---- named projects (save / load) and files (export / import) -------------------------------------
 
-const SAVES_KEY = "pulse8.saves.v1";
 const FILE_APP = "pulse8";
 
 export interface SavedProject {
@@ -103,48 +106,54 @@ export interface SavedProject {
   project: Saved;
 }
 
-export function listSaves(): SavedProject[] {
+export async function listSaves(): Promise<SavedProject[]> {
   try {
-    const list = JSON.parse(localStorage.getItem(SAVES_KEY) ?? "[]") as SavedProject[];
-    return Array.isArray(list) ? list.filter((e) => e && typeof e.id === "string" && typeof e.name === "string").sort((a, b) => b.savedAt - a.savedAt) : [];
+    const db = await openDb();
+    const list = await idbRequest<SavedProject[]>(db.transaction(SAVES_STORE).objectStore(SAVES_STORE).getAll());
+    return list.filter((e) => e && typeof e.id === "string" && typeof e.name === "string").sort((a, b) => b.savedAt - a.savedAt);
   } catch {
     return [];
   }
 }
 
-function writeSaves(list: SavedProject[]): boolean {
+/** Saves the current project under `name`; the same name overwrites. False if storage refused. */
+export async function saveProject(name: string): Promise<boolean> {
   try {
-    localStorage.setItem(SAVES_KEY, JSON.stringify(list));
+    const clean = name.trim() || "Untitled";
+    const existing = (await listSaves()).find((e) => e.name.toLowerCase() === clean.toLowerCase());
+    const project = snapshot();
+    project.projectName = clean;
+    const entry: SavedProject = {
+      id: existing?.id ?? Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: clean,
+      savedAt: Date.now(),
+      project,
+    };
+    const db = await openDb();
+    const tx = db.transaction(SAVES_STORE, "readwrite");
+    tx.objectStore(SAVES_STORE).put(entry); // structured clone happens here, before any later edit
+    await txDone(tx);
+    setState({ projectName: clean });
     return true;
   } catch {
     return false;
   }
 }
 
-/** Saves the current project under `name`; the same name overwrites. False if storage refused. */
-export function saveProject(name: string): boolean {
-  const clean = name.trim() || "Untitled";
-  const list = listSaves();
-  const existing = list.find((e) => e.name.toLowerCase() === clean.toLowerCase());
-  const entry: SavedProject = {
-    id: existing?.id ?? Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    name: clean,
-    savedAt: Date.now(),
-    project: JSON.parse(JSON.stringify(snapshot())) as Saved,
-  };
-  entry.project.projectName = clean;
-  const ok = writeSaves([entry, ...list.filter((e) => e.id !== entry.id)]);
-  if (ok) setState({ projectName: clean });
-  return ok;
-}
-
-export function deleteSave(id: string): void {
-  writeSaves(listSaves().filter((e) => e.id !== id));
+export async function deleteSave(id: string): Promise<void> {
+  try {
+    const db = await openDb();
+    const tx = db.transaction(SAVES_STORE, "readwrite");
+    tx.objectStore(SAVES_STORE).delete(id);
+    await txDone(tx);
+  } catch {
+    /* nothing to delete from an unreachable store */
+  }
 }
 
 /** Replaces the current project. The caller stops playback first. */
 export function loadSaved(entry: SavedProject): boolean {
-  const project = parseProject(JSON.parse(JSON.stringify(entry.project)) as Saved);
+  const project = parseProject(structuredClone(entry.project));
   if (!project) return false;
   setState({ ...project, projectName: entry.name, cue: null });
   return true;
@@ -152,7 +161,7 @@ export function loadSaved(entry: SavedProject): boolean {
 
 export function exportProject(name: string): void {
   const clean = name.trim() || "pulse8-project";
-  const blob = new Blob([JSON.stringify({ app: FILE_APP, version: 1, name: clean, project: snapshot() })], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ app: FILE_APP, version: 1, name: clean, project: { ...snapshot(), patterns: sparse(getState().patterns) } })], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -178,20 +187,35 @@ export async function importProject(file: File): Promise<string> {
   return name;
 }
 
+/** Writes the project to the autosave slot shortly after each change, and straight away when the
+ * page is hidden or closed so the last edit is not lost. */
 export function autosave(): void {
   let timer: number | undefined;
+  let dirty = false;
   const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName, s.scale];
+  const flush = () => {
+    window.clearTimeout(timer);
+    if (!dirty) return;
+    dirty = false;
+    void (async () => {
+      try {
+        const db = await openDb();
+        const tx = db.transaction(CURRENT_STORE, "readwrite");
+        tx.objectStore(CURRENT_STORE).put({ id: CURRENT_ID, savedAt: Date.now(), project: snapshot() });
+        await txDone(tx);
+      } catch {
+        /* storage full or blocked: nothing to do */
+      }
+    })();
+  };
   observe((next, prev) => {
     const a = persisted(next);
     const b = persisted(prev);
     if (a.every((v, i) => v === b[i])) return;
+    dirty = true;
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(snapshot()));
-      } catch {
-        /* storage full or blocked: nothing to do */
-      }
-    }, 500);
+    timer = window.setTimeout(flush, 500);
   });
+  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flush());
+  window.addEventListener("pagehide", flush);
 }
