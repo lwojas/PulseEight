@@ -30,7 +30,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: Pulse8/package-lock.json
+          cache-dependency-path: |
+            Pulse8/package-lock.json
+            webdsp/package-lock.json
+      # Pulse8's install runs webdsp's `prepare` (tsup), so webdsp needs its own deps first.
+      - name: Install webdsp
+        working-directory: webdsp
+        run: npm ci
       - name: Install
         working-directory: Pulse8
         run: npm ci
