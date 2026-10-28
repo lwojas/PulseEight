@@ -9,7 +9,7 @@ import { flashKey, registerKey } from "../engine/keyhl";
 import { PUNCHES } from "../engine/mangler";
 import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
 import { noteName, TRACKS } from "../engine/spec";
-import { LENGTHS, PAGE } from "../engine/state";
+import { FX_LANES, LENGTHS, PAGE } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { ArpControl } from "./ArpControl";
 import { usePress } from "./controls";
@@ -87,35 +87,64 @@ export function PageBar() {
   );
 }
 
-// --- fx lane (written punch-ins, one slim row under the pads) -----------------------------------
+// --- fx lanes (written punch-ins: up to three, layered) ------------------------------------------
 
-function FxCell({ abs }: { abs: number }) {
-  const id = useStore((s) => s.patterns[s.pattern].fx[abs]);
-  const lvl = useStore((s) => s.patterns[s.pattern].fxLvl[abs]);
-  const label = id ? PUNCHES.find((p) => p.id === id)?.label.slice(0, 2) : "";
+function FxCell({ lane, abs }: { lane: number; abs: number }) {
+  const id = useStore((s) => s.patterns[s.pattern].fxLanes[lane].fx[abs]);
+  const lvl = useStore((s) => s.patterns[s.pattern].fxLanes[lane].fxLvl[abs]);
+  const playRef = usePlayheadCell(abs);
+  const name = id ? PUNCHES.find((p) => p.id === id)?.label : "";
   return (
     <button
       type="button"
       className="cell fx-cell"
+      ref={playRef}
       data-on={id !== 0}
       data-beat={abs % 4 === 0}
       style={id ? ({ "--lvl": lvl.toFixed(2) } as CSSProperties) : undefined}
-      aria-label={id ? `FX ${PUNCHES.find((p) => p.id === id)?.label} at ${Math.round(lvl * 100)}% on step ${abs + 1}, tap to clear` : `No FX on step ${abs + 1}`}
-      onClick={() => id && controller.clearFxStep(abs)}
+      aria-label={id ? `FX${lane + 1}: ${name} at ${Math.round(lvl * 100)}% on step ${abs + 1}, tap to clear` : `FX${lane + 1}: no FX on step ${abs + 1}`}
+      onClick={() => id && controller.clearFxStep(lane, abs)}
     >
-      {label}
+      <span className="pad-num">{pad2(abs + 1)}</span>
+      <span className="fx-cell-name">{name}</span>
+      <span className="fx-cell-lvl">{id ? `${Math.round(lvl * 100)}%` : ""}</span>
     </button>
   );
 }
 
-function FxStrip() {
+/** One FX lane, laid out like the step pads: 16 steps a page, tap a filled cell to clear it. */
+function FxLane({ lane }: { lane: number }) {
   const page = useStore((s) => s.page);
   return (
-    <div className="fx-strip" role="group" aria-label="Written FX for this page">
-      <span className="silk fx-strip-tag">FX</span>
-      <div className="fx-strip-cells">
-        {Array.from({ length: PAGE }, (_, i) => <FxCell key={i} abs={page * PAGE + i} />)}
+    <div className="fx-lane">
+      <div className="fx-lane-cells" role="group" aria-label={`FX${lane + 1} steps`}>
+        {Array.from({ length: PAGE }, (_, i) => <FxCell key={i} lane={lane} abs={page * PAGE + i} />)}
       </div>
+      <div className="fx-lane-foot">
+        <span className="silk">FX{lane + 1} · TAP A STEP TO CLEAR · WRITE + HOLD A PAD TO RECORD</span>
+        <ConfirmButton label="CLR LANE" onConfirm={() => controller.clearFxLane(lane)} />
+      </div>
+    </div>
+  );
+}
+
+function SeqViewTabs() {
+  const view = useStore((s) => s.seqView);
+  // a bitmask, not an array: the selector must return a stable value
+  const usedMask = useStore((s) => s.patterns[s.pattern].fxLanes.reduce((m, l, i) => (l.fx.some((id) => id !== 0) ? m | (1 << i) : m), 0));
+  return (
+    <div className="seq-views" role="tablist" aria-label="Sequencer view">
+      <button type="button" role="tab" className="chip" aria-selected={view === "steps"} data-active={view === "steps"} onClick={() => setState({ seqView: "steps" })}>
+        STEPS
+      </button>
+      {Array.from({ length: FX_LANES }, (_, i) => (
+        <button
+          key={i} type="button" role="tab" className="chip" data-used={(usedMask & (1 << i)) !== 0}
+          aria-selected={view === i} data-active={view === i} onClick={() => setState({ seqView: i })}
+        >
+          FX{i + 1}
+        </button>
+      ))}
     </div>
   );
 }
@@ -222,7 +251,7 @@ function Pads({ track }: { track: number }) {
   );
 }
 
-// --- the focused track: header, steps, FX lane, keyboard ---------------------------------------------------
+// --- the focused track: header, steps, keyboard ---------------------------------------------------
 
 function TrackHeader({ track }: { track: number }) {
   const spec = TRACKS[track];
@@ -463,16 +492,23 @@ function StepEditor({ track }: { track: number }) {
 
 export function SequencerPanel() {
   const track = useStore((s) => s.focus);
+  const view = useStore((s) => s.seqView);
   return (
     <>
       <PageBar />
       <div className="seq-body" style={accentStyle(track)}>
         <TrackRail />
         <div className="stage" data-drum={TRACKS[track].role === "drum"}>
-          <TrackHeader track={track} />
-          <Pads track={track} />
-          <FxStrip />
-          <StepEditor track={track} />
+          <SeqViewTabs />
+          {view === "steps" ? (
+            <>
+              <TrackHeader track={track} />
+              <Pads track={track} />
+              <StepEditor track={track} />
+            </>
+          ) : (
+            <FxLane lane={view} />
+          )}
         </div>
       </div>
     </>

@@ -173,8 +173,10 @@ export function setLength(length: number, copyPage?: number): void {
       for (let i = p.length; i < length; i++) {
         const src = from + (i % PAGE);
         for (const t of p.tracks) t.steps[i] = { ...t.steps[src] };
-        p.fx[i] = p.fx[src];
-        p.fxLvl[i] = p.fxLvl[src];
+        for (const lane of p.fxLanes) {
+          lane.fx[i] = lane.fx[src];
+          lane.fxLvl[i] = lane.fxLvl[src];
+        }
       }
     }
     p.length = length;

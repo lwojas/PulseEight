@@ -48,12 +48,36 @@ export interface ManglerBase {
 export interface Pattern {
   length: number;
   tracks: TrackPattern[];
-  /** Written FX, one punch id per step (0 = none). */
+  /** Written FX: up to `FX_LANES` recorded punch-ins that play back layered. */
+  fxLanes: FxLane[];
+  mangler: ManglerBase;
+}
+
+/** One recorded punch-in take. */
+export interface FxLane {
+  /** Punch id per step (0 = none). */
   fx: number[];
   /** Sweep level 0..1 of the written punch at the start of each step (the recorded automation). */
   fxLvl: number[];
-  mangler: ManglerBase;
 }
+
+/** How many punch-ins one pattern can hold at once. */
+export const FX_LANES = 3;
+
+export const newFxLane = (): FxLane => ({ fx: new Array(MAX_STEPS).fill(0), fxLvl: new Array(MAX_STEPS).fill(0) });
+export const fxLaneEmpty = (l: FxLane): boolean => l.fx.every((id) => id === 0);
+
+/** The lane a new punch-in should be written to: the first empty one. When all are taken they are
+ * all wiped and the first is used again. Mutates `p`. */
+export function pickWriteLane(p: Pattern): number {
+  const free = p.fxLanes.findIndex(fxLaneEmpty);
+  if (free >= 0) return free;
+  p.fxLanes = Array.from({ length: FX_LANES }, newFxLane);
+  return 0;
+}
+
+/** Sequencer panel: the step pads, or one FX lane (its index). */
+export type SeqView = "steps" | number;
 
 export type Tab = "seq" | "sound" | "mix" | "fx" | "ptn";
 
@@ -83,6 +107,7 @@ export interface AppState {
   /** Browser storage is unavailable or refusing writes: nothing is being saved. */
   storageBlocked: boolean;
   tab: Tab;
+  seqView: SeqView;
   // transport
   audio: "off" | "starting" | "ready" | "error";
   audioError: string;
@@ -124,8 +149,7 @@ export function newPattern(): Pattern {
   return {
     length: 16,
     tracks: Array.from({ length: NUM_TRACKS }, (_, i) => newTrackPattern(i)),
-    fx: new Array(MAX_STEPS).fill(0),
-    fxLvl: new Array(MAX_STEPS).fill(0),
+    fxLanes: Array.from({ length: FX_LANES }, newFxLane),
     mangler: defaultMangler(),
   };
 }
@@ -259,6 +283,7 @@ export function initialState(): AppState {
     keyHighlight: loadKeyHighlight(),
     storageBlocked: false,
     tab: "seq",
+    seqView: "steps",
     audio: "off",
     audioError: "",
     playing: false,

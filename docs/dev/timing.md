@@ -24,8 +24,8 @@ For the step at `gridTime`:
    - melodic: `pitch = note − rootMidi + 12 × oct`; duration `0.62 × stepDur`, or until the start of the next step
      (+15 ms) when the next step is a slide; `tie` when this step slides and the previous is on.
 3. **Arpeggiators.** `scheduleArps` asks each active arp for the notes that fall in this step window.
-4. **Written FX.** Unless a punch is being held (which wins), `scheduleLaneStep` sends the lane's chain values for this
-   step as scheduled ramps, and applies routing at `t`.
+4. **Written FX.** Unless a punch is being held (which wins), `scheduleLaneStep` layers every lane's punch at this
+   step (`layeredTarget`), sends the chain values as scheduled ramps, and applies routing at `t`.
 5. Advance `gridTime`, `step`, `stepCount`. At the pattern end, `advancePattern` decides what comes next.
 
 ## Pattern boundaries
@@ -62,7 +62,8 @@ attribute writes and zero React renders. The per-step position is not in the sto
 
 `punchDown` records `punchSince = audio time`. Every tick, `sweepHeldPunch` computes `sweepLevel(base, bpm, elapsed,
 id)` and pushes the chain to the new level. With WRITE armed, the level at each step's start is recorded into
-`fx`/`fxLvl` as steps become audible. `punchUp` returns the chain to the written lane's value, or to rest.
+the lane chosen for the hold (`pickWriteLane`: the first empty lane, or wipe all three and use the first) as steps
+become audible. `punchUp` returns the chain to the written lanes' layered value, or to rest.
 A released VERB keeps the reverb return open for `VERB_TAIL` (2.5 s).
 
 ## Stopped-transport arpeggiator

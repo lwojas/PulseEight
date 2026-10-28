@@ -16,11 +16,12 @@ AppState
 │       │    ├─ level, oct, preset (name of last loaded preset; cosmetic)
 │       │    ├─ dly: { send, mode, time, div }
 │       │    └─ rev: { send, size }
-│       ├─ fx[64]      punch id per step (0 = none)
-│       ├─ fxLvl[64]   sweep level 0..1 at the start of each step
+│       ├─ fxLanes[3]  one recorded punch-in take each (FX_LANES):
+│       │    ├─ fx[64]     punch id per step (0 = none)
+│       │    └─ fxLvl[64]  sweep level 0..1 at the start of each step
 │       └─ mangler: { sweep, param[] }   sweep-in time and character knob per punch
 └─ performance (not persisted)
-   mutes, solos, focus, page, selStep, follow, tab, write, erase, punch, punchSel,
+   mutes, solos, focus, page, selStep, follow, tab, seqView, write, erase, punch, punchSel,
    chainEdit, copyArm, audio, playing, playPattern, chainPos, cue, fxPlay, keyHighlight, storageBlocked
 ```
 
@@ -88,7 +89,8 @@ Every load path (autosave, named save, import) goes through `parseProject`:
 
 1. Bounds-check the container (1–64 patterns) and pad short arrays with fresh patterns (older saves held 16).
 2. Per-pattern fix-ups (`migrate`): the old single FX send became delay and reverb sends; punches gained per-FX
-   parameters; a written punch gained a sweep level (`fxLvl`).
+   parameters; a written punch gained a sweep level (`fxLvl`); the single `fx`/`fxLvl` lane became `fxLanes`, the old lane
+   becoming lane 1.
 3. Track-specific fix-ups (the bass gained ENV MOD: a pattern whose sound array is the wrong length gets that track's
    default sound).
 4. `valid()` — structural checks: every track present, 64 steps, the right number of controls, lane lengths.

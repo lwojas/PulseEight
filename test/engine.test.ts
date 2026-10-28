@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ARP_RATES, Arpeggiator, arpIndex, arpPool, normalizeArp, type ArpDirection, type ArpSettings } from "../src/engine/arp";
-import { baseValues, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/mangler";
+import { baseValues, layeredTarget, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/mangler";
 import { BEAT_DIVISIONS, freeDelaySeconds } from "../src/engine/trackfx";
 import { KITS, kitSounds, BASS_PRESETS, synthSound } from "../src/engine/presets";
 import { defaultSound, normToUnits, TRACKS, unitsToNorm, noteName } from "../src/engine/spec";
 import { isInScale, defaultScale, isChromatic, normalizeScale, notesInRange, rootAtOrAbove, rootAtOrBelow, SCALE_PRESETS, SCALES, withPreset, withRoot } from "../src/engine/scale";
-import { demoPattern, newPattern, randomizeTrack } from "../src/engine/state";
+import { demoPattern, FX_LANES, newPattern, pickWriteLane, randomizeTrack } from "../src/engine/state";
 
 describe("control mapping", () => {
   it("round-trips every control across its range", () => {
@@ -94,10 +94,34 @@ describe("punch FX", () => {
     expect(sweepLevel(m, 120, 5)).toBe(1);
     expect(sweepLevel({ ...base, sweep: 0 }, 120, 0)).toBe(1);
   });
-  it("new patterns carry a zeroed written-level lane next to the FX lane", () => {
+  it("new patterns carry three empty FX lanes with a written-level lane each", () => {
     const p = newPattern();
-    expect(p.fxLvl).toHaveLength(p.fx.length);
-    expect(p.fxLvl.every((v) => v === 0)).toBe(true);
+    expect(p.fxLanes).toHaveLength(FX_LANES);
+    for (const l of p.fxLanes) {
+      expect(l.fxLvl).toHaveLength(l.fx.length);
+      expect(l.fx.every((v) => v === 0) && l.fxLvl.every((v) => v === 0)).toBe(true);
+    }
+  });
+  it("writes take the first empty lane; a fourth wipes all three and restarts at the first", () => {
+    const p = newPattern();
+    for (let i = 0; i < FX_LANES; i++) {
+      const lane = pickWriteLane(p);
+      expect(lane).toBe(i);
+      p.fxLanes[lane].fx[i] = 1;
+    }
+    expect(pickWriteLane(p)).toBe(0);
+    expect(p.fxLanes.every((l) => l.fx.every((v) => v === 0))).toBe(true);
+  });
+  it("layered punches stack their overrides; one layer equals the single punch", () => {
+    const rest = baseValues();
+    const filter = manglerTarget(base, 1, 1);
+    expect(layeredTarget(base, [{ id: 1, lvl: 1 }])).toEqual(filter);
+    expect(layeredTarget(base, [])).toEqual(manglerTarget(base, 0, 0));
+    const both = layeredTarget(base, [{ id: 1, lvl: 1 }, { id: 3, lvl: 1 }]);
+    expect(both.values.fCut).toBe(filter.values.fCut);
+    expect(both.values.cMix).toBe(1);
+    expect(both.values.cBits).not.toBe(rest.cBits);
+    expect(both.takeover).toBe(true);
   });
 });
 

@@ -3,10 +3,10 @@
 // is *audible* (the scheduler runs ~120 ms ahead of the speakers).
 import { Arpeggiator } from "./arp";
 import { Groovebox, type MixInput } from "./audio";
-import { manglerTarget, sweepLevel, VERB_ID, VERB_TAIL } from "./mangler";
+import { layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { NUM_TRACKS, TRACKS } from "./spec";
-import { MAX_CHAIN, type Pattern } from "./state";
+import { MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { locateSong } from "./song";
@@ -19,6 +19,11 @@ const GATE = 0.62; // fraction of a step a melodic note is held (unless it slide
 const VEL_NORMAL = 0.7;
 const VEL_ACCENT = 1;
 const MELODIC = TRACKS.filter((t) => t.role !== "drum").map((t) => t.id);
+
+const heldLayers = (id: number, lvl: number): PunchLayer[] => (id ? [{ id, lvl }] : []);
+/** The punches the written lanes hold at `step`, in lane order. */
+const laneLayers = (pat: Pattern, step: number): PunchLayer[] =>
+  pat.fxLanes.flatMap((l) => (l.fx[step] ? [{ id: l.fx[step], lvl: l.fxLvl[step] }] : []));
 
 interface StepEvent {
   time: number;
@@ -47,11 +52,12 @@ class Controller {
   private audibleStep = -1;
 
   // FX
-  private punchApplied = 0;
-  private lvlApplied = 1;
-  /** Written-lane state last scheduled (id, level) so unchanged steps send nothing. */
+  /** The punches the chain was last put in the state of (held, or the written lanes layered). */
+  private layersApplied: PunchLayer[] = [];
+  /** How many written layers the last scheduled step had, so runs of idle steps send nothing (-1 = unknown). */
   private punchScheduled = -1;
-  private lvlScheduled = -1;
+  /** The lane each pattern's held punch is being written to; chosen on the first write of a hold. */
+  private writeLanes = new Map<number, number>();
   /** Audio time the held punch went down: the sweep level grows from here. */
   private punchSince = 0;
   /** Keep the reverb return open until this audio time so a released VERB rings out. */
@@ -146,7 +152,7 @@ class Controller {
     clearLit();
     setState({ playing: false, cue: null });
     const held = getState().punch;
-    this.applyPunch(held, held ? this.heldLevel(gb.now) : 0);
+    this.applyLayers(heldLayers(held, held ? this.heldLevel(gb.now) : 0));
   }
 
   togglePlay(): void {
@@ -281,17 +287,32 @@ class Controller {
     const gb = this.gb;
     this.punchSince = gb ? gb.now : 0;
     setState({ punch: id, punchSel: id });
+    this.writeLanes.clear();
     const lvl = this.heldLevel(this.punchSince);
-    this.applyPunch(id, lvl);
+    this.applyLayers(heldLayers(id, lvl));
     if (st.playing && st.write && this.audibleStep >= 0) {
       const stepDur = 15 / st.bpm;
       const frac = gb ? (gb.now - this.audibleSince) / stepDur : 0;
       // A press late in a step is aimed at the next one; that step is written as it arrives.
       // The press step starts the recorded sweep from its beginning.
       if (frac < 0.65) {
-        editPattern((p) => { p.fx[this.audibleStep] = id; p.fxLvl[this.audibleStep] = lvl; }, st.playPattern);
+        this.writeFx(st.playPattern, this.audibleStep, id, lvl);
       }
     }
+  }
+
+  /** Record a held punch into its lane. The first write of a hold takes the first empty lane; with
+   * all three taken, they are wiped and the first is used. */
+  private writeFx(pattern: number, step: number, id: number, lvl: number): void {
+    editPattern((p) => {
+      let lane = this.writeLanes.get(pattern);
+      if (lane === undefined) {
+        lane = pickWriteLane(p);
+        this.writeLanes.set(pattern, lane);
+      }
+      p.fxLanes[lane].fx[step] = id;
+      p.fxLanes[lane].fxLvl[step] = lvl;
+    }, pattern);
   }
 
   punchUp(): void {
@@ -299,18 +320,28 @@ class Controller {
     const held = st.punch;
     setState({ punch: 0 });
     this.punchScheduled = -1;
+    this.writeLanes.clear();
     if (held === VERB_ID && this.gb) this.verbUntil = this.gb.now + VERB_TAIL;
-    const lane = st.playing && st.fxPlay && this.audibleStep >= 0 ? st.patterns[st.playPattern].fx[this.audibleStep] : 0;
-    const lvl = lane ? st.patterns[st.playPattern].fxLvl[this.audibleStep] : 0;
-    this.applyPunch(lane, lvl);
+    this.applyLayers(this.writtenLayersNow());
   }
 
-  clearFxStep(step: number): void {
-    editPattern((p) => { p.fx[step] = 0; p.fxLvl[step] = 0; });
+  /** What the written lanes are doing at the step being heard (nothing when stopped or FX are off). */
+  private writtenLayersNow(): PunchLayer[] {
+    const st = getState();
+    if (!st.playing || !st.fxPlay || this.audibleStep < 0) return [];
+    return laneLayers(st.patterns[st.playPattern], this.audibleStep);
+  }
+
+  clearFxStep(lane: number, step: number): void {
+    editPattern((p) => { p.fxLanes[lane].fx[step] = 0; p.fxLanes[lane].fxLvl[step] = 0; });
+  }
+
+  clearFxLane(lane: number): void {
+    editPattern((p) => { p.fxLanes[lane].fx.fill(0); p.fxLanes[lane].fxLvl.fill(0); });
   }
 
   clearFxAll(): void {
-    editPattern((p) => { p.fx.fill(0); p.fxLvl.fill(0); });
+    editPattern((p) => { for (const l of p.fxLanes) { l.fx.fill(0); l.fxLvl.fill(0); } });
   }
 
   // --- state observation ---------------------------------------------------------------------
@@ -328,9 +359,7 @@ class Controller {
     }
     if (next.bpm !== prev.bpm && next.playing) this.gb.setTempo(next.bpm, this.gridTime, this.gridTime);
     if (next.fxPlay !== prev.fxPlay && next.punch === 0) {
-      const on = next.fxPlay && next.playing && this.audibleStep >= 0;
-      const lane = on ? next.patterns[next.playPattern] : null;
-      this.applyPunch(lane ? lane.fx[this.audibleStep] : 0, lane ? lane.fxLvl[this.audibleStep] : 0);
+      this.applyLayers(this.writtenLayersNow());
       this.punchScheduled = -1;
     }
   }
@@ -349,7 +378,7 @@ class Controller {
     const gb = this.gb;
     if (!gb) return;
     gb.applySound(this.soundPattern());
-    this.applyPunch(this.punchApplied, this.lvlApplied);
+    this.applyLayers(this.layersApplied);
   }
 
   private mixInput(takeover: boolean, boost: number): MixInput {
@@ -357,41 +386,39 @@ class Controller {
     return { pattern: this.soundPattern(), mutes: st.mutes, solos: st.solos, takeover, boost };
   }
 
-  /** Put the punch bus in the state for punch `id` (0 = resting) at sweep level `lvl`. */
-  private applyPunch(id: number, lvl = 1, time?: number): void {
+  /** Put the punch bus in the state for these punches (none = resting). */
+  private applyLayers(layers: PunchLayer[], time?: number): void {
     const gb = this.gb;
     if (!gb) return;
     gb.when(time, () => {
-      this.punchApplied = id;
-      this.lvlApplied = lvl;
-      const keepVerb = id === 0 && gb.now < this.verbUntil;
-      const target = manglerTarget(this.soundPattern().mangler, id, lvl, keepVerb);
+      this.layersApplied = layers;
+      const keepVerb = layers.length === 0 && gb.now < this.verbUntil;
+      const target = layeredTarget(this.soundPattern().mangler, layers, keepVerb);
       gb.applyManglerValues(target.values);
       gb.applyMix(this.mixInput(target.takeover, target.boost));
     });
   }
 
-  /** Written lane: step `step` of `pat` starts at audio time `t`. Its chain values go out as
-   * scheduled webdsp ramps (the level at this step to the level at the next), the routing at `t`. */
+  /** Written lanes: step `step` of `pat` starts at audio time `t`. The layered chain values go out as
+   * scheduled webdsp ramps (each lane's level at this step to its level at the next), the routing at `t`. */
   private scheduleLaneStep(pat: Pattern, step: number, t: number, stepDur: number): void {
     const gb = this.gb!;
-    const id = this.punchGate(pat, step);
-    const lvl = id ? pat.fxLvl[step] : 0;
-    const nextStep = (step + 1) % pat.length;
-    const nextId = this.punchGate(pat, nextStep);
-    const hasRamp = id !== 0 && nextId === id && pat.fxLvl[nextStep] !== lvl;
-    const a = manglerTarget(pat.mangler, id, lvl);
-    const b = hasRamp ? manglerTarget(pat.mangler, id, pat.fxLvl[nextStep]) : a;
+    const layers = this.fxOn() ? laneLayers(pat, step) : [];
+    const next = this.fxOn() ? laneLayers(pat, (step + 1) % pat.length) : [];
+    // A lane keeps ramping into the next step while it holds the same punch there.
+    const ahead = layers.map((l) => ({ id: l.id, lvl: next.find((n) => n.id === l.id)?.lvl ?? l.lvl }));
+    const hasRamp = ahead.some((l, i) => l.lvl !== layers[i].lvl);
+    const a = layeredTarget(pat.mangler, layers);
+    const b = hasRamp ? layeredTarget(pat.mangler, ahead) : a;
     gb.scheduleManglerSegment(a.values, b.values, t, hasRamp ? stepDur : 0);
     gb.when(t, () => {
-      this.punchApplied = id;
-      this.lvlApplied = lvl;
+      this.layersApplied = layers;
       gb.applyMix(this.mixInput(a.takeover, a.boost));
     });
   }
 
-  private punchGate(pat: Pattern, step: number): number {
-    return getState().fxPlay ? pat.fx[step] : 0;
+  private fxOn(): boolean {
+    return getState().fxPlay;
   }
 
   // --- the clock -----------------------------------------------------------------------------
@@ -414,10 +441,11 @@ class Controller {
     const st = getState();
     if (st.punch !== 0) {
       const lvl = this.heldLevel(now);
-      if (lvl !== this.lvlApplied || st.punch !== this.punchApplied) this.applyPunch(st.punch, lvl);
+      const [on] = this.layersApplied;
+      if (this.layersApplied.length !== 1 || on.lvl !== lvl || on.id !== st.punch) this.applyLayers(heldLayers(st.punch, lvl));
     } else if (this.verbUntil && now >= this.verbUntil) {
       this.verbUntil = 0;
-      if (this.punchApplied === 0) this.applyPunch(0, 0);
+      if (this.layersApplied.length === 0) this.applyLayers([]);
     }
   }
 
@@ -463,11 +491,9 @@ class Controller {
     if (st.punch !== 0) {
       this.punchScheduled = -1;
     } else {
-      const want = st.fxPlay ? pat.fx[step] : 0;
-      const lvl = want ? pat.fxLvl[step] : 0;
-      if (want !== this.punchScheduled || lvl !== this.lvlScheduled || want !== 0) {
-        this.punchScheduled = want;
-        this.lvlScheduled = lvl;
+      const active = st.fxPlay ? laneLayers(pat, step).length : 0;
+      if (active !== 0 || this.punchScheduled !== 0) {
+        this.punchScheduled = active;
         this.scheduleLaneStep(pat, step, t, stepDur);
       }
     }
@@ -499,7 +525,7 @@ class Controller {
     if (next === this.schedPattern) return;
     this.schedPattern = next;
     gb.applySound(st.patterns[next], time);
-    gb.when(time, () => this.applyPunch(this.punchApplied, this.lvlApplied));
+    gb.when(time, () => this.applyLayers(this.layersApplied));
   }
 
   /** Light the keys of the notes now sounding; melodic tracks with no note on this step go dark. */
@@ -516,8 +542,10 @@ class Controller {
       const st = getState();
       if (st.punch !== 0 && st.write) {
         const lvl = this.levelAt(ev.time, ev.pattern);
-        editPattern((p) => { p.fx[ev.step] = st.punch; p.fxLvl[ev.step] = lvl; }, ev.pattern);
-      } else if (st.erase) editPattern((p) => { p.fx[ev.step] = 0; p.fxLvl[ev.step] = 0; }, ev.pattern);
+        this.writeFx(ev.pattern, ev.step, st.punch, lvl);
+      } else if (st.erase) {
+        editPattern((p) => { for (const l of p.fxLanes) { l.fx[ev.step] = 0; l.fxLvl[ev.step] = 0; } }, ev.pattern);
+      }
     }
     if (!latest) return;
     this.audibleSince = latest.time;

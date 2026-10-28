@@ -210,6 +210,30 @@ export function manglerTarget(base: ManglerBase, punchId: number, lvl = 1, keepV
   };
 }
 
+/** A punch at a sweep level: one written lane's contribution at a step. */
+export interface PunchLayer {
+  id: number;
+  lvl: number;
+}
+
+/** Several punches at once (the FX lanes play layered). Each layer's overrides on the resting chain are
+ * stacked in order, a later layer winning where two touch the same value; takeover if any layer is,
+ * and the loudest boost. One layer is exactly `manglerTarget`. */
+export function layeredTarget(base: ManglerBase, layers: readonly PunchLayer[], keepVerb = false): ManglerTarget {
+  if (layers.length === 0) return manglerTarget(base, 0, 0, keepVerb);
+  const resting = baseValues();
+  const values = { ...resting };
+  let takeover = false;
+  let boost = 0;
+  for (const { id, lvl } of layers) {
+    const t = manglerTarget(base, id, lvl);
+    for (const k of Object.keys(resting) as ManglerKey[]) if (t.values[k] !== resting[k]) values[k] = t.values[k];
+    takeover ||= t.takeover;
+    boost = Math.max(boost, t.boost);
+  }
+  return { values, takeover, boost };
+}
+
 /** Punches whose level swings back and forth (0 → 1 → 0 …) for as long as the pad is held. */
 export const PING_PONG = new Set([7]);
 /** Half-period of a ping-pong swing when the sweep time is NOW, in 16th steps. */

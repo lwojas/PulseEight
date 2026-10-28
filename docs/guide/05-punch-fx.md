@@ -54,15 +54,19 @@ A released **VERB** keeps ringing for about two and a half seconds, so its tail 
 ## Writing FX
 
 Press **WRITE** (the red dot). While the transport is playing and WRITE is armed, whatever pad you hold is recorded
-into the pattern's **FX lane**, the slim row under the step pads.
+into one of the pattern's **three FX lanes**. Tabs above the pads switch the sequencer between **STEPS** and **FX1**, **FX2**, **FX3**, each showing just that lane
+(a tab is outlined when its lane holds something).
 
-- One effect per step. The lane stores the pad and **how far into its sweep it was**, and playback replays the
+- Each hold is one take. It goes into the **first empty lane**, and the lanes play back **together**, layered on the
+  one effect section. When all three lanes are taken, the next take wipes them all and starts again in lane 1.
+- One effect per step per lane. A lane stores the pad and **how far into its sweep it was**, and playback replays the
   movement as smooth ramps scheduled on the audio clock, not as an on/off switch.
 - A pad pressed late in a step is aimed at the next step.
 - A pad you are holding always wins over what is written.
-- **ERASE** (hold it) clears the lane as the playhead passes over it.
-- Tap a cell of the lane to clear just that step. **CLR** wipes the whole lane (tap twice).
-- **FX ON** switches playback of the written lane on and off without losing it.
+- **ERASE** (hold it) clears every lane as the playhead passes over it.
+- Tap a cell of a lane to clear just that step. A lane's **CLR** wipes that lane (tap twice); **CLR** beside WRITE wipes all three.
+- **FX ON** switches playback of the written lanes on and off without losing them.
+- Two lanes that use the same part of the chain (say FILTER and SWEEP) fight over it: the higher lane wins.
 
 FX writing is step-quantised: an effect is *selected* on a step boundary, and its level is smooth in between.
 

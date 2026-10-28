@@ -87,7 +87,7 @@ A failing test or type error stops the deploy. The `--base` is the repository na
 - Bus gains and sends are not schedulable in webdsp, so punch *routing* is applied from a 10 ms audio-clock ticker
   (a few ms of jitter, inaudible at 16th-note resolution). Effect and instrument changes at pattern boundaries are
   sample-accurate. A webdsp "schedulable bus params" feature would remove the ticker.
-- FX writes are one punch per step (step-quantised).
+- FX writes are one punch per step per lane (step-quantised), three lanes per pattern.
 - Sound constants and presets are a first pass, set by measurement rather than by ear. Expect them to be tuned.
 - MIDI input is control only (CC, program change, clock). There is no MIDI note input or output.
 - Web MIDI availability depends on the browser.

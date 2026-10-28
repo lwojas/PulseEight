@@ -2,7 +2,7 @@
 // plus named saves. Performance state (mutes, solos, FX arming, the screen) is deliberately not
 // saved. Project files (export / import) are separate and unchanged.
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
-import { MAX_CHAIN, MAX_STEPS, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
+import { FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { normalizeArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { newDelay, newReverb } from "./trackfx";
@@ -30,7 +30,8 @@ interface Saved {
 function valid(p: unknown): p is Pattern {
   const x = p as Pattern;
   return (
-    !!x && Array.isArray(x.tracks) && x.tracks.length === NUM_TRACKS && Array.isArray(x.fx) && x.fx.length === MAX_STEPS && Array.isArray(x.fxLvl) && x.fxLvl.length === MAX_STEPS &&
+    !!x && Array.isArray(x.tracks) && x.tracks.length === NUM_TRACKS && Array.isArray(x.fxLanes) && x.fxLanes.length === FX_LANES &&
+    x.fxLanes.every((l) => Array.isArray(l?.fx) && l.fx.length === MAX_STEPS && Array.isArray(l.fxLvl) && l.fxLvl.length === MAX_STEPS) &&
     typeof x.length === "number" && !!x.mangler &&
     x.tracks.every((t, i) => Array.isArray(t.steps) && t.steps.length === MAX_STEPS && t.sound?.length === TRACKS[i].controls.length)
   );
@@ -47,7 +48,14 @@ function migrate(p: Pattern): void {
     delete old.send;
   });
   if (!Array.isArray(p.mangler?.param)) p.mangler = defaultMangler();
-  if (!Array.isArray(p.fxLvl) && Array.isArray(p.fx)) p.fxLvl = p.fx.map((id) => (id ? 1 : 0));
+  // The single FX lane became three: an old pattern's lane is the first.
+  const old = p as unknown as { fx?: number[]; fxLvl?: number[] };
+  if (!Array.isArray(p.fxLanes) && Array.isArray(old.fx)) {
+    const lvl = Array.isArray(old.fxLvl) ? old.fxLvl : old.fx.map((id) => (id ? 1 : 0));
+    p.fxLanes = [{ fx: old.fx, fxLvl: lvl }, ...Array.from({ length: FX_LANES - 1 }, newFxLane)];
+  }
+  delete old.fx;
+  delete old.fxLvl;
 }
 
 /** Validates and normalises a saved project (any age); null if it is not a usable project. */

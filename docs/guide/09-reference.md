@@ -81,7 +81,7 @@ Normal step: 70%. Accented step: 100%.
 | Drag | Knob, slider | Change value |
 | Two taps | CLR, CLEAR | Confirm a destructive clear |
 | Hold | Punch pad | Sweep effect in; release to go out |
-| Hold | ERASE | Clear FX lane as it plays |
+| Hold | ERASE | Clear all FX lanes as they play |
 
 ## Troubleshooting
 
