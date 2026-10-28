@@ -45,6 +45,7 @@ function migrate(p: Pattern): void {
     const old = t as unknown as { send?: number };
     if (!t.dly) t.dly = { ...newDelay(i), send: typeof old.send === "number" ? old.send : newDelay(i).send };
     if (!t.rev) t.rev = newReverb(i);
+    if (typeof t.punch !== "boolean") t.punch = true;
     delete old.send;
   });
   if (!Array.isArray(p.mangler?.param)) p.mangler = defaultMangler();

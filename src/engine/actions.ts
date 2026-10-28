@@ -110,6 +110,10 @@ export function setReverb(track: number, patch: Partial<ReverbSend>): void {
   });
 }
 
+export function setPunchSend(track: number, on: boolean): void {
+  editPattern((p) => { p.tracks[track].punch = on; });
+}
+
 export function setOctave(track: number, oct: number): void {
   editPattern((p) => { p.tracks[track].oct = Math.max(-2, Math.min(2, oct)); });
 }

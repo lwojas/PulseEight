@@ -1,7 +1,7 @@
 // Sound, mixer, FX mangler and pattern panels.
 import { useRef, useState, type CSSProperties } from "react";
 import {
-  clearChain, clearPattern, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPunchParam, setReverb,
+  clearChain, clearPattern, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPunchParam, setPunchSend, setReverb,
   setSound, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
@@ -68,6 +68,7 @@ export function SoundPanel() {
   const playing = useStore((s) => s.playing);
   const dlySend = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
   const revSend = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
+  const punchSend = useStore((s) => s.patterns[s.pattern].tracks[track].punch !== false);
   const spec = TRACKS[track];
   const defaults = defaultSound(spec);
   return (
@@ -105,6 +106,12 @@ export function SoundPanel() {
             readout={`${Math.round(revSend * 100)}%`} onChange={(v) => setReverb(track, { send: v })}
           />
         </div>
+        <button
+          type="button" className="btn sm punch-send" data-active={punchSend} aria-pressed={punchSend}
+          aria-label={`Send ${spec.name} to Punch FX`} onClick={() => setPunchSend(track, !punchSend)}
+        >
+          PUNCH FX
+        </button>
       </div>
     </div>
   );

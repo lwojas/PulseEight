@@ -20,6 +20,10 @@ room while the clap rides a long delay.
 Set the send amounts with the `DLY` and `REV` knobs on the **SOUND** panel. Delay mode and time, and reverb size, are on
 the **Track FX** panel.
 
+Below the send knobs, the **PUNCH FX** button gates the track's send into the [Punch FX](05-punch-fx.md) section. It is on by
+default. Switch it off and that track is ignored by punches: it is neither fed into throw effects nor cut by a takeover, so
+it plays on dry. It is separate from the delay and reverb sends, saved per pattern, and MIDI-mappable as `track.N.punchSend`.
+
 ### Delay
 
 | Mode | Time |

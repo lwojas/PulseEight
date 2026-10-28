@@ -209,8 +209,10 @@ export class Groovebox {
         this.setBus(this.trackBus[t], `${t}:g`, NodeParam.BusGain, audible ? levelToGain(tp.level) : 0);
         this.setBus(this.trackBus[t], `${t}:d`, NodeParam.BusSendAmount, tp.dly.send);
         this.setBus(this.busB[t], `${t}:r`, NodeParam.BusSendAmount, tp.rev.send);
-        this.setBus(this.busC[t], `${t}:s`, NodeParam.BusSendAmount, mix.takeover ? 1 : mix.boost);
-        this.setBus(this.busC[t], `${t}:m`, NodeParam.BusMainGain, mix.takeover ? 0 : 1);
+        // a track with its punch send off is neither fed to the punch section nor cut by a takeover
+        const punched = tp.punch !== false;
+        this.setBus(this.busC[t], `${t}:s`, NodeParam.BusSendAmount, punched ? (mix.takeover ? 1 : mix.boost) : 0);
+        this.setBus(this.busC[t], `${t}:m`, NodeParam.BusMainGain, punched && mix.takeover ? 0 : 1);
         this.applyTrackFx(t, tp.dly, tp.rev);
       }
     });

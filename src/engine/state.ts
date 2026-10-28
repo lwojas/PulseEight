@@ -42,6 +42,8 @@ export interface TrackPattern {
   /** Track sends (mixing): delay and reverb. */
   dly: DelaySend;
   rev: ReverbSend;
+  /** Punch FX send gate: false keeps the track out of the punch section (neither fed nor taken over). */
+  punch: boolean;
   /** Octave shift for melodic tracks. */
   oct: number;
   /** Name of the preset last loaded into this track (cosmetic). */
@@ -148,6 +150,7 @@ export function newTrackPattern(track: number): TrackPattern {
     level: DEFAULT_LEVELS[track],
     dly: newDelay(track),
     rev: newReverb(track),
+    punch: true,
     oct: 0,
     preset: "",
   };

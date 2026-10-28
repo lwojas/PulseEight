@@ -13,7 +13,7 @@
 //
 // A parameter's value is in its own domain, `kind` says which:
 //   norm  0..1 continuous      int  min..max whole numbers      bool  0 or 1
-import { setArp, setDelay, setLevel, setMute, setReverb, setSolo, setSound } from "./actions";
+import { setArp, setDelay, setLevel, setMute, setPunchSend, setReverb, setSolo, setSound } from "./actions";
 import { controller } from "./controller";
 import { currentSource, withSource, type ParamSource } from "./source";
 import { DEFAULT_LEVELS, NUM_PATTERNS, type AppState, type TrackPattern } from "./state";
@@ -55,6 +55,7 @@ function build(): ParamDef[] {
       { id: idOf(t, "solo"), label: `${name} solo`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.solos[t] ? 1 : 0), set: (v) => setSolo(t, v >= 1) },
       { id: idOf(t, "delaySend"), label: `${name} delay send`, kind: "norm", min: 0, max: 1, def: DEFAULT_DELAY_SENDS[t], get: (s) => tp(s, t).dly.send, set: (v) => setDelay(t, { send: v }) },
       { id: idOf(t, "reverbSend"), label: `${name} reverb send`, kind: "norm", min: 0, max: 1, def: DEFAULT_REVERB_SENDS[t], get: (s) => tp(s, t).rev.send, set: (v) => setReverb(t, { send: v }) },
+      { id: idOf(t, "punchSend"), label: `${name} punch FX send`, kind: "bool", min: 0, max: 1, def: 1, get: (s) => (tp(s, t).punch ? 1 : 0), set: (v) => setPunchSend(t, v >= 1) },
     );
     if (spec.role !== "drum") {
       defs.push({ id: idOf(t, "arp"), label: `${name} arpeggiator`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.arp[t].on ? 1 : 0), set: (v) => setArp(t, { on: v >= 1 }) });
