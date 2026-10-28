@@ -2,14 +2,14 @@
 // step editor (accent / slide / note keys).
 import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties } from "react";
 import {
-  clearTrack, holdStep, randomize, setLength, setOctave, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
+  clearTrack, holdStep, randomize, setLength, setOctave, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { flashKey, registerKey } from "../engine/keyhl";
 import { PUNCHES } from "../engine/mangler";
 import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
 import { noteName, TRACKS } from "../engine/spec";
-import { FX_LANES, LENGTHS, PAGE } from "../engine/state";
+import { DEFAULT_GATE, FX_LANES, GATES, LENGTHS, PAGE } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { ArpControl } from "./ArpControl";
 import { usePress } from "./controls";
@@ -253,10 +253,28 @@ function Pads({ track }: { track: number }) {
 
 // --- the focused track: header, steps, keyboard ---------------------------------------------------
 
+/** Gate length of the selected step: how long its note is held. Disabled until a step is selected. */
+function GateControl({ track }: { track: number }) {
+  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
+  const gate = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep].gate ?? DEFAULT_GATE : -1));
+  return (
+    <span className="step-gate" role="group" aria-label="Gate length">
+      <span className="silk">GATE</span>
+      {GATES.map((g, i) => (
+        <button
+          key={g.label} type="button" className="btn sm" disabled={selStep < 0} data-active={gate === i} aria-pressed={gate === i}
+          aria-label={`${g.name} gate`} title={`${g.name} (${Math.round(g.len * 100)}% of a step)`} onClick={() => setStepGate(track, selStep, i)}
+        >
+          {g.label}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 function TrackHeader({ track }: { track: number }) {
   const spec = TRACKS[track];
-  const muted = useStore((s) => s.mutes[track]);
-  const solo = useStore((s) => s.solos[track]);
+  const melodic = spec.role !== "drum";
   const preset = useStore((s) => s.patterns[s.pattern].tracks[track].preset);
   return (
     <div className="track-head" style={accentStyle(track)}>
@@ -266,9 +284,7 @@ function TrackHeader({ track }: { track: number }) {
         <span className="silk">{preset || spec.engine}</span>
       </div>
       <div className="track-btns">
-        <button type="button" className="btn sm" onClick={() => controller.audition(track)} aria-label={`Hit ${spec.name}`}>HIT</button>
-        <button type="button" className="btn sm track-ms" data-active={muted} aria-pressed={muted} onClick={() => toggleMute(track)}>M</button>
-        <button type="button" className="btn sm solo track-ms" data-active={solo} aria-pressed={solo} onClick={() => toggleSolo(track)}>S</button>
+        {melodic && <GateControl track={track} />}
         <button type="button" className="btn sm" onClick={() => randomize(track)}>RND</button>
         <ConfirmButton label="CLR" onConfirm={() => clearTrack(track)} />
       </div>

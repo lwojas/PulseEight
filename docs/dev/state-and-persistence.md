@@ -11,7 +11,7 @@ AppState
 │  └─ patterns[64]: Pattern
 │       ├─ length (16 | 32 | 48 | 64)
 │       ├─ tracks[8]: TrackPattern
-│       │    ├─ steps[64]: { on, note, acc, slide }
+│       │    ├─ steps[64]: { on, note, acc, slide, gate? }
 │       │    ├─ sound[]   normalised 0..1, one per control in spec.ts
 │       │    ├─ level, oct, preset (name of last loaded preset; cosmetic)
 │       │    ├─ dly: { send, mode, time, div }

@@ -22,7 +22,18 @@ export interface Step {
   acc: boolean;
   /** Slide: glide into this note from the previous one (melodic tracks only). */
   slide: boolean;
+  /** Gate length: index into `GATES` (melodic tracks only). Absent in saves from before it existed. */
+  gate?: number;
 }
+
+/** Selectable note lengths as a fraction of a step. The default (index 1) is the original fixed 62%. */
+export const GATES = [
+  { label: "S", name: "Short", len: 0.25 },
+  { label: "M", name: "Medium", len: 0.62 },
+  { label: "L", name: "Long", len: 1 },
+  { label: "XL", name: "Two steps", len: 2 },
+] as const;
+export const DEFAULT_GATE = 1;
 
 export interface TrackPattern {
   steps: Step[];
@@ -204,6 +215,7 @@ export function clearTrackSteps(p: Pattern, track: number) {
     s.on = false;
     s.acc = false;
     s.slide = false;
+    delete s.gate;
     s.note = spec.defaultNote ?? 0;
   }
 }

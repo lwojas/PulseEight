@@ -4,7 +4,7 @@ import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { TRACKS } from "./spec";
-import { clearTrackSteps, newPattern, newTrackPattern, PAGE, randomizeTrack } from "./state";
+import { clearTrackSteps, GATES, newPattern, newTrackPattern, PAGE, randomizeTrack } from "./state";
 import { BEAT_DIVISIONS, type DelaySend, type ReverbSend } from "./trackfx";
 import { editPattern, getState, setState } from "./store";
 
@@ -71,6 +71,11 @@ export function toggleStepFlag(track: number, step: number, flag: "acc" | "slide
     s[flag] = !s[flag];
     s.on = true;
   });
+}
+
+/** Set a step's gate length (index into `GATES`). */
+export function setStepGate(track: number, step: number, gate: number): void {
+  editPattern((p) => { p.tracks[track].steps[step].gate = Math.max(0, Math.min(GATES.length - 1, Math.round(gate))); });
 }
 
 // --- sound / mix ---------------------------------------------------------------------------------

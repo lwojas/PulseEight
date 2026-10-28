@@ -19,7 +19,7 @@ The step pads show 16 steps at a time. Pages are labelled `1-16`, `17-32`, `33-4
 | **Tap** a pad | Toggles the hit. A new hit sounds immediately. |
 | **Hold** a pad | **Accent**: a harder hit (full velocity instead of 70%). Holding an empty pad places an accented hit; holding an accented hit removes the accent. |
 
-**HIT** plays the selected drum once, so you can audition a sound without touching the pattern.
+Tapping a track in the track strip plays it once (when stopped), so you can audition a sound without touching the pattern.
 
 ## Acid and FM tracks
 
@@ -39,7 +39,7 @@ two switches:
 - **SLIDE**: glides into this note from the previous step's note without retriggering. Slide needs the previous step
   to be on; a slide on its own is an ordinary note.
 
-Notes sustain for 62% of a step. A slide holds the previous note all the way into the next.
+Notes sustain for 62% of a step by default. Select a melodic step and use the **GATE** buttons above the pads (S 25%, M 62%, L 100%, XL two steps) to set its length. A slide holds the previous note all the way into the next.
 
 **OCT** shifts the whole track up or down by octaves. The ◀ ▶ buttons beside the keys move the keyboard's view.
 
@@ -83,7 +83,8 @@ Open the full panel with the arpeggiator button on a melodic track. Settings are
 |---|---|
 | **RND** | Writes a fresh pattern for the selected track. Drums get a density map per instrument; melodic tracks get notes from the project scale, with accents and slides. |
 | **CLR** | Clears the selected track's steps in this pattern (confirm with a second tap). |
-| **HIT** | Plays the selected track once. |
-| **M / S** | Mute / solo. |
+| **GATE** | Melodic tracks: note length of the selected step. |
+
+Selecting a track in the rail plays it once when stopped. Mute and solo live in the rail (wide screens) and the Mix tab.
 
 Next: [Sound design](03-sound.md).

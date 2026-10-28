@@ -6,7 +6,7 @@ import { Groovebox, type MixInput } from "./audio";
 import { layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { NUM_TRACKS, TRACKS } from "./spec";
-import { MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
+import { DEFAULT_GATE, GATES, MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { locateSong } from "./song";
@@ -15,7 +15,6 @@ import { startTicker } from "./ticker";
 
 const LOOKAHEAD = 0.12; // seconds of audio scheduled ahead
 const TICK_MS = 10;
-const GATE = 0.62; // fraction of a step a melodic note is held (unless it slides into the next)
 const VEL_NORMAL = 0.7;
 const VEL_ACCENT = 1;
 const MELODIC = TRACKS.filter((t) => t.role !== "drum").map((t) => t.id);
@@ -480,7 +479,7 @@ class Controller {
         time: t,
         velocity: s.acc ? VEL_ACCENT : VEL_NORMAL,
         pitch: s.note - (spec.rootMidi ?? 0) + 12 * tp.oct,
-        duration: holdsIntoNext ? nextStart - t + 0.015 : stepDur * GATE,
+        duration: holdsIntoNext ? nextStart - t + 0.015 : stepDur * (GATES[s.gate ?? DEFAULT_GATE]?.len ?? GATES[DEFAULT_GATE].len),
         tie: s.slide && prev.on,
       });
     }
