@@ -39,7 +39,7 @@ two switches:
 - **SLIDE**: glides into this note from the previous step's note without retriggering. Slide needs the previous step
   to be on; a slide on its own is an ordinary note.
 
-Notes sustain for 62% of a step by default. Select a melodic step and use the **GATE** buttons above the pads (S 25%, M 62%, L 100%, XL two steps) to set its length. A slide holds the previous note all the way into the next.
+Notes sustain for 62% of a step by default. Select a melodic step and use the **GATE** buttons above the pads (DEF 62% of a step, 1/4 a bar, or a whole bar) to set its length. A slide holds the previous note all the way into the next.
 
 **OCT** shifts the whole track up or down by octaves. The ◀ ▶ buttons beside the keys move the keyboard's view.
 
@@ -74,6 +74,8 @@ project tempo and the sequencer's clock. It runs whether or not the transport is
 | **Octaves** | 1 – 4 |
 | **Velocity** | How hard every arp note plays |
 | **Gate** | How much of each note length is held |
+
+With the arp on, sequenced steps feed it too: each step is held into the arp for its **GATE**, so DEF arpeggiates that one note (its octaves, if set) for a step, and 1/4 or BAR keeps it going. Steps whose gates overlap are held together, so long gates on several steps build a chord for the arp to walk.
 
 Open the full panel with the arpeggiator button on a melodic track. Settings are saved with the project.
 

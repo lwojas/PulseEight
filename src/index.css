@@ -202,7 +202,7 @@ button.oled { cursor: pointer; text-align: left; }
 .track-no { font-family: var(--font-mono); font-size: 11px; font-weight: 700; padding: 2px 6px; background: var(--acc); color: var(--ink); border-radius: 2px; align-self: center; }
 .track-btns { display: flex; align-items: center; gap: 4px; flex: none; }
 .step-gate { display: inline-flex; align-items: center; gap: 3px; margin-right: 4px; }
-.step-gate .btn.sm { min-width: 30px; }
+.step-gate .btn.sm { min-width: 38px; }
 .step-gate .btn:disabled { opacity: 0.4; }
 .track-btns .btn.sm { min-width: 34px; padding: 0 6px; min-height: 32px; }
 
@@ -336,7 +336,7 @@ button.oled { cursor: pointer; text-align: left; }
   .oled-main b { font-size: 15px; }
   .swing .knob-readout { display: none; }
   .step-gate > .silk { display: none; }
-  .step-gate .btn.sm, .track-btns .btn.sm { min-width: 30px; padding: 0 4px; }
+  .step-gate .btn.sm, .track-btns .btn.sm { min-width: 34px; padding: 0 4px; }
 }
 
 /* ---- wide screens: one composition, sequencer first ----------------------------------------------

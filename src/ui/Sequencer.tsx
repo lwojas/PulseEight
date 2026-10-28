@@ -263,7 +263,7 @@ function GateControl({ track }: { track: number }) {
       {GATES.map((g, i) => (
         <button
           key={g.label} type="button" className="btn sm" disabled={selStep < 0} data-active={gate === i} aria-pressed={gate === i}
-          aria-label={`${g.name} gate`} title={`${g.name} (${Math.round(g.len * 100)}% of a step)`} onClick={() => setStepGate(track, selStep, i)}
+          aria-label={`${g.name} gate`} title={g.name} onClick={() => setStepGate(track, selStep, i)}
         >
           {g.label}
         </button>

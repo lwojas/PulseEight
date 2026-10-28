@@ -63,6 +63,9 @@ class Controller {
   private verbUntil = 0;
 
   // arpeggiators: one per melodic track, all fed by the same transport grid
+  /** Notes the sequencer is holding into each track's arp (its steps feed the arp, held for their gate),
+   * as the song step count at which each is released. */
+  private seqHolds = new Map<number, Array<{ note: number; end: number }>>();
   private arps = new Map<number, Arpeggiator>(MELODIC.map((t) => [t, new Arpeggiator()]));
   /** While the transport is stopped the arps walk a free grid of the same step length (tempo-driven),
    * started by the first held key. -1 = not running. */
@@ -189,6 +192,8 @@ class Controller {
   }
 
   private realignArps(): void {
+    for (const t of this.seqHolds.keys()) this.arps.get(t)?.clear();
+    this.seqHolds.clear();
     for (const a of this.arps.values()) a.realign();
     this.arpFreeTime = -1;
   }
@@ -214,6 +219,18 @@ class Controller {
         gb.when(time, () => flashKey(track, e.note, Math.min(180, e.length * stepDur * 1000)));
       }
     }
+  }
+
+  /** Let go of the arp notes whose step gate has run out (those no later step is still holding). */
+  private releaseSeqHolds(track: number): void {
+    const holds = this.seqHolds.get(track);
+    if (!holds?.length) return;
+    const arp = this.arps.get(track);
+    const live = holds.filter((h) => h.end > this.stepCount);
+    for (const h of holds) {
+      if (h.end <= this.stepCount && !live.some((l) => l.note === h.note)) arp?.noteUp(h.note);
+    }
+    this.seqHolds.set(track, live);
   }
 
   /** Stopped transport: keep the held arps going on their own grid. */
@@ -354,7 +371,7 @@ class Controller {
       this.syncNow();
     }
     if (next.arp !== prev.arp) {
-      next.arp.forEach((a, t) => { if (!a.on && prev.arp[t].on) this.arps.get(t)?.clear(); });
+      next.arp.forEach((a, t) => { if (!a.on && prev.arp[t].on) { this.arps.get(t)?.clear(); this.seqHolds.delete(t); } });
     }
     if (next.bpm !== prev.bpm && next.playing) this.gb.setTempo(next.bpm, this.gridTime, this.gridTime);
     if (next.fxPlay !== prev.fxPlay && next.punch === 0) {
@@ -466,12 +483,23 @@ class Controller {
       const spec = TRACKS[track];
       const tp = pat.tracks[track];
       const s = tp.steps[step];
+      this.releaseSeqHolds(track);
       if (!s.on) continue;
       if (spec.role === "drum") {
         gb.note(track, { time: t, velocity: s.acc ? VEL_ACCENT : VEL_NORMAL, chokeGroup: spec.chokeGroup });
         continue;
       }
       notes.push([track, s.note]);
+      if (st.arp[track].on) {
+        // With the arp on, a step is not played directly: it is held into the arp for its gate, so
+        // long gates stack into chords that the arp then walks.
+        const len = GATES[s.gate ?? DEFAULT_GATE]?.len ?? GATES[DEFAULT_GATE].len;
+        const holds = this.seqHolds.get(track) ?? [];
+        holds.push({ note: s.note, end: this.stepCount + Math.max(1, Math.ceil(len)) });
+        this.seqHolds.set(track, holds);
+        this.arps.get(track)?.noteDown(s.note);
+        continue;
+      }
       const next = tp.steps[(step + 1) % len];
       const prev = tp.steps[(step + len - 1) % len];
       const holdsIntoNext = next.on && next.slide;
