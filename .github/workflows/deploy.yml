@@ -1,0 +1,55 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # package.json depends on "webdsp": "file:../webdsp", so check both repos out side by side.
+      - uses: actions/checkout@v4
+        with:
+          path: Pulse8
+      - uses: actions/checkout@v4
+        with:
+          repository: lwojas/webdsp
+          path: webdsp
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Pulse8/package-lock.json
+      - name: Install
+        working-directory: Pulse8
+        run: npm ci
+      - name: Test
+        working-directory: Pulse8
+        run: npm test
+      - name: Build
+        working-directory: Pulse8
+        run: npx tsc --noEmit && npx vite build --base=/${{ github.event.repository.name }}/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: Pulse8/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
