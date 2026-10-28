@@ -70,6 +70,8 @@ export interface AppState {
   page: number;
   selStep: number;
   follow: boolean;
+  /** Light piano keys as they are played (manually or by the sequencer). */
+  keyHighlight: boolean;
   tab: Tab;
   // transport
   audio: "off" | "starting" | "ready" | "error";
@@ -234,6 +236,7 @@ export function initialState(): AppState {
     page: 0,
     selStep: -1,
     follow: false,
+    keyHighlight: loadKeyHighlight(),
     tab: "seq",
     audio: "off",
     audioError: "",
@@ -249,4 +252,22 @@ export function initialState(): AppState {
     chainEdit: false,
     copyArm: false,
   };
+}
+
+const KEY_HL = "pulse8.keyHighlight";
+
+function loadKeyHighlight(): boolean {
+  try {
+    return localStorage.getItem(KEY_HL) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function saveKeyHighlight(on: boolean): void {
+  try {
+    localStorage.setItem(KEY_HL, on ? "on" : "off");
+  } catch {
+    /* storage blocked: the setting just won't persist */
+  }
 }

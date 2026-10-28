@@ -46,7 +46,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-ui); overscroll-behavior: none; }
+html, body { margin: 0; height: 100%; height: -webkit-fill-available; min-height: 100dvh; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-ui); overscroll-behavior: none; }
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; touch-action: manipulation; }
 button:disabled { opacity: 0.4; cursor: default; }
@@ -57,7 +57,9 @@ h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
 
 /* ---- shell: one fixed screen ------------------------------------------------------------------ */
 
-.app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+/* Mobile browser/OS chrome: 100vh is the *largest* viewport and hides the bottom nav behind the
+   toolbar, so prefer the dynamic viewport (dvh) and fall back to -webkit-fill-available. */
+.app { height: 100vh; height: -webkit-fill-available; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 .layout { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 8px 8px; }
 .col { display: contents; }
 .panel {
@@ -72,7 +74,7 @@ h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
 .app[data-tab="fx"] .trackfx-panel,
 .app[data-tab="ptn"] .ptn-panel { display: flex; flex: 1 1 auto; }
 
-.tabs { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: #0d0e11; border-top: 1px solid var(--rule); }
+.tabs { flex: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 6px 8px 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); background: #0d0e11; border-top: 1px solid var(--rule); }
 .tab { height: 42px; border-radius: var(--radius); background: var(--cap); border: 1px solid var(--rule); font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; color: var(--silk); }
 .tab[data-active="true"] { background: var(--text); color: var(--ink); border-color: var(--text); }
 
@@ -210,6 +212,10 @@ button.oled { cursor: pointer; text-align: left; }
 .key.white { background: #d9dae0; color: var(--ink); font-family: var(--font-mono); font-size: 9px; font-weight: 700; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; grid-row: 1; }
 .key.black { position: absolute; top: 0; height: 60%; transform: translateX(-50%); background: #1a1b20; border: 1px solid var(--rule); z-index: 2; }
 .key[data-on="true"] { background: var(--acc); color: var(--ink); }
+/* played keys: yellow for the acid bass, blue for the FM */
+.key[data-hl="true"] { background: var(--hl); color: var(--ink); }
+.key[data-track="6"] { --hl: #ffd400; }
+.key[data-track="7"] { --hl: #3d7bff; }
 
 /* ---- mixer ------------------------------------------------------------------------------------ */
 

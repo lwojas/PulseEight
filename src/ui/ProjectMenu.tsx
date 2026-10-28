@@ -3,7 +3,9 @@
 import { useRef, useState, type ReactNode } from "react";
 import { controller } from "../engine/controller";
 import { deleteSave, exportProject, importProject, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
-import { getState, useStore } from "../engine/store";
+import { refreshKeys } from "../engine/keyhl";
+import { saveKeyHighlight } from "../engine/state";
+import { getState, setState, useStore } from "../engine/store";
 import { Modal } from "./Modal";
 
 const icon = (d: ReactNode) => (
@@ -25,6 +27,12 @@ export function ProjectMenu() {
   const file = useRef<HTMLInputElement>(null);
   const menuBtn = useRef<HTMLButtonElement>(null);
   const projectName = useStore((s) => s.projectName);
+  const keyHl = useStore((s) => s.keyHighlight);
+  const toggleKeyHl = () => {
+    setState({ keyHighlight: !keyHl });
+    saveKeyHighlight(!keyHl);
+    refreshKeys();
+  };
 
   const open = (d: Dialog) => {
     setNote("");
@@ -91,6 +99,7 @@ export function ProjectMenu() {
 
       <Modal open={dialog === "menu"} title="Menu" onClose={close} anchor={{ to: menuBtn, placement: "bottom", offset: 6 }}>
         <div className="modal-menu">
+          <button type="button" className="btn" data-active={keyHl} role="switch" aria-checked={keyHl} onClick={toggleKeyHl}>KEY HIGHLIGHT: {keyHl ? "ON" : "OFF"}</button>
           <button type="button" className="btn" onClick={() => { exportProject(getState().projectName); close(); }}>EXPORT TO FILE</button>
           <button type="button" className="btn" onClick={() => file.current?.click()}>IMPORT FROM FILE</button>
           {note && <p className="modal-note err" role="alert">{note}</p>}

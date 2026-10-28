@@ -1,10 +1,11 @@
 // The sequencer surface: page selector, the 8-lane overview, the focused track's big pads and the
 // step editor (accent / slide / note keys).
-import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties } from "react";
 import {
   clearTrack, holdStep, randomize, setLength, setOctave, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
+import { flashKey, registerKey } from "../engine/keyhl";
 import { PUNCHES } from "../engine/mangler";
 import { noteName, TRACKS } from "../engine/spec";
 import { LENGTHS, PAGE } from "../engine/state";
@@ -284,6 +285,19 @@ function OctaveControl({ track }: { track: number }) {
   );
 }
 
+/** A piano key; the keyhl module lights it directly (no re-render) when its note sounds. */
+function PianoKey({ track, note, ...rest }: { track: number; note: number } & ButtonHTMLAttributes<HTMLButtonElement> & { "data-on"?: boolean; "data-c"?: boolean }) {
+  const off = useRef<(() => void) | undefined>(undefined);
+  const ref = useCallback(
+    (el: HTMLButtonElement | null) => {
+      off.current?.();
+      off.current = el ? registerKey(track, note, el) : undefined;
+    },
+    [track, note],
+  );
+  return <button ref={ref} type="button" data-track={track} {...rest} />;
+}
+
 /** Playable keys. With a step selected a key writes that step's note; without one it just plays the
  * instrument. Two octaves on wide screens, one on phones. */
 function Keys({ track, step }: { track: number; step: number }) {
@@ -312,6 +326,7 @@ function Keys({ track, step }: { track: number; step: number }) {
 
   const press = (n: number) => {
     if (n < lo || n > hi) return;
+    flashKey(track, n);
     if (step >= 0) setStepNote(track, step, n);
     else controller.audition(track, n);
   };
@@ -322,16 +337,16 @@ function Keys({ track, step }: { track: number; step: number }) {
       <button type="button" className="btn sm key-shift" aria-label="Keys down an octave" disabled={view <= minBase} onClick={() => setBase(view - 12)}>◀</button>
       <div className="keys" role="group" aria-label="Note keys" style={{ gridTemplateColumns: `repeat(${W}, 1fr)` }}>
         {whites.map((n, i) => (
-          <button
-            key={n} type="button" className="key white" data-on={note === n} data-c={n % 12 === 0}
+          <PianoKey
+            key={n} track={track} note={n} className="key white" data-on={note === n} data-c={n % 12 === 0}
             style={{ gridColumn: i + 1 }} aria-label={label(n)} onClick={() => press(n)}
           >
             {n % 12 === 0 || !wide ? label(n) : ""}
-          </button>
+          </PianoKey>
         ))}
         {blacks.map(({ n, i }) => (
-          <button
-            key={n} type="button" className="key black" data-on={note === n}
+          <PianoKey
+            key={n} track={track} note={n} className="key black" data-on={note === n}
             style={{ left: `${((i + 1) / W) * 100}%`, width: `${(0.6 / W) * 100}%` }}
             aria-label={label(n)} onClick={() => press(n)}
           />

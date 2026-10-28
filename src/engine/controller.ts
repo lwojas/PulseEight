@@ -6,6 +6,7 @@ import { manglerTarget, sweepLevel, VERB_ID, VERB_TAIL } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { NUM_TRACKS, TRACKS } from "./spec";
 import type { Pattern } from "./state";
+import { clearLit, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { startTicker } from "./ticker";
 
@@ -14,12 +15,15 @@ const TICK_MS = 10;
 const GATE = 0.62; // fraction of a step a melodic note is held (unless it slides into the next)
 const VEL_NORMAL = 0.7;
 const VEL_ACCENT = 1;
+const MELODIC = TRACKS.filter((t) => t.role !== "drum").map((t) => t.id);
 
 interface StepEvent {
   time: number;
   step: number;
   pattern: number;
   chainPos: number;
+  /** Notes the melodic tracks start on this step: [track, note] */
+  notes: Array<[number, number]>;
 }
 
 class Controller {
@@ -105,6 +109,7 @@ class Controller {
     gb.resetManglerSchedule();
     this.audibleStep = -1;
     setAudible(-1, -1);
+    clearLit();
     setState({ playing: false, cue: null });
     const held = getState().punch;
     this.applyPunch(held, held ? this.heldLevel(gb.now) : 0);
@@ -319,7 +324,8 @@ class Controller {
     const t = this.gridTime + (step % 2 === 1 ? swingOff : 0);
     const nextStart = this.gridTime + stepDur + ((step + 1) % 2 === 1 ? swingOff : 0);
 
-    this.events.push({ time: t, step, pattern: this.schedPattern, chainPos: this.chainPos });
+    const notes: Array<[number, number]> = [];
+    this.events.push({ time: t, step, pattern: this.schedPattern, chainPos: this.chainPos, notes });
 
     for (let track = 0; track < NUM_TRACKS; track++) {
       const spec = TRACKS[track];
@@ -330,6 +336,7 @@ class Controller {
         gb.note(track, { time: t, velocity: s.acc ? VEL_ACCENT : VEL_NORMAL, chokeGroup: spec.chokeGroup });
         continue;
       }
+      notes.push([track, s.note]);
       const next = tp.steps[(step + 1) % len];
       const prev = tp.steps[(step + len - 1) % len];
       const holdsIntoNext = next.on && next.slide;
@@ -384,6 +391,11 @@ class Controller {
     gb.when(time, () => this.applyPunch(this.punchApplied, this.lvlApplied));
   }
 
+  /** Light the keys of the notes now sounding; melodic tracks with no note on this step go dark. */
+  private lightKeys(ev: StepEvent): void {
+    for (const track of MELODIC) setLit(track, ev.notes.filter(([t]) => t === track).map(([, n]) => n));
+  }
+
   /** Move the store's playhead to what is audible now; record/erase FX as steps pass. */
   private publishAudible(now: number): void {
     let latest: StepEvent | null = null;
@@ -400,6 +412,7 @@ class Controller {
     this.audibleSince = latest.time;
     this.audibleStep = latest.step;
     setAudible(latest.step, latest.pattern);
+    this.lightKeys(latest);
     // The store only hears about things that change rarely (pattern, cue, chain position, page);
     // the per-step playhead goes straight to the DOM.
     const st = getState();
