@@ -212,7 +212,6 @@ button.oled { cursor: pointer; text-align: left; }
 .step-editor:not(.hint) .keys-wrap { flex: 1 1 auto; min-height: var(--keys-h); }
 .step-editor:not(.hint) .keys { height: auto; }
 .step-editor-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; min-height: 34px; }
-.note-readout { font-family: var(--font-mono); font-size: 18px; color: var(--acc); min-width: 44px; }
 .step-editor-tools { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; flex: none; }
 .oct { display: inline-flex; align-items: center; gap: 4px; }
 .arp-ctl { display: inline-flex; gap: 2px; }
@@ -407,7 +406,6 @@ button.oled { cursor: pointer; text-align: left; }
   .step-editor:not(.hint) .keys-wrap { flex: 1 1 auto; min-height: var(--keys-h); }
   .step-editor:not(.hint) .keys { height: auto; }
   .step-editor.hint { min-height: 40px; }
-  .note-readout { font-size: 22px; }
   .keys { gap: 3px; }
   .key.white { font-size: 10px; }
 

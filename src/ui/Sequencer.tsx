@@ -472,7 +472,6 @@ function StepEditor({ track }: { track: number }) {
   const spec = TRACKS[track];
   const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
   const step = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
-  const oct = useStore((s) => s.patterns[s.pattern].tracks[track].oct);
   const scale = useStore((s) => s.scale);
   if (spec.role === "drum") {
     return (
@@ -486,8 +485,6 @@ function StepEditor({ track }: { track: number }) {
       <div className="step-editor-top">
         {step ? (
           <>
-            <span className="silk">STEP {pad2(selStep + 1)}</span>
-            <b className="note-readout">{noteName(step.note + 12 * oct)}</b>
             <button type="button" className="btn sm" data-active={step.acc} aria-pressed={step.acc} onClick={() => toggleStepFlag(track, selStep, "acc")}>ACCENT</button>
             <button type="button" className="btn sm" data-active={step.slide} aria-pressed={step.slide} onClick={() => toggleStepFlag(track, selStep, "slide")}>SLIDE</button>
           </>
