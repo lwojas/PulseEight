@@ -82,9 +82,15 @@ function snapshot(): Saved {
   return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale };
 }
 
-/** Restores the autosave slot into the store. Resolves once done; a missing, damaged or
- * unreachable store just leaves the default project. */
+/** Restores the autosave slot into the store. Resolves once done; a missing or damaged slot just
+ * leaves the default project, and an unreachable store also raises `storageBlocked`. */
 export async function loadProject(): Promise<void> {
+  try {
+    await openDb();
+  } catch {
+    setState({ storageBlocked: true });
+    return;
+  }
   try {
     const db = await openDb();
     const record = await idbRequest<{ id: string; project: Saved } | undefined>(db.transaction(CURRENT_STORE).objectStore(CURRENT_STORE).get(CURRENT_ID));
@@ -203,8 +209,10 @@ export function autosave(): void {
         const tx = db.transaction(CURRENT_STORE, "readwrite");
         tx.objectStore(CURRENT_STORE).put({ id: CURRENT_ID, savedAt: Date.now(), project: snapshot() });
         await txDone(tx);
+        if (getState().storageBlocked) setState({ storageBlocked: false });
       } catch {
-        /* storage full or blocked: nothing to do */
+        /* storage full or blocked: say so (the Save button explains) */
+        setState({ storageBlocked: true });
       }
     })();
   };

@@ -16,7 +16,7 @@ const SAVE_ICON = icon(<><path d="M3 2.5h8l2 2v9H3z" /><path d="M5.5 2.5v3.5h4V2
 const LOAD_ICON = icon(<><path d="M2 5.5V13h12V6H8L6.5 4.5H2z" /></>);
 const MENU_ICON = icon(<path d="M2.5 4h11M2.5 8h11M2.5 12h11" />);
 
-type Dialog = "save" | "load" | "menu" | null;
+type Dialog = "save" | "load" | "menu" | "blocked" | null;
 
 const stamp = (t: number) => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -27,6 +27,8 @@ export function ProjectMenu() {
   const [note, setNote] = useState("");
   const file = useRef<HTMLInputElement>(null);
   const menuBtn = useRef<HTMLButtonElement>(null);
+  const saveBtn = useRef<HTMLButtonElement>(null);
+  const blocked = useStore((s) => s.storageBlocked);
   const projectName = useStore((s) => s.projectName);
   const keyHl = useStore((s) => s.keyHighlight);
   const scale = useStore((s) => s.scale);
@@ -68,7 +70,10 @@ export function ProjectMenu() {
   return (
     <div className="project-menu">
       <span className="project-name" title={projectName || "Unsaved project"} data-empty={!projectName}>{projectName || "UNSAVED"}</span>
-      <button type="button" className="btn sm" aria-label="Save project" onClick={() => open("save")}>{SAVE_ICON}<span className="lbl">SAVE</span></button>
+      <button
+        ref={saveBtn} type="button" className="btn sm" data-blocked={blocked} aria-disabled={blocked} aria-haspopup={blocked ? "dialog" : undefined}
+        aria-label={blocked ? "Save project (unavailable: storage is blocked)" : "Save project"} onClick={() => open(blocked ? "blocked" : "save")}
+      >{SAVE_ICON}<span className="lbl">SAVE</span></button>
       <button type="button" className="btn sm" aria-label="Load project" onClick={() => open("load")}>{LOAD_ICON}<span className="lbl">LOAD</span></button>
       <button ref={menuBtn} type="button" className="btn sm" aria-label="Menu" aria-haspopup="dialog" onClick={() => open("menu")}>{MENU_ICON}</button>
 
@@ -80,6 +85,12 @@ export function ProjectMenu() {
           {note && <p className="modal-note err" role="alert">{note}</p>}
           <button type="submit" className="btn modal-primary">SAVE</button>
         </form>
+      </Modal>
+
+      <Modal open={dialog === "blocked"} title="Storage is blocked" onClose={close} anchor={{ to: saveBtn, placement: "bottom", offset: 6 }}>
+        <p className="modal-note">This browser is not letting Pulse.8 store anything, so your project is not being saved and a reload will lose it. This usually means a private or incognito window, or site data blocked in the browser settings.</p>
+        <p className="modal-note">To keep your work, open Pulse.8 in a normal window and allow site data, or use <b>Menu → Export</b> to download the project as a file. Import it again later from the same menu.</p>
+        <button type="button" className="btn modal-primary" onClick={close}>OK</button>
       </Modal>
 
       <Modal open={dialog === "load"} title="Load project" onClose={close}>

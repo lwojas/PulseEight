@@ -77,6 +77,8 @@ export interface AppState {
   follow: boolean;
   /** Light piano keys as they are played (manually or by the sequencer). */
   keyHighlight: boolean;
+  /** Browser storage is unavailable or refusing writes: nothing is being saved. */
+  storageBlocked: boolean;
   tab: Tab;
   // transport
   audio: "off" | "starting" | "ready" | "error";
@@ -251,6 +253,7 @@ export function initialState(): AppState {
     selStep: -1,
     follow: false,
     keyHighlight: loadKeyHighlight(),
+    storageBlocked: false,
     tab: "seq",
     audio: "off",
     audioError: "",
