@@ -24,6 +24,9 @@ Node 22 is what CI uses.
 | `npm run build` | `tsc --noEmit` then `vite build` to `dist/` |
 | `npm run preview` | Serve `dist/` |
 | `npm test` | Vitest, once |
+| `npm run vst:build` | Build the optional `Pulse8.vst3` (see [VST3 build](vst.md)) |
+| `npm run vst:serve` | Production build served on port 5175, for a plugin pointed at local code |
+| `npm run vst:e2e` | Headless end-to-end test of the plugin's host path, no DAW |
 
 TypeScript is `strict` with `noUnusedLocals` and `noUnusedParameters`; the build fails on both.
 
@@ -35,7 +38,7 @@ the module and break that lookup. `server.fs.allow: [".."]` lets the dev server 
 
 ## Tests
 
-`test/engine.test.ts` and `test/midi.test.ts`, Vitest, Node environment, no audio, no DOM. They cover the pure logic:
+`test/engine.test.ts`, `test/midi.test.ts`, `test/hoststate.test.ts` and `test/nativeseq.test.ts`, Vitest, Node environment, no audio, no DOM. They cover the pure logic:
 
 | Area | Examples |
 |---|---|
@@ -46,6 +49,7 @@ the module and break that lookup. `server.fs.allow: [".."]` lets the dev server 
 | Scales | membership, presets, normalising bad input |
 | Arpeggiator | direction order, grid timing, triplet drift, sanitising |
 | MIDI | mapping validation, value conversion both ways, channels, echo suppression, banks, clock follower, song position |
+| Plugin host | host-state save/restore; the song compiled to a native sequence |
 
 What is **not** tested automatically: the sound itself, the scheduler against a real audio clock, and the React
 components. Check those by ear and by eye (`npm run dev`), at phone width and wide.
