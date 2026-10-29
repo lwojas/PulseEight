@@ -513,6 +513,35 @@ button.oled { cursor: pointer; text-align: left; }
   .mangler .punch-grid { grid-auto-rows: minmax(34px, 1fr); min-height: 120px; }
 }
 
+/* Short desktop windows (a DAW's default plugin window is ~1100x700): the band gives height back so the
+   sequencer, and its keyboard, stay on screen. Punch FX is the tallest band panel, so it sets the pace. */
+@media (min-width: 1100px) and (max-height: 820px) {
+  .layout { padding-top: 4px; }
+  .patternbar { padding-bottom: 4px; }
+  .band > .panel, .app[data-tab] .band > .panel { padding: 6px 10px; }
+  .mangler { row-gap: 4px; }
+  .mangler .knobs { --ks: 36px; grid-template-columns: repeat(1, 56px); }
+  .mangler .chip, .mangler .write-controls .btn { min-height: 24px; }
+  .mangler .punch-grid { grid-auto-rows: minmax(26px, 1fr); min-height: 0; gap: 4px; }
+  .seq-views { margin-bottom: 4px; }
+  .pagebar { margin-bottom: 4px; }
+  .tfx-knobs { --ks: 36px; }
+  .tfx-groups { gap: 4px; }
+  .tfx-group { padding: 2px 6px 4px; }
+  /* sound: sends move from a tall right-hand column to a strip under the knobs */
+  .sound { grid-template-columns: 130px minmax(0, 1fr); grid-template-rows: auto 1fr auto; grid-template-areas: "title knobs" "chips knobs" "plock sends"; column-gap: 12px; }
+  .sound .plock-bar { grid-area: plock; margin-top: 4px; }
+  .sound .knobs { --ks: 44px; }
+  .sound .chip { min-height: 24px; }
+  .sound .chips { gap: 3px; }
+  .sends { flex-direction: row; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 4px; padding: 2px 8px; }
+  .sound .sends-knobs { --ks: 32px; margin: 0; grid-template-columns: repeat(2, 56px); }
+  .sends .punch-send { width: auto; margin-top: 0; padding: 0 10px; }
+}
+@media (min-width: 1100px) and (max-height: 680px) {
+  .mangler .punch-grid { grid-auto-rows: minmax(22px, 1fr); }
+}
+
 /* ---- project menu and modal ------------------------------------------------------------------- */
 
 .project-menu { display: flex; align-items: center; gap: 4px; margin-left: 6px; flex: none; }
