@@ -9,8 +9,8 @@ import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../e
 import { hasLocks, lockStep, soundParam } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
-import { BANK_SIZE, DEFAULT_LEVELS, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
-import { BEAT_DIVISIONS, DEFAULT_DELAY_SENDS, DEFAULT_REVERB_SENDS, DELAY_MODES, formatFreeDelay } from "../engine/trackfx";
+import { BANK_SIZE, defaultLevel, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
+import { BEAT_DIVISIONS, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatFreeDelay } from "../engine/trackfx";
 import { getState, setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
 import { Modal } from "./Modal";
@@ -121,11 +121,11 @@ export function SoundPanel() {
         <span className="silk">SENDS</span>
         <div className="knobs sends-knobs">
           <Knob
-            label="DLY" value={dlySend} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)" locked={locks?.["fx.delaySend"] !== undefined}
+            label="DLY" value={dlySend} def={defaultDelaySend(track)} accent="var(--fx)" locked={locks?.["fx.delaySend"] !== undefined}
             readout={`${Math.round(dlySend * 100)}%`} onChange={(v) => setLockable(track, "fx.delaySend", v)}
           />
           <Knob
-            label="REV" value={revSend} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)" locked={locks?.["fx.reverbSend"] !== undefined}
+            label="REV" value={revSend} def={defaultReverbSend(track)} accent="var(--fx)" locked={locks?.["fx.reverbSend"] !== undefined}
             readout={`${Math.round(revSend * 100)}%`} onChange={(v) => setLockable(track, "fx.reverbSend", v)}
           />
         </div>
@@ -150,7 +150,7 @@ function MixRow({ track }: { track: number }) {
   return (
     <div className="mix-row" style={accentStyle(track)} data-dim={mute}>
       <button type="button" className="mix-name" onClick={() => setState({ focus: track, selStep: -1 })}>{spec.name}</button>
-      <Slider label="LVL" value={level} def={DEFAULT_LEVELS[track]} onChange={(v) => setLevel(track, v)} />
+      <Slider label="LVL" value={level} def={defaultLevel(track)} onChange={(v) => setLevel(track, v)} />
       <span className="mix-ms">
         <button type="button" className="btn sm" data-active={mute} aria-pressed={mute} aria-label={`Mute ${spec.name}`} onClick={() => toggleMute(track)}>M</button>
         <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} aria-label={`Solo ${spec.name}`} onClick={() => toggleSolo(track)}>S</button>

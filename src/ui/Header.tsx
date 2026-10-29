@@ -1,5 +1,6 @@
 // Transport bar: logo, play/stop, tempo and swing, the current pattern.
 import { useRef, type CSSProperties } from "react";
+import { PRODUCT } from "../product";
 import { controller } from "../engine/controller";
 import { setState, useStore } from "../engine/store";
 import { Knob } from "./controls";
@@ -36,7 +37,7 @@ export function Header() {
   return (
     <header className="topbar">
       <div className="transport">
-        <div className="logo">PULSE<span>.8</span></div>
+        <div className="logo">{PRODUCT.logo[0]}<span>{PRODUCT.logo[1]}</span></div>
         <button
           type="button" className="btn play" data-active={playing} aria-pressed={playing}
           onClick={() => controller.togglePlay()}

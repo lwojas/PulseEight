@@ -48,6 +48,7 @@ musically, and [webdsp](https://github.com/lwojas/webdsp) for sound. The one rul
 
 | File | Responsibility |
 |---|---|
+| `../product.ts` | Product identity: name, logo, and the `id` that prefixes every storage key and file stamp. Start a clone here (see [REFERENCE_RESKIN.md](../../REFERENCE_RESKIN.md)). |
 | `spec.ts` | **The track definitions.** Which webdsp instrument backs each role, which parameters are exposed as macro controls, over what range and taper. Normalised ↔ engine-unit conversion and readout formatting. Note naming. |
 | `state.ts` | `AppState`, `Pattern`, `TrackPattern`, `Step`; constructors; the demo groove; the pure pattern edits (`randomizeTrack`, `clearTrackSteps`). |
 | `store.ts` | The store. `setState`, `observe`, `editPattern`, the `useStore` hook. |

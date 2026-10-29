@@ -1,6 +1,7 @@
 // Saves patterns, the chain and the transport settings to IndexedDB (db.ts): an autosave slot
 // plus named saves. Performance state (mutes, solos, FX arming, the screen) is deliberately not
 // saved. Project files (export / import) are separate and unchanged.
+import { FILE_EXT, PRODUCT } from "../product";
 import { sanitizeLocks } from "./plock";
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
@@ -129,7 +130,10 @@ export async function loadProject(): Promise<void> {
 
 // ---- named projects (save / load) and files (export / import) -------------------------------------
 
-const FILE_APP = "pulse8";
+const FILE_APP = PRODUCT.id;
+
+/** "mix.pulse8.json" and "mix.json" both import as "mix". */
+const stripFileExt = (file: string) => (file.toLowerCase().endsWith(FILE_EXT) ? file.slice(0, -FILE_EXT.length) : file.replace(/\.json$/i, ""));
 
 export interface SavedProject {
   id: string;
@@ -206,8 +210,8 @@ function projectText(name: string): string {
 export const hasHostFiles = (): boolean => getHostFiles() !== null;
 
 export async function exportProject(name: string): Promise<void> {
-  const clean = name.trim() || "pulse8-project";
-  const fileName = clean.replace(/[^\w.-]+/g, "-").toLowerCase() + ".pulse8.json";
+  const clean = name.trim() || `${PRODUCT.id}-project`;
+  const fileName = clean.replace(/[^\w.-]+/g, "-").toLowerCase() + FILE_EXT;
   const files = getHostFiles();
   if (files) {
     await files.saveFile({ suggestedName: fileName, data: projectText(clean) });
@@ -244,8 +248,8 @@ function importProjectText(text: string, fileName: string): string {
     throw new Error("That file is not valid JSON.");
   }
   const project = parseProject((data?.project ?? data) as Saved);
-  if (!project) throw new Error("That file is not a Pulse.8 project.");
-  const name = (typeof data.name === "string" && data.name ? data.name : fileName.replace(/\.pulse8\.json$|\.json$/i, "")).slice(0, 40);
+  if (!project) throw new Error(`That file is not a ${PRODUCT.name} project.`);
+  const name = (typeof data.name === "string" && data.name ? data.name : stripFileExt(fileName)).slice(0, 40);
   replaceProject(project, name);
   return name;
 }

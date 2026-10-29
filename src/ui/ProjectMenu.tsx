@@ -1,6 +1,7 @@
 // Top-right project controls: SAVE and LOAD (named projects kept in the browser) and a menu with
 // file IMPORT / EXPORT.
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { PRODUCT } from "../product";
 import { controller } from "../engine/controller";
 import { deleteSave, exportProject, hasHostFiles, importProject, importProjectFromHost, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
 import { refreshKeys } from "../engine/keyhl";
@@ -165,8 +166,8 @@ export function ProjectMenu() {
       </Modal>
 
       <Modal open={dialog === "blocked"} title="Storage is blocked" onClose={close} anchor={{ to: phone ? menuBtn : saveBtn, placement: "bottom", offset: 6 }}>
-        <p className="modal-note">This browser is not letting Pulse.8 store anything, so your project is not being saved and a reload will lose it. This usually means a private or incognito window, or site data blocked in the browser settings.</p>
-        <p className="modal-note">To keep your work, open Pulse.8 in a normal window and allow site data, or use <b>Menu → Export</b> to download the project as a file. Import it again later from the same menu.</p>
+        <p className="modal-note">This browser is not letting {PRODUCT.name} store anything, so your project is not being saved and a reload will lose it. This usually means a private or incognito window, or site data blocked in the browser settings.</p>
+        <p className="modal-note">To keep your work, open {PRODUCT.name} in a normal window and allow site data, or use <b>Menu → Export</b> to download the project as a file. Import it again later from the same menu.</p>
         <button type="button" className="btn modal-primary" onClick={close}>OK</button>
       </Modal>
 

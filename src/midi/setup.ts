@@ -1,6 +1,7 @@
 // Wires the generic MIDI pieces to Pulse.8: the parameter registry, the mapping, the transport.
 // This is the only MIDI module that imports the app.
 import { hasEmbeddedHost, sameMidiRoute, type MidiRoute } from "webdsp";
+import { storageKey } from "../product";
 import { controller } from "../engine/controller";
 import { setStepNote } from "../engine/actions";
 import { flashKey } from "../engine/keyhl";
@@ -29,7 +30,7 @@ export interface MidiSettings extends PortChoice {
   keyboardOctave: number;
 }
 
-const KEY = "pulse8.midi";
+const KEY = storageKey("midi");
 const DEFAULTS: MidiSettings = { enabled: false, input: "all", output: "all", clock: false, keyboard: "off", keyboardOctave: 0 };
 
 function loadSettings(): MidiSettings {

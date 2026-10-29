@@ -12,9 +12,10 @@
 //   CC  21  solo                   CC  22  arpeggiator on     (acid bass: 74 filter, 71 resonance)
 //
 // There is no pan: the app has none. CC 10 is left free for it.
+import { NUM_TRACKS, TRACKS } from "../engine/spec";
 import type { MidiMapping } from "./control";
 
-const TRACK_COUNT = 8;
+const TRACK_COUNT = NUM_TRACKS;
 /** Sound knob CCs by position on the track (Sound Controller 1-6). */
 const SOUND_CCS = [70, 71, 72, 73, 74, 75];
 
@@ -36,7 +37,7 @@ const SOUND_KEYS: string[][] = [
   ["cutoff", "envmod", "decay", "reso", "bite", "wave"], // ACID
   ["color", "depth", "bite", "tone", "decay"], // FM
 ];
-const MELODIC = [6, 7];
+const MELODIC = TRACKS.filter((t) => t.role !== "drum").map((t) => t.id);
 
 function build(): MidiMapping["parameters"] {
   const parameters: MidiMapping["parameters"] = {};

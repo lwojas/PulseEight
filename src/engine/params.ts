@@ -19,8 +19,8 @@ import { setArp, setLevel, setLockable, setMute, setPunchSend, setSolo } from ".
 import { controller } from "./controller";
 import { effectiveValue, lockParam, lockStep } from "./plock";
 import { currentSource, withSource, type ParamSource } from "./source";
-import { DEFAULT_LEVELS, NUM_PATTERNS, type AppState, type TrackPattern } from "./state";
-import { DEFAULT_DELAY_SENDS, DEFAULT_REVERB_SENDS } from "./trackfx";
+import { defaultLevel, NUM_PATTERNS, type AppState, type TrackPattern } from "./state";
+import { defaultDelaySend, defaultReverbSend } from "./trackfx";
 import { defaultSound, TRACKS } from "./spec";
 import { observe } from "./store";
 
@@ -60,11 +60,11 @@ function build(): ParamDef[] {
     const t = spec.id;
     const name = spec.name;
     defs.push(
-      { id: idOf(t, "volume"), label: `${name} volume`, kind: "norm", min: 0, max: 1, def: DEFAULT_LEVELS[t], get: (s) => tp(s, t).level, set: (v) => setLevel(t, v) },
+      { id: idOf(t, "volume"), label: `${name} volume`, kind: "norm", min: 0, max: 1, def: defaultLevel(t), get: (s) => tp(s, t).level, set: (v) => setLevel(t, v) },
       { id: idOf(t, "mute"), label: `${name} mute`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.mutes[t] ? 1 : 0), set: (v) => setMute(t, v >= 1) },
       { id: idOf(t, "solo"), label: `${name} solo`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.solos[t] ? 1 : 0), set: (v) => setSolo(t, v >= 1) },
-      { id: idOf(t, "delaySend"), label: `${name} delay send`, kind: "norm", min: 0, max: 1, def: DEFAULT_DELAY_SENDS[t], get: (s) => shown(s, t, "fx.delaySend"), set: (v) => setLockable(t, "fx.delaySend", v) },
-      { id: idOf(t, "reverbSend"), label: `${name} reverb send`, kind: "norm", min: 0, max: 1, def: DEFAULT_REVERB_SENDS[t], get: (s) => shown(s, t, "fx.reverbSend"), set: (v) => setLockable(t, "fx.reverbSend", v) },
+      { id: idOf(t, "delaySend"), label: `${name} delay send`, kind: "norm", min: 0, max: 1, def: defaultDelaySend(t), get: (s) => shown(s, t, "fx.delaySend"), set: (v) => setLockable(t, "fx.delaySend", v) },
+      { id: idOf(t, "reverbSend"), label: `${name} reverb send`, kind: "norm", min: 0, max: 1, def: defaultReverbSend(t), get: (s) => shown(s, t, "fx.reverbSend"), set: (v) => setLockable(t, "fx.reverbSend", v) },
       { id: idOf(t, "punchSend"), label: `${name} punch FX send`, kind: "bool", min: 0, max: 1, def: 1, get: (s) => (tp(s, t).punch ? 1 : 0), set: (v) => setPunchSend(t, v >= 1) },
     );
     if (spec.role !== "drum") {

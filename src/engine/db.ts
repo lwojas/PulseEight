@@ -4,7 +4,9 @@
 // localStorage: 64 patterns are ~1.7 MB of project data, and localStorage is string-only and
 // capped around 5 MB for the whole origin.
 
-const DB_NAME = "pulse8";
+import { PRODUCT } from "../product";
+
+const DB_NAME = PRODUCT.id;
 const DB_VERSION = 1;
 export const SAVES_STORE = "saves";
 export const CURRENT_STORE = "current";

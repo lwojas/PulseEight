@@ -51,6 +51,8 @@ export interface TrackSpec {
   fixed: ReadonlyArray<readonly [param: number, value: number]>;
   /** Source gain trim in dB, for level balance between machines. */
   gainDb: number;
+  /** Starting mix for a fresh pattern: fader level and delay / reverb sends (all 0..1). */
+  mix: { level: number; delay: number; reverb: number };
   chokeGroup?: number;
   /** Melodic tracks: MIDI note of the instrument's `tune` (note pitch = note - rootMidi). */
   rootMidi?: number;
@@ -85,6 +87,7 @@ export const TRACKS: readonly TrackSpec[] = [
       lin("drive", "DRIVE", KickParam.Drive, 0, 1, 0.3),
     ],
     fixed: [], gainDb: 0,
+    mix: { level: 0.85, delay: 0, reverb: 0 },
   },
   {
     id: 1, name: "SNARE", short: "SNR", engine: "TWO-MODE SNARE", role: "drum", kind: InstrumentKind.Snare, accent: "--drum",
@@ -95,6 +98,7 @@ export const TRACKS: readonly TrackSpec[] = [
       lin("noise", "RATTLE", SnareParam.Noise, 0.15, 1, 0.6),
     ],
     fixed: [], gainDb: -1,
+    mix: { level: 0.75, delay: 0.15, reverb: 0.12 },
   },
   {
     id: 2, name: "CL HAT", short: "CH", engine: "METAL HAT · CLOSED", role: "drum", kind: InstrumentKind.HiHat, accent: "--drum",
@@ -105,6 +109,7 @@ export const TRACKS: readonly TrackSpec[] = [
       lin("tone", "BRIGHT", HiHatParam.Tone, 0, 1, 0.55),
     ],
     fixed: [], gainDb: -5, chokeGroup: 1,
+    mix: { level: 0.55, delay: 0.12, reverb: 0 },
   },
   {
     id: 3, name: "OP HAT", short: "OH", engine: "METAL HAT · OPEN", role: "drum", kind: InstrumentKind.HiHat, accent: "--drum",
@@ -115,6 +120,7 @@ export const TRACKS: readonly TrackSpec[] = [
       lin("tone", "BRIGHT", HiHatParam.Tone, 0, 1, 0.5),
     ],
     fixed: [], gainDb: -5, chokeGroup: 1,
+    mix: { level: 0.55, delay: 0.25, reverb: 0 },
   },
   {
     id: 4, name: "CLAP", short: "CLP", engine: "BURST CLAP", role: "drum", kind: InstrumentKind.Clap, accent: "--drum",
@@ -125,6 +131,7 @@ export const TRACKS: readonly TrackSpec[] = [
       lin("snap", "SNAP", ClapParam.Snap, 0, 1, 0.5),
     ],
     fixed: [], gainDb: -2,
+    mix: { level: 0.7, delay: 0.3, reverb: 0.18 },
   },
   {
     id: 5, name: "PERC", short: "PRC", engine: "TUNED TOM", role: "drum", kind: InstrumentKind.Tom, accent: "--drum",
@@ -136,6 +143,7 @@ export const TRACKS: readonly TrackSpec[] = [
       lin("damp", "DAMP", TomParam.Damp, 0, 1, 0.3),
     ],
     fixed: [], gainDb: -2,
+    mix: { level: 0.6, delay: 0.3, reverb: 0.1 },
   },
   {
     id: 6, name: "ACID", short: "ACD", engine: "ACID BASS", role: "bass", kind: InstrumentKind.Bass, accent: "--bass",
@@ -157,6 +165,7 @@ export const TRACKS: readonly TrackSpec[] = [
       [BassParam.Release, 0.06], [BassParam.Legato, 0], [BassParam.Slide, 0.08],
     ],
     gainDb: -3, rootMidi: 33, noteLo: 24, noteHi: 59, defaultNote: 24,
+    mix: { level: 0.78, delay: 0.1, reverb: 0 },
   },
   {
     id: 7, name: "FM", short: "FM", engine: "TWO-OP FM", role: "tone", kind: InstrumentKind.Fm, accent: "--tone",
@@ -172,6 +181,7 @@ export const TRACKS: readonly TrackSpec[] = [
       [FmParam.Release, 0.12], [FmParam.Legato, 0], [FmParam.Slide, 0.06],
     ],
     gainDb: -5, rootMidi: 45, noteLo: 36, noteHi: 71, defaultNote: 48,
+    mix: { level: 0.62, delay: 0.3, reverb: 0.15 },
   },
 ];
 

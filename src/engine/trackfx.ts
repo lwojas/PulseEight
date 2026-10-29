@@ -2,6 +2,7 @@
 // Deliberately small: delay is Free (a time in ms) or Beat (a tempo division); reverb is send + size.
 // These are separate from the punch FX in mangler.ts, which are performed, not mixed.
 import { DUB_DIVISIONS } from "./mangler";
+import { TRACKS } from "./spec";
 
 export interface DelaySend {
   send: number;
@@ -40,8 +41,9 @@ export function delayReadout(d: DelaySend): string {
   return d.mode === 1 ? formatBeatDelay(d.div) : formatFreeDelay(d.time);
 }
 
-export const DEFAULT_DELAY_SENDS = [0, 0.15, 0.12, 0.25, 0.3, 0.3, 0.1, 0.3];
-export const DEFAULT_REVERB_SENDS = [0, 0.12, 0, 0, 0.18, 0.1, 0, 0.15];
+// Per-track starting sends live in `TRACKS[i].mix` (spec.ts).
+export const defaultDelaySend = (track: number) => TRACKS[track].mix.delay;
+export const defaultReverbSend = (track: number) => TRACKS[track].mix.reverb;
 
-export const newDelay = (track: number): DelaySend => ({ send: DEFAULT_DELAY_SENDS[track], mode: 1, time: 0.5, div: 1 });
-export const newReverb = (track: number): ReverbSend => ({ send: DEFAULT_REVERB_SENDS[track], size: 0.5 });
+export const newDelay = (track: number): DelaySend => ({ send: defaultDelaySend(track), mode: 1, time: 0.5, div: 1 });
+export const newReverb = (track: number): ReverbSend => ({ send: defaultReverbSend(track), size: 0.5 });

@@ -59,6 +59,7 @@ plugin loads the hosted app (or a dev server, see the doc). In the DAW it follow
 |---|---|
 | **[User Guide](docs/guide/01-getting-started.md)** | Getting started, sequencing, sound design, mixing, Punch FX, patterns, projects, MIDI, reference |
 | **[Developer docs](docs/dev/architecture.md)** | Architecture, audio graph, scheduling, state and persistence, extending, MIDI design, development |
+| **[Reference / reskin guide](REFERENCE_RESKIN.md)** | Using this repository as the starting point for a new groovebox |
 | **[Full index](docs/README.md)** | |
 
 ## At a glance

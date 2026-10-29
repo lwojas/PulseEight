@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { controller } from "./engine/controller";
+import { NUM_TRACKS } from "./engine/spec";
 import { getState, setState, useStore } from "./engine/store";
 import type { Tab } from "./engine/state";
 import { Header } from "./ui/Header";
@@ -46,7 +47,7 @@ export function App() {
       if (e.code === "Space" && target.tagName !== "BUTTON") {
         e.preventDefault();
         controller.togglePlay();
-      } else if (/^[1-8]$/.test(e.key) && !e.metaKey && !e.ctrlKey) {
+      } else if (/^[1-9]$/.test(e.key) && Number(e.key) <= NUM_TRACKS && !e.metaKey && !e.ctrlKey) {
         setState({ focus: Number(e.key) - 1, selStep: -1 });
         controller.audition(Number(e.key) - 1);
       } else if (e.key === "[" || e.key === "]") {

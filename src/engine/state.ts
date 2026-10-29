@@ -1,5 +1,6 @@
 // The whole application state, and the pure functions that edit a pattern.
 // Nothing here touches audio or React.
+import { storageKey } from "../product";
 import { defaultSound, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
 import { defaultArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
@@ -163,7 +164,7 @@ export function newTrackPattern(track: number): TrackPattern {
   return {
     steps: Array.from({ length: MAX_STEPS }, () => emptyStep(spec.defaultNote ?? 0)),
     sound: defaultSound(spec),
-    level: DEFAULT_LEVELS[track],
+    level: defaultLevel(track),
     dly: newDelay(track),
     rev: newReverb(track),
     punch: true,
@@ -172,7 +173,8 @@ export function newTrackPattern(track: number): TrackPattern {
   };
 }
 
-export const DEFAULT_LEVELS = [0.85, 0.75, 0.55, 0.55, 0.7, 0.6, 0.78, 0.62];
+// Starting fader level per track: `TRACKS[i].mix.level` (spec.ts).
+export const defaultLevel = (track: number) => TRACKS[track].mix.level;
 
 export function newPattern(): Pattern {
   return {
@@ -330,7 +332,7 @@ export function initialState(): AppState {
   };
 }
 
-const KEY_HL = "pulse8.keyHighlight";
+const KEY_HL = storageKey("keyHighlight");
 
 function loadKeyHighlight(): boolean {
   try {

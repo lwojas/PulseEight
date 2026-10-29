@@ -50,16 +50,16 @@ indexed by track.
 1. **`spec.ts`** — add the `TrackSpec`: `id` (must equal its index), `name`, `short`, `engine` description, `role`
    (`drum | bass | tone`), the webdsp `kind`, `accent`, `controls`, `fixed` parameters, `gainDb`, and for melodic tracks
    `rootMidi`, `noteLo`, `noteHi`, `defaultNote`. Optionally a `chokeGroup`.
-2. **Per-track defaults** that are plain arrays indexed by track — all must gain an element:
-   `DEFAULT_LEVELS` (`state.ts`), `DEFAULT_DELAY_SENDS` and `DEFAULT_REVERB_SENDS` (`trackfx.ts`).
+2. **Per-track defaults** are the `mix` field on the same `TrackSpec` (`level`, `delay`, `reverb`); there are no
+   parallel arrays to extend.
 3. **`presets.ts`** — a drum track needs an entry in every `Kit.drums` array (kits index by drum track id). A synth
    needs a preset list and a case in `presetsFor`.
 4. **`state.ts`** — `randomizeTrack` has a density table for drums; give the new one a row. Add it to `demoPattern` if
    you want it to sound at first start.
-5. **`midi/mapping.ts`** — `TRACK_COUNT`, a row in `SOUND_KEYS`, and `MELODIC` if relevant.
+5. **`midi/mapping.ts`** — a row in `SOUND_KEYS` (track count and melodic tracks come from `TRACKS`).
 6. **Persistence.** `valid()` requires `tracks.length === NUM_TRACKS`, so every existing project would be rejected.
    Write a migration that appends a fresh track to older patterns and add a test with an old-shaped project.
-7. **Keyboard shortcuts** `1`–`8` are in `App.tsx`; the regex limits them to eight tracks.
+7. **Keyboard shortcuts** `1`–`9` follow `NUM_TRACKS` (`App.tsx`); there is no key for a tenth track.
 8. **Audio** — `audio.ts` builds buses and an instrument per `TRACKS` entry automatically. Check the voice limit
    (`maxVoices` in `Groovebox.create`).
 
