@@ -91,19 +91,25 @@ class Controller {
 
   // --- start-up (needs a user gesture) -------------------------------------------------------
 
-  async start(): Promise<void> {
+  /** `projectReady`: something the engine must not be configured before (the project being restored from a plugin host).
+   * The engine itself, and the native sequence compiler's chunk, load in parallel with it, so a reopened window is not
+   * waiting for them one after the other. */
+  async start(projectReady?: Promise<unknown>): Promise<void> {
     if (this.gb || getState().audio === "starting") return;
     setState({ audio: "starting", audioError: "" });
     try {
-      this.gb = await Groovebox.create();
+      const hostplay = hasEmbeddedHost() ? import("./hostplay") : null;
+      const gb = await Groovebox.create();
+      await projectReady;
+      this.gb = gb;
       startTicker(() => this.tick(), TICK_MS);
       setState({ audio: "ready" });
       this.syncNow();
       // A plugin that can play the song itself follows the DAW's transport and is handed the song; otherwise (a browser, an older
       // plugin) the page sequences as always.
       // (loaded only here: a browser never needs the native sequence compiler, so it does not download it)
-      if (hasEmbeddedHost()) {
-        const { HostPlayback, hostPlayback } = await import("./hostplay");
+      if (hostplay) {
+        const { HostPlayback, hostPlayback } = await hostplay;
         if (hostPlayback(this.gb)) {
           this.host = new HostPlayback(this.gb, { begin: () => this.hostBegin(), end: () => this.hostEnd(), steps: (steps) => this.audibleSteps(steps) });
           this.host.start();

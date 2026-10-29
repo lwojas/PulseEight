@@ -12,12 +12,13 @@ import "./index.css";
 // restored instead (see persist.ts, "the project in a plugin host's session").
 const host = getHostState();
 const restored = host ? restoreFromHost(host, () => controller.stop()) : loadProject();
+// A plugin host supplies its own audio backend, which needs no user gesture: bring the engine up (not the transport) so the
+// start gate never shows. It starts alongside the restore rather than after it (the engine does not need the project to be
+// created, only to be configured), which shortens the silence after a reopened window.
+if (hasEmbeddedHost()) void controller.start(restored);
 void restored.then(() => {
   autosave();
   midi.boot();
-  // A plugin host supplies its own audio backend, which needs no user gesture: bring the engine up (not the
-  // transport) so the start gate never shows.
-  if (hasEmbeddedHost()) void controller.start();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <App />
