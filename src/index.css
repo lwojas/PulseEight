@@ -509,6 +509,14 @@ button.oled { cursor: pointer; text-align: left; }
 .project-menu .btn.sm { min-width: 34px; }
 .project-menu .btn[data-blocked="true"] { opacity: 0.45; border-style: dashed; }
 .project-menu .lbl { display: none; }
+/* on phones swing, SAVE / LOAD and the project name live in the menu: the header has no room for them */
+.menu-group.phone-group { display: none; }
+.swing-oled { justify-content: space-between; }
+.swing-oled .oled-main { align-items: center; }
+.project-title { font: 700 12px var(--font-mono); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.project-title[data-empty="true"] { color: var(--silk); }
+.menu-row .btn svg { vertical-align: -3px; margin-right: 4px; }
+@media (max-width: 699px) { .topbar .swing, .project-menu .head-only { display: none; } .menu-group.phone-group { display: flex; } }
 @media (min-width: 700px) { .project-menu .lbl { display: inline; } }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(5, 6, 8, 0.7); display: flex; align-items: center; justify-content: center; padding: 16px; }

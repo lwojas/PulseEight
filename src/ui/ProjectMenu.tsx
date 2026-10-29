@@ -9,6 +9,7 @@ import { saveKeyHighlight } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { midi, ports } from "../midi/setup";
 import { Modal } from "./Modal";
+import { useMedia } from "./useMedia";
 
 const icon = (d: ReactNode) => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
@@ -93,6 +94,10 @@ export function ProjectMenu() {
   const projectName = useStore((s) => s.projectName);
   const keyHl = useStore((s) => s.keyHighlight);
   const scale = useStore((s) => s.scale);
+  const swing = useStore((s) => s.swing);
+  // on phones SAVE / LOAD live in the menu, so the header's save button is not there to anchor to
+  const phone = useMedia("(max-width: 699px)");
+  const nudgeSwing = (d: number) => setState({ swing: Math.min(0.75, Math.max(0.5, Math.round(swing * 100 + d) / 100)) });
   const toggleKeyHl = () => {
     setState({ keyHighlight: !keyHl });
     saveKeyHighlight(!keyHl);
@@ -141,12 +146,12 @@ export function ProjectMenu() {
 
   return (
     <div className="project-menu">
-      <span className="project-name" title={projectName || "Unsaved project"} data-empty={!projectName}>{projectName || "UNSAVED"}</span>
+      <span className="project-name head-only" title={projectName || "Unsaved project"} data-empty={!projectName}>{projectName || "UNSAVED"}</span>
       <button
-        ref={saveBtn} type="button" className="btn sm" data-blocked={blocked} aria-disabled={blocked} aria-haspopup={blocked ? "dialog" : undefined}
+        ref={saveBtn} type="button" className="btn sm head-only" data-blocked={blocked} aria-disabled={blocked} aria-haspopup={blocked ? "dialog" : undefined}
         aria-label={blocked ? "Save project (unavailable: storage is blocked)" : "Save project"} onClick={() => open(blocked ? "blocked" : "save")}
       >{SAVE_ICON}<span className="lbl">SAVE</span></button>
-      <button type="button" className="btn sm" aria-label="Load project" onClick={() => open("load")}>{LOAD_ICON}<span className="lbl">LOAD</span></button>
+      <button type="button" className="btn sm head-only" aria-label="Load project" onClick={() => open("load")}>{LOAD_ICON}<span className="lbl">LOAD</span></button>
       <button ref={menuBtn} type="button" className="btn sm" aria-label="Menu" aria-haspopup="dialog" onClick={() => open("menu")}>{MENU_ICON}</button>
 
       <Modal open={dialog === "save"} title="Save project" onClose={close}>
@@ -159,7 +164,7 @@ export function ProjectMenu() {
         </form>
       </Modal>
 
-      <Modal open={dialog === "blocked"} title="Storage is blocked" onClose={close} anchor={{ to: saveBtn, placement: "bottom", offset: 6 }}>
+      <Modal open={dialog === "blocked"} title="Storage is blocked" onClose={close} anchor={{ to: phone ? menuBtn : saveBtn, placement: "bottom", offset: 6 }}>
         <p className="modal-note">This browser is not letting Pulse.8 store anything, so your project is not being saved and a reload will lose it. This usually means a private or incognito window, or site data blocked in the browser settings.</p>
         <p className="modal-note">To keep your work, open Pulse.8 in a normal window and allow site data, or use <b>Menu → Export</b> to download the project as a file. Import it again later from the same menu.</p>
         <button type="button" className="btn modal-primary" onClick={close}>OK</button>
@@ -184,6 +189,14 @@ export function ProjectMenu() {
 
       <Modal open={dialog === "menu"} title="Menu" onClose={close} anchor={{ to: menuBtn, placement: "bottom", offset: 6 }}>
         <div className="modal-menu">
+          <section className="menu-group phone-group" aria-label="Project">
+            <span className="silk">PROJECT</span>
+            <b className="project-title" data-empty={!projectName}>{projectName || "UNSAVED"}</b>
+            <div className="menu-row">
+              <button type="button" className="btn" onClick={() => open(blocked ? "blocked" : "save")}>{SAVE_ICON} SAVE</button>
+              <button type="button" className="btn" onClick={() => open("load")}>{LOAD_ICON} LOAD</button>
+            </div>
+          </section>
           <section className="menu-group" aria-label="Key and scale">
             <span className="silk">KEY &amp; SCALE</span>
             <div className="menu-field">
@@ -208,6 +221,17 @@ export function ProjectMenu() {
               </div>
             </div>
             <p className="modal-note">Synth keyboards show only the scale's notes, starting on the root. Chromatic shows every key.</p>
+          </section>
+          <section className="menu-group phone-group" aria-label="Swing">
+            <span className="silk">SWING</span>
+            <div className="oled swing-oled" aria-label="Swing">
+              <button type="button" className="oled-btn" aria-label="Less swing" disabled={swing <= 0.5} onClick={() => nudgeSwing(-1)}>−</button>
+              <div className="oled-main">
+                <span className="silk">SWING</span>
+                <b>{Math.round(swing * 100)}%</b>
+              </div>
+              <button type="button" className="oled-btn" aria-label="More swing" disabled={swing >= 0.75} onClick={() => nudgeSwing(1)}>+</button>
+            </div>
           </section>
           <section className="menu-group" aria-label="Display">
             <span className="silk">DISPLAY</span>
