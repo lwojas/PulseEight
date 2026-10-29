@@ -232,6 +232,27 @@ describe.skipIf(!available)("Pulse.8 in the plugin (headless end to end)", () =>
     store.setState({ selStep: -1 });
   });
 
+  it("keeps the song playing, without a gap, while a reopened window rebuilds its graph on the kept engine", async () => {
+    await stopDaw();
+    load({ 0: pattern(0, [0, 4, 8, 12]) });
+    await rig.wait(0.3);
+    await play(0);
+    await rig.until(3.2);
+    // A second page connecting to the same engine: what a reopened window does. It opts in, builds the whole Groovebox graph (the
+    // plugin has to recognise every structure command as done) and resends the song.
+    (globalThis as { __webdspHost?: { adoptEngine?: boolean } }).__webdspHost!.adoptEngine = true;
+    const { Groovebox } = await import("../../src/engine/audio");
+    const reopened = await Groovebox.create();
+    expect(reopened.ids.inst).toEqual(controller.engine!.ids.inst);
+    await rig.until(9.2);
+    const errors = rig.sent.filter((m) => m.type === "error");
+    expect(errors).toEqual([]);
+    const beats = await hitBeats(0, 4, 9);
+    strict(beats, [4, 5, 6, 7, 8]); // a kick on every beat across the reconnect
+    await stopDaw();
+  });
+
+  // (last: it closes the window, after which nothing the page sends reaches the plugin)
   it("keeps playing, in time, with the window closed", async () => {
     load({ 0: pattern(0, [0, 4, 8, 12]) });
     await rig.wait(0.3);

@@ -140,8 +140,13 @@ session") follows them and `test/hoststate.test.ts` pins them:
 8. **Large text goes as base64** from the plugin to the page (JUCE's event escaping is quadratic); the shim does that, nothing
    to do here. Untouched patterns are written as `null` (`sparse`), which keeps a typical snapshot to a few tens of KB.
 
-Reopening the editor starts a fresh engine (webvst's "staged engine swap" is not done there), so the song is silent until the page
-has started and sent the sequence: about a second after the window opens. The project itself is back at once.
+Reopening the editor keeps the engine: `main.tsx` sets `__webdspHost.adoptEngine`, so webvst does not swap in an empty engine when
+the new page connects. The song keeps playing natively while the window loads; the page rebuilds its graph (the same commands in the
+same order, which the plugin recognises as already done and swallows) and resends the song (swallowed too when unchanged). If the
+graph ever differs, the plugin moves the page to a fresh engine and replays what it sent, so the worst case is the old behaviour:
+silence until the page has sent the song. Needs a plugin built with this (webvst `EngineHost.h`, "adopt"); an older plugin ignores the
+flag. **Keep the graph deterministic**: `Groovebox`'s constructor must issue the same structure commands (buses, effects,
+instruments) in the same order every time, or reopening falls back to the fresh engine.
 
 ## Tests
 
@@ -164,7 +169,7 @@ has started and sent the sequence: about a second after the window opens. The pr
 - **Playing, the DAW decides the tempo and Pulse.8's BPM is not used.** Swing is the project's.
 - **Not baked:** a held punch and live keyboard arpeggios need the window; the arp restarts each song loop.
 - A route does not filter notes outside a synth's range, and plays at MIDI velocity.
-- Reopening the editor starts a fresh engine: a moment of silence until the page has sent the song again.
+- Reopening the editor keeps the engine only with a webvst that supports adopting; with an older plugin it is a moment of silence.
 - No hardware MIDI controllers in a macOS plugin WebView (WKWebView has no Web MIDI); no MIDI output. Pulse.8's MIDI mapping works
   on the DAW's MIDI (CCs, program changes) while the window is open.
 - VST3, macOS, ad-hoc signed. Verified headless (above) against the real engine; not yet loaded in REAPER or Live, so do that first.
