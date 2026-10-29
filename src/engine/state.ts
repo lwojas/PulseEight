@@ -157,7 +157,7 @@ export interface AppState {
   plock: boolean;
 }
 
-const emptyStep = (note: number): Step => ({ on: false, note, acc: false, slide: false });
+export const emptyStep = (note: number): Step => ({ on: false, note, acc: false, slide: false });
 
 export function newTrackPattern(track: number): TrackPattern {
   const spec = TRACKS[track];

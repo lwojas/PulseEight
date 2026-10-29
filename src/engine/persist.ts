@@ -4,7 +4,7 @@
 import { FILE_EXT, PRODUCT } from "../product";
 import { sanitizeLocks } from "./plock";
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
-import { FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
+import { emptyStep, FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { normalizeArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { newDelay, newReverb } from "./trackfx";
@@ -104,6 +104,35 @@ function sparse(patterns: Pattern[]): Array<Pattern | null> {
   return patterns.map((p) => (JSON.stringify(p) === blank ? null : p));
 }
 
+/** Whether a step is exactly what a fresh pattern holds (so it can be left out of a host snapshot and rebuilt on restore). */
+const isBlankStep = (st: Pattern["tracks"][number]["steps"][number], track: number): boolean =>
+  !st.on && !st.acc && !st.slide && st.note === (TRACKS[track].defaultNote ?? 0) && !st.gate && !st.parameterLocks;
+
+/** A pattern holds 64 steps per track whatever its length, and most of them are blank (a 16-step pattern: three quarters).
+ * For the host's session each track's trailing blank steps are dropped; `expandPattern` puts them back. Lossless, and
+ * ~4x smaller, which matters because the whole snapshot crosses the plugin bridge on every window open, close and edit. */
+function compactPattern(p: Pattern | null): Pattern | null {
+  if (!p) return p;
+  return {
+    ...p,
+    tracks: p.tracks.map((t, i) => {
+      let n = t.steps.length;
+      while (n > 0 && isBlankStep(t.steps[n - 1], i)) n--;
+      return n === t.steps.length ? t : { ...t, steps: t.steps.slice(0, n) };
+    }),
+  };
+}
+
+/** Undoes `compactPattern` in place (a no-op for a full pattern, so files and older snapshots read the same). */
+function expandPattern(p: Pattern | null): void {
+  if (!p || !Array.isArray(p.tracks)) return;
+  p.tracks.forEach((t, i) => {
+    if (!Array.isArray(t?.steps) || t.steps.length >= MAX_STEPS) return;
+    const note = TRACKS[i]?.defaultNote ?? 0;
+    for (let n = t.steps.length; n < MAX_STEPS; n++) t.steps.push(emptyStep(note));
+  });
+}
+
 function snapshot(): Saved {
   const s = getState();
   return { projectName: s.projectName, patterns: s.patterns, chain: s.chain, chainOn: s.chainOn, bpm: s.bpm, swing: s.swing, pattern: s.pattern, scale: s.scale, arp: s.arp };
@@ -201,8 +230,10 @@ export function loadSaved(entry: SavedProject): boolean {
 }
 
 /** The project as the text of an export file (and of a host snapshot): untouched patterns are written as null. */
-function projectText(name: string): string {
-  return JSON.stringify({ app: FILE_APP, version: 1, name, project: { ...snapshot(), patterns: sparse(getState().patterns) } });
+function projectText(name: string, compact = false): string {
+  const sparsed = sparse(getState().patterns);
+  const patterns = compact ? sparsed.map(compactPattern) : sparsed;
+  return JSON.stringify({ app: FILE_APP, version: 1, name, project: { ...snapshot(), patterns } });
 }
 
 /** Whether export / import must go through the host's own dialogs: a plugin's WKWebView has no file input and ignores
@@ -275,20 +306,23 @@ const projectChanged = (next: AppState, prev: AppState) => {
 
 export const HOST_APP = FILE_APP;
 /** Version of a snapshot's `data` (the export file's JSON). Bump when older code could no longer read it. */
-export const HOST_FORMAT = 1;
+export const HOST_FORMAT = 2;
+/** Formats this code reads: 1 was the export file's JSON as it is; 2 drops each track's trailing blank steps (`compactPattern`). */
+const HOST_FORMATS_READ = [1, 2];
 export const HOST_PUBLISH_DEBOUNCE_MS = 300;
 /** An older plugin never answers: give up waiting after this long and run on the default project. */
 export const HOST_ANSWER_TIMEOUT_MS = 2500;
 
 export function toHostSnapshot(): HostStateSnapshot {
-  return { app: HOST_APP, format: HOST_FORMAT, data: projectText(getState().projectName), blobs: {} };
+  return { app: HOST_APP, format: HOST_FORMAT, data: projectText(getState().projectName, true), blobs: {} };
 }
 
 /** The project in a snapshot, or null when it is not ours, not a format we read, or malformed. */
 export function fromHostSnapshot(snap: HostStateSnapshot): (Saved & { patterns: Pattern[] }) | null {
-  if (snap.app !== HOST_APP || snap.format !== HOST_FORMAT) return null;
+  if (snap.app !== HOST_APP || !HOST_FORMATS_READ.includes(snap.format)) return null;
   try {
     const data = JSON.parse(snap.data) as { project?: Saved };
+    data?.project?.patterns?.forEach(expandPattern);
     return parseProject(data?.project as Saved);
   } catch {
     return null;

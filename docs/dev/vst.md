@@ -132,8 +132,9 @@ session") follows them and `test/hoststate.test.ts` pins them:
    only if nothing was edited meanwhile.
 5. **Publish on a short debounce (300 ms) and flush on `pagehide` / hidden.** The window may close right after an edit.
 6. **A snapshot that is not ours or unreadable starts fresh**, never wedges startup. The snapshot is stamped
-   `app: "pulse8"`, `format: 1` (`HOST_FORMAT`; bump it, and keep reading the old one, if the shape changes). The data is the
-   export file's JSON, so every load goes through `parseProject` and its migrations.
+   `app: "pulse8"`, `format: 2` (`HOST_FORMAT`; bump it, and keep reading the old one, if the shape changes). The data is the
+   export file's JSON with each track's trailing blank steps dropped (`compactPattern`; a 16-step pattern is a quarter of its former size, and
+   the snapshot crosses the plugin bridge on every window open, close and edit), so every load goes through `parseProject` and its migrations.
 7. **The same snapshot is installed once.** A resubscribe is handed the answer again; re-installing would undo edits. A
    *different* later snapshot (the DAW reverting the session) is installed, after stopping playback.
 8. **Large text goes as base64** from the plugin to the page (JUCE's event escaping is quadratic); the shim does that, nothing

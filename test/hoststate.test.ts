@@ -4,7 +4,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import type { HostStateSnapshot } from "webdsp";
 import { autosave, fromHostSnapshot, HOST_ANSWER_TIMEOUT_MS, HOST_PUBLISH_DEBOUNCE_MS, restoreFromHost, toHostSnapshot } from "../src/engine/persist";
 import { editPattern, getState, setState } from "../src/engine/store";
-import { initialState } from "../src/engine/state";
+import { lockParams } from "../src/engine/plock";
+import { demoPattern, initialState } from "../src/engine/state";
 
 class FakeHost {
   published: HostStateSnapshot[] = [];
@@ -51,6 +52,23 @@ function savedSnapshot(bpm = 97.5): HostStateSnapshot {
 }
 
 describe("host snapshot", () => {
+  it("drops blank trailing steps and restores them exactly", () => {
+    const patterns = Array.from({ length: 64 }, () => demoPattern());
+    patterns[1].tracks[0].steps[40].on = true; // beyond the pattern's length: still data
+    patterns[1].tracks[2].steps[63].parameterLocks = { [lockParams(2)[0].id]: 0.3 };
+    setState({ patterns });
+    const full = JSON.stringify(patterns).length;
+    const snap = toHostSnapshot();
+    expect(snap.data.length).toBeLessThan(full / 3);
+    expect(fromHostSnapshot(snap)!.patterns).toEqual(patterns);
+  });
+
+  it("still reads a format 1 snapshot (full step arrays)", () => {
+    const snap = toHostSnapshot();
+    const old = { ...snap, format: 1, data: JSON.stringify({ project: { ...JSON.parse(snap.data).project, patterns: getState().patterns } }) };
+    expect(fromHostSnapshot(old)!.patterns).toEqual(getState().patterns);
+  });
+
   it("round-trips the project, stamped with the app", () => {
     const snap = savedSnapshot();
     expect(snap.app).toBe("pulse8");
