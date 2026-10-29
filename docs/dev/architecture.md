@@ -112,3 +112,9 @@ See [Timing & scheduling](timing.md).
 
 The visual language lives in `concept/DESIGN/` (`DESIGN.md` tokens and a reference mock-up). `src/index.css` implements
 it: dark surfaces, three accent colours (`--drum`, `--bass`, `--tone`) and `--fx`, tabular mono readouts.
+
+Layout is CSS-only, by media query: phone (tabs, below 1100 px wide) and desktop (one page, 1100 px and up, with narrower
+overrides below 1300 and 1500 px). Desktop also has a short-window block (`min-width: 1100px` and `max-height: 820px`, with a
+tighter step at 680 px): the band is the tallest fixed-height row, so it is compacted there to keep the sequencer keyboard on
+screen. A DAW's default plugin window is about 1100×700, so check that size (and 1100×640) after any change to the band
+panels. Heights come from the `--cell-h`/`--keys-h` tokens at the top of the file.

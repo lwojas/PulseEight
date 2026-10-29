@@ -37,6 +37,8 @@ Pulse.8 adapts to the device. The pieces are the same everywhere; only their arr
 **Wide screens (1100 px and up)** — everything is on one page. Transport and pattern navigation run across the top.
 Below them a band holds the instrument knobs, the track FX and the Punch FX. The sequencer takes the rest of the
 width, with a slim mixer beside it. Drums get a block of large pads; the bass and FM tracks get a two-octave keyboard.
+In a short window (820 px high or less, such as a DAW's default plugin window) the band is compacted: the delay and reverb
+sends move to a strip under the knobs, so the keyboard stays on screen.
 
 ## The transport bar
 
