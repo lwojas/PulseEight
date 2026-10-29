@@ -12,28 +12,45 @@
 // (`instrument.<control key>`, normalised 0..1). Others (track level, sends, ...) opt in by being
 // returned from `lockParams`, which the sequencer, the UI and playback all go through.
 import { TRACKS } from "./spec";
-import type { Step, TrackPattern } from "./state";
+import type { AppState, Step, TrackPattern } from "./state";
+
+/** What a lock drives: one of the track's sound controls, or one of its FX sends. */
+export type LockTarget = { kind: "sound"; control: number } | { kind: "send"; send: "dly" | "rev" };
 
 export interface LockParam {
   /** Stable id: the key in `Step.parameterLocks` (saved with the project, so never renamed). */
   id: string;
   label: string;
+  target: LockTarget;
   /** The base value, normalised 0..1. */
   base(tp: TrackPattern): number;
-  /** Index of the track's sound control this drives, for the engine and the knobs. */
-  control: number;
 }
 
 const cache = new Map<number, readonly LockParam[]>();
 
-/** Every parameter of `track` a step can lock. */
+/** Every parameter of `track` a step can lock: its sound controls (first, in control order), then its delay and reverb sends. */
 export function lockParams(track: number): readonly LockParam[] {
   let list = cache.get(track);
   if (!list) {
-    list = TRACKS[track].controls.map((c, i) => ({ id: `instrument.${c.key}`, label: c.label, control: i, base: (tp: TrackPattern) => tp.sound[i] }));
+    list = [
+      ...TRACKS[track].controls.map((c, i): LockParam => ({ id: `instrument.${c.key}`, label: c.label, target: { kind: "sound", control: i }, base: (tp) => tp.sound[i] })),
+      { id: "fx.delaySend", label: "DLY", target: { kind: "send", send: "dly" }, base: (tp) => tp.dly.send },
+      { id: "fx.reverbSend", label: "REV", target: { kind: "send", send: "rev" }, base: (tp) => tp.rev.send },
+    ];
     cache.set(track, list);
   }
   return list;
+}
+
+/** The lock parameter behind sound control `control` of `track`. */
+export const soundParam = (track: number, control: number): LockParam => lockParams(track)[control];
+
+/** The lock parameter with this id, if the track has it. */
+export const lockParam = (track: number, id: string): LockParam | undefined => lockParams(track).find((p) => p.id === id);
+
+/** The step P-LOCK mode is editing on `track`, if any: the selected step of the focused track while the mode is on. */
+export function lockStep(s: Pick<AppState, "plock" | "focus" | "selStep" | "patterns" | "pattern">, track: number): Step | undefined {
+  return s.plock && s.focus === track && s.selStep >= 0 ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : undefined;
 }
 
 /** The value of `param` on `step`: its lock when it has one, else the base. */
@@ -42,7 +59,7 @@ export const effectiveValue = (tp: TrackPattern, step: Step | undefined, param: 
 /** The track's sound as it is on `step` (a new array; the base `tp.sound` when the step has no locks). */
 export function effectiveSound(tp: TrackPattern, track: number, step: Step | undefined): number[] {
   if (!hasLocks(step)) return tp.sound;
-  return lockParams(track).map((p) => effectiveValue(tp, step, p));
+  return tp.sound.map((_, i) => effectiveValue(tp, step, soundParam(track, i)));
 }
 
 export const hasLocks = (step: Step | undefined): boolean => !!step?.parameterLocks && Object.keys(step.parameterLocks).length > 0;

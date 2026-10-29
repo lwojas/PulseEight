@@ -100,4 +100,6 @@ The sound knobs hold the track's **base** sound. P-LOCK lets single steps deviat
 3. Select another step and repeat. **CLEAR** removes the selected step's locks; the step itself and the base sound are untouched.
 4. Press **P-LOCK** again to leave. Locks stay; the knobs edit the base again, which moves every step that has no lock for that parameter.
 
-Locks are saved with the pattern. Sends, MIDI-mapped knobs and the plugin's native playback are not locked yet.
+The DLY and REV sends lock the same way as the sound knobs. On a phone, the **P** key next to GATE in the sequencer toggles P-LOCK without leaving the sequencer.
+
+MIDI-mapped knobs follow the screen: in P-LOCK mode, with a step selected on the focused track, a mapped sound knob or send writes that step's lock (and reports the step's value); a knob of another track still edits its base. Locks play in the VST3 build too, baked into its native sequence. Volume, mute, solo and the arp are not lockable.

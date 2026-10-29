@@ -7,14 +7,17 @@
 //   track.<1-8>.sound.<key>                                            (the track's macro knobs)
 //   pattern.select                                                     (0-based pattern slot)
 //
+// Sound knobs and the delay/reverb sends are lockable (plock.ts): in P-LOCK mode, with a step selected on the focused track, they read
+// and write that step's lock rather than the base, exactly as the on-screen knobs do.
 // Ids are 1-based for tracks (what a person calls them) and never change once shipped: they are the
 // external contract (see docs/dev/midi.md). Volume, sends and sound belong to the pattern on screen, as
 // they do in the UI.
 //
 // A parameter's value is in its own domain, `kind` says which:
 //   norm  0..1 continuous      int  min..max whole numbers      bool  0 or 1
-import { setArp, setDelay, setLevel, setMute, setPunchSend, setReverb, setSolo, setSound } from "./actions";
+import { setArp, setLevel, setLockable, setMute, setPunchSend, setSolo } from "./actions";
 import { controller } from "./controller";
+import { effectiveValue, lockParam, lockStep } from "./plock";
 import { currentSource, withSource, type ParamSource } from "./source";
 import { DEFAULT_LEVELS, NUM_PATTERNS, type AppState, type TrackPattern } from "./state";
 import { DEFAULT_DELAY_SENDS, DEFAULT_REVERB_SENDS } from "./trackfx";
@@ -44,6 +47,13 @@ interface ParamDef extends ParamInfo {
 const tp = (s: AppState, t: number): TrackPattern => s.patterns[s.pattern].tracks[t];
 const idOf = (t: number, name: string) => `track.${t + 1}.${name}`;
 
+/** A lockable parameter's value as the controls show it: in P-LOCK mode with a step selected on the track, that step's (its lock over
+ * the base); otherwise the base. Writes go through `setLockable`, which edits the same thing. */
+const shown = (s: AppState, t: number, lockId: string): number => {
+  const p = lockParam(t, lockId)!;
+  return effectiveValue(tp(s, t), lockStep(s, t), p);
+};
+
 function build(): ParamDef[] {
   const defs: ParamDef[] = [];
   for (const spec of TRACKS) {
@@ -53,8 +63,8 @@ function build(): ParamDef[] {
       { id: idOf(t, "volume"), label: `${name} volume`, kind: "norm", min: 0, max: 1, def: DEFAULT_LEVELS[t], get: (s) => tp(s, t).level, set: (v) => setLevel(t, v) },
       { id: idOf(t, "mute"), label: `${name} mute`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.mutes[t] ? 1 : 0), set: (v) => setMute(t, v >= 1) },
       { id: idOf(t, "solo"), label: `${name} solo`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.solos[t] ? 1 : 0), set: (v) => setSolo(t, v >= 1) },
-      { id: idOf(t, "delaySend"), label: `${name} delay send`, kind: "norm", min: 0, max: 1, def: DEFAULT_DELAY_SENDS[t], get: (s) => tp(s, t).dly.send, set: (v) => setDelay(t, { send: v }) },
-      { id: idOf(t, "reverbSend"), label: `${name} reverb send`, kind: "norm", min: 0, max: 1, def: DEFAULT_REVERB_SENDS[t], get: (s) => tp(s, t).rev.send, set: (v) => setReverb(t, { send: v }) },
+      { id: idOf(t, "delaySend"), label: `${name} delay send`, kind: "norm", min: 0, max: 1, def: DEFAULT_DELAY_SENDS[t], get: (s) => shown(s, t, "fx.delaySend"), set: (v) => setLockable(t, "fx.delaySend", v) },
+      { id: idOf(t, "reverbSend"), label: `${name} reverb send`, kind: "norm", min: 0, max: 1, def: DEFAULT_REVERB_SENDS[t], get: (s) => shown(s, t, "fx.reverbSend"), set: (v) => setLockable(t, "fx.reverbSend", v) },
       { id: idOf(t, "punchSend"), label: `${name} punch FX send`, kind: "bool", min: 0, max: 1, def: 1, get: (s) => (tp(s, t).punch ? 1 : 0), set: (v) => setPunchSend(t, v >= 1) },
     );
     if (spec.role !== "drum") {
@@ -63,17 +73,18 @@ function build(): ParamDef[] {
     const sound = defaultSound(spec);
     spec.controls.forEach((c, i) => {
       const id = idOf(t, `sound.${c.key}`);
+      const lockId = `instrument.${c.key}`;
       const label = `${name} ${c.label.toLowerCase()}`;
       if (c.steps) {
         // a stepped control is stored normalised but is a choice: expose the index
         const top = c.steps.length - 1;
         defs.push({
           id, label, kind: "int", min: 0, max: top, def: Math.round(sound[i] * top), labels: c.steps,
-          get: (s) => Math.round(tp(s, t).sound[i] * top),
-          set: (v) => setSound(t, i, v / top),
+          get: (s) => Math.round(shown(s, t, lockId) * top),
+          set: (v) => setLockable(t, lockId, v / top),
         });
       } else {
-        defs.push({ id, label, kind: "norm", min: 0, max: 1, def: sound[i], get: (s) => tp(s, t).sound[i], set: (v) => setSound(t, i, v) });
+        defs.push({ id, label, kind: "norm", min: 0, max: 1, def: sound[i], get: (s) => shown(s, t, lockId), set: (v) => setLockable(t, lockId, v) });
       }
     });
   }
@@ -135,7 +146,7 @@ let stopObserving: (() => void) | null = null;
 export function onParamChange(fn: ParamListener): () => void {
   listeners.add(fn);
   stopObserving ??= observe((next, prev) => {
-    if (next.patterns === prev.patterns && next.mutes === prev.mutes && next.solos === prev.solos && next.pattern === prev.pattern && next.arp === prev.arp) return;
+    if (next.patterns === prev.patterns && next.plock === prev.plock && next.selStep === prev.selStep && next.focus === prev.focus && next.mutes === prev.mutes && next.solos === prev.solos && next.pattern === prev.pattern && next.arp === prev.arp) return;
     const source = currentSource();
     for (const d of defs) {
       const value = d.get(next);

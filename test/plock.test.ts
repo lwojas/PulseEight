@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clearStepLocks, setPlockMode, setSound, setSoundControl, tapStep } from "../src/engine/actions";
+import { clearStepLocks, setLockable, setPlockMode, setSound, setSoundControl, tapStep } from "../src/engine/actions";
 import { Groovebox } from "../src/engine/audio";
 import { effectiveSound, effectiveValue, hasLocks, lockParams, sanitizeLocks } from "../src/engine/plock";
 import { BASS_TRACK } from "../src/engine/spec";
@@ -123,11 +123,15 @@ describe("playback scheduling", () => {
   function fake() {
     const scheduled: any[][] = [];
     const gb = Object.create(Groovebox.prototype) as any;
-    gb.runtime = { scheduleParams: vi.fn((e) => scheduled.push(e)) };
-    gb.inst = Array.from({ length: 8 }, (_, i) => 100 + i);
+    const busWrites: Array<[number, number, number]> = []; // [time, bus, value]
+    gb.runtime = { scheduleParams: vi.fn((e) => scheduled.push(e)), getCurrentTime: () => 0, setNodeParameter: (bus: number, _p: number, v: number) => busWrites.push([-1, bus, v]) };
+    gb.queue = { at: (time: number, fn: () => void) => { fn(); busWrites[busWrites.length - 1][0] = time; } };
+    gb.ids = { inst: Array.from({ length: 8 }, (_, i) => 100 + i), trackBus: Array.from({ length: 8 }, (_, i) => 200 + i), busB: Array.from({ length: 8 }, (_, i) => 300 + i) };
     gb.soundCache = Array.from({ length: 8 }, () => new Array(8).fill(NaN));
-    gb.lockedControls = Array.from({ length: 8 }, () => new Set());
-    return { gb: gb as Groovebox, scheduled };
+    gb.busCache = new Map();
+    gb.lockedParams = Array.from({ length: 8 }, () => new Map());
+    gb.lockedKeys = new Set();
+    return { gb: gb as Groovebox, scheduled, busWrites };
   }
   const pat = () => getState().patterns[getState().pattern];
 
@@ -156,6 +160,20 @@ describe("playback scheduling", () => {
     expect(lock.target).toEqual({ instrument: 100 + T });
   });
 
+  it("schedules a send lock on its step and the base back after it, and holds off immediate base writes meanwhile", () => {
+    setPlockMode(true);
+    setState({ selStep: 3 });
+    setLockable(T, "fx.reverbSend", 0.9);
+    const { gb, scheduled, busWrites } = fake();
+    gb.scheduleLocks(pat(), 3, 1.1);
+    expect(scheduled).toHaveLength(0); // buses are not schedulable params: they go through the ticker queue
+    expect(busWrites).toEqual([[1.1, 300 + T, 0.9]]);
+    expect((gb as any).lockedKeys.has(`${T}:r`)).toBe(true);
+    gb.scheduleLocks(pat(), 4, 1.2);
+    expect(busWrites[1]).toEqual([1.2, 300 + T, pat().tracks[T].rev.send]);
+    expect((gb as any).lockedKeys.size).toBe(0);
+  });
+
   it("restores from the pattern as it is when the next step is scheduled (a base edit in between is honoured)", () => {
     setPlockMode(true);
     setState({ selStep: 3 });
@@ -168,5 +186,59 @@ describe("playback scheduling", () => {
     const lockV = scheduled[0][0].value;
     const restoreV = scheduled[1][0].value;
     expect(restoreV).toBeGreaterThan(lockV);
+  });
+});
+
+describe("sends and MIDI-mapped knobs", () => {
+  it("locks a send on a step without touching the base send", async () => {
+    const { setLockable } = await import("../src/engine/actions");
+    const base = tp().dly.send;
+    setPlockMode(true);
+    setState({ selStep: 3 });
+    setLockable(T, "fx.delaySend", 0.7);
+    expect(step(3).parameterLocks).toEqual({ "fx.delaySend": 0.7 });
+    expect(tp().dly.send).toBe(base);
+    setPlockMode(false);
+    setLockable(T, "fx.delaySend", 0.2);
+    expect(tp().dly.send).toBe(0.2);
+    expect(step(3).parameterLocks).toEqual({ "fx.delaySend": 0.7 });
+  });
+
+  it("a MIDI knob writes the selected step's lock in P-LOCK mode and reads what the UI shows", async () => {
+    const { getParam, setParam } = await import("../src/engine/params");
+    setSound(T, CUT, 0.6);
+    setPlockMode(true);
+    setState({ selStep: 5 });
+    setParam("track.7.sound.cutoff", 0.25, "midi");
+    expect(step(5).parameterLocks).toEqual({ "instrument.cutoff": 0.25 });
+    expect(tp().sound[CUT]).toBe(0.6);
+    expect(getParam("track.7.sound.cutoff", getState())).toBe(0.25);
+    setState({ selStep: 6 });
+    expect(getParam("track.7.sound.cutoff", getState())).toBe(0.6);
+    setPlockMode(false);
+    expect(getParam("track.7.sound.cutoff", getState())).toBe(0.6);
+    setParam("track.7.sound.cutoff", 0.9, "midi");
+    expect(tp().sound[CUT]).toBe(0.9);
+  });
+
+  it("a MIDI knob of another track edits its base in P-LOCK mode", async () => {
+    const { setParam } = await import("../src/engine/params");
+    setPlockMode(true);
+    setState({ selStep: 5 });
+    setParam("track.1.sound.tune", 0.9, "midi");
+    expect(getState().patterns[0].tracks[0].sound[0]).toBe(0.9);
+    expect(getState().patterns[0].tracks[0].steps[5].parameterLocks).toBeUndefined();
+  });
+
+  it("announces the shown value when the selected step changes", async () => {
+    const { onParamChange } = await import("../src/engine/params");
+    setPlockMode(true);
+    setState({ selStep: 1 });
+    setSoundControl(T, CUT, 0.15);
+    const seen: Array<[string, number]> = [];
+    const off = onParamChange((id, v) => seen.push([id, v]));
+    setState({ selStep: 2 });
+    off();
+    expect(seen).toContainEqual(["track.7.sound.cutoff", tp().sound[CUT]]);
   });
 });

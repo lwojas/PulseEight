@@ -212,6 +212,9 @@ class Controller {
     setAudible(-1, -1);
     clearLit();
     setState({ playing: false, cue: null });
+    // the host's locks may have left the engine away from the base sound: send it again
+    gb.forgetLocks();
+    this.syncNow();
     const held = getState().punch;
     this.applyLayers(heldLayers(held, held ? this.heldLevel(gb.now) : 0));
   }

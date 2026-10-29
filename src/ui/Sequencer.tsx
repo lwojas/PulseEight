@@ -2,7 +2,7 @@
 // step editor (accent / slide / note keys).
 import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import {
-  clearTrack, holdStep, randomize, setLength, setOctave, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
+  clearTrack, holdStep, randomize, setLength, setOctave, setPlockMode, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { flashKey, registerKey } from "../engine/keyhl";
@@ -297,6 +297,8 @@ function TrackHeader({ track }: { track: number }) {
   const spec = TRACKS[track];
   const melodic = spec.role !== "drum";
   const preset = useStore((s) => s.patterns[s.pattern].tracks[track].preset);
+  const phone = useMedia("(max-width: 699px)");
+  const plock = useStore((s) => s.plock);
   return (
     <div className="track-head" style={accentStyle(track)}>
       <div className="track-id">
@@ -306,6 +308,11 @@ function TrackHeader({ track }: { track: number }) {
       </div>
       <div className="track-btns">
         {melodic && <GateControl track={track} />}
+        {phone && (
+          <button type="button" className="btn sm plock-key" data-active={plock} aria-pressed={plock} aria-label="P-LOCK mode" title="P-LOCK: select steps to lock sound parameters" onClick={() => setPlockMode(!plock)}>
+            P
+          </button>
+        )}
         <button type="button" className="btn sm" onClick={() => randomize(track)}>RND</button>
         <ConfirmButton label="CLR" onConfirm={() => clearTrack(track)} />
       </div>
@@ -485,10 +492,11 @@ function StepEditor({ track }: { track: number }) {
   const selStep = useStore((s) => (s.focus === track && !s.plock ? s.selStep : -1));
   const step = useStore((s) => (s.selStep >= 0 && s.focus === track && !s.plock ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
   const scale = useStore((s) => s.scale);
+  const phone = useMedia("(max-width: 699px)");
   if (spec.role === "drum") {
     return (
       <div className="step-editor hint" style={accentStyle(track)}>
-        <span className="silk">{plock ? "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB" : "TAP A STEP TO TOGGLE · HOLD FOR ACCENT"}</span>
+        <span className="silk">{plock ? (phone ? "P-LOCK" : "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB") : "TAP A STEP TO TOGGLE · HOLD FOR ACCENT"}</span>
       </div>
     );
   }
@@ -501,7 +509,7 @@ function StepEditor({ track }: { track: number }) {
             <button type="button" className="btn sm" data-active={step.slide} aria-pressed={step.slide} onClick={() => toggleStepFlag(track, selStep, "slide")}>SLIDE</button>
           </>
         ) : (
-          <span className="silk">{plock ? "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB" : "PLAY THE KEYS · TAP A STEP TO ENTER NOTES"}</span>
+          (!phone || plock) && <span className="silk">{plock ? (phone ? "P-LOCK" : "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB") : "PLAY THE KEYS · TAP A STEP TO ENTER NOTES"}</span>
         )}
         <span className="step-editor-tools">
           <ArpControl track={track} />

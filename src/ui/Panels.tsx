@@ -1,12 +1,12 @@
 // Sound, mixer, FX mangler and pattern panels.
 import { useRef, useState, type CSSProperties } from "react";
 import {
-  clearChain, clearPattern, clearStepLocks, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPlockMode, setPunchParam,
+  clearChain, clearPattern, clearStepLocks, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setLockable, setPlockMode, setPunchParam,
   setPunchSend, setReverb, setSoundControl, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
-import { lockParams, hasLocks } from "../engine/plock";
+import { hasLocks, lockStep, soundParam } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
 import { BANK_SIZE, DEFAULT_LEVELS, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
@@ -81,13 +81,14 @@ export function SoundPanel() {
   const track = useStore((s) => s.focus);
   const baseSound = useStore((s) => s.patterns[s.pattern].tracks[track].sound);
   // In P-LOCK mode the knobs show the selected step: its locks over the base. Neither is changed by looking.
-  const locks = useStore((s) => (s.plock && s.selStep >= 0 ? s.patterns[s.pattern].tracks[track].steps[s.selStep].parameterLocks : undefined));
+  const locks = useStore((s) => lockStep(s, track)?.parameterLocks);
   const plock = useStore((s) => s.plock);
-  const params = lockParams(track);
-  const sound = baseSound.map((v, i) => locks?.[params[i].id] ?? v);
+  const sound = baseSound.map((v, i) => locks?.[soundParam(track, i).id] ?? v);
   const playing = useStore((s) => s.playing);
-  const dlySend = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
-  const revSend = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
+  const baseDly = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
+  const baseRev = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
+  const dlySend = locks?.["fx.delaySend"] ?? baseDly;
+  const revSend = locks?.["fx.reverbSend"] ?? baseRev;
   const punchSend = useStore((s) => s.patterns[s.pattern].tracks[track].punch !== false);
   const spec = TRACKS[track];
   const defaults = defaultSound(spec);
@@ -109,7 +110,7 @@ export function SoundPanel() {
             def={defaults[i] ?? unitsToNorm(c, c.def)}
             steps={c.steps?.length}
             readout={formatControl(c, sound[i])}
-            locked={locks?.[params[i].id] !== undefined}
+            locked={locks?.[soundParam(track, i).id] !== undefined}
             onChange={(v) => setSoundControl(track, i, v)}
             onTouch={() => { if (!playing && !plock) controller.audition(track); }}
           />
@@ -120,12 +121,12 @@ export function SoundPanel() {
         <span className="silk">SENDS</span>
         <div className="knobs sends-knobs">
           <Knob
-            label="DLY" value={dlySend} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)"
-            readout={`${Math.round(dlySend * 100)}%`} onChange={(v) => setDelay(track, { send: v })}
+            label="DLY" value={dlySend} def={DEFAULT_DELAY_SENDS[track]} accent="var(--fx)" locked={locks?.["fx.delaySend"] !== undefined}
+            readout={`${Math.round(dlySend * 100)}%`} onChange={(v) => setLockable(track, "fx.delaySend", v)}
           />
           <Knob
-            label="REV" value={revSend} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)"
-            readout={`${Math.round(revSend * 100)}%`} onChange={(v) => setReverb(track, { send: v })}
+            label="REV" value={revSend} def={DEFAULT_REVERB_SENDS[track]} accent="var(--fx)" locked={locks?.["fx.reverbSend"] !== undefined}
+            readout={`${Math.round(revSend * 100)}%`} onChange={(v) => setLockable(track, "fx.reverbSend", v)}
           />
         </div>
         <button

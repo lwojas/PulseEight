@@ -24,7 +24,7 @@ import {
 } from "webdsp";
 import { defaultWorkletUrl } from "webdsp/worklet-url";
 import { baseValues, MANGLER_KEYS, MANGLER_PARAMS, type FxSlot, type ManglerValues } from "./mangler";
-import { lockParams } from "./plock";
+import { lockParams, type LockParam } from "./plock";
 import { normToUnits, NUM_TRACKS, TRACKS } from "./spec";
 import type { Pattern } from "./state";
 import {
@@ -132,6 +132,18 @@ export function trackFxWrites(ids: GraphIds, pattern: Pattern, clamp: (param: nu
   return out;
 }
 
+/** The engine write that puts parameter `p` of `track` at normalised `value`. Its key is the one the mixer and sound writes use for
+ * the same parameter, so a lock and the base share caches. */
+export function lockWrite(ids: GraphIds, track: number, p: LockParam, value: number): Write {
+  const t = p.target;
+  if (t.kind === "sound") {
+    const c = TRACKS[track].controls[t.control];
+    return { kind: "inst", key: `${track}:${t.control}`, instrument: ids.inst[track], param: c.param, value: normToUnits(c, value) };
+  }
+  const delay = t.send === "dly";
+  return { kind: "bus", key: `${track}:${delay ? "d" : "r"}`, bus: delay ? ids.trackBus[track] : ids.busB[track], param: NodeParam.BusSendAmount, value };
+}
+
 /** A pattern's instrument settings, in engine units. */
 export function soundWrites(ids: GraphIds, pattern: Pattern): Write[] {
   const out: Write[] = [];
@@ -169,8 +181,10 @@ export class Groovebox {
   private fxCache = new Map<string, number>();
 
   private soundCache: number[][] = TRACKS.map((t) => new Array(t.controls.length).fill(NaN));
-  /** Per track: the sound controls a scheduled parameter lock has put away from the base value (until a later step restores them). */
-  private lockedControls: Array<Set<number>> = TRACKS.map(() => new Set());
+  /** Per track: the write key of each parameter a scheduled lock has put away from the base value (until a later step restores it), by lock id. */
+  private lockedParams: Array<Map<string, string>> = TRACKS.map(() => new Map());
+  /** Every key in `lockedParams`: what the immediate base writes leave alone. */
+  private lockedKeys = new Set<string>();
   private busCache = new Map<string, number>();
   private manglerCache: Partial<ManglerValues> = {};
 
@@ -279,11 +293,19 @@ export class Groovebox {
   silence(): void {
     this.runtime.cancelScheduled();
     // the restores that were scheduled are gone with the rest: the engine may hold locked values, so forget what it holds
-    this.lockedControls.forEach((set, t) => {
-      for (const i of set) this.soundCache[t][i] = NaN;
-      set.clear();
-    });
+    this.forgetLocks();
     for (const spec of TRACKS) if (spec.role !== "drum") this.runtime.instrumentNoteOff(this.inst[spec.id]);
+  }
+
+  /** Forget what the engine holds of every lockable parameter (a lock may have left it away from the base), so the next apply sends it. */
+  forgetLocks(): void {
+    this.lockedParams.forEach((m) => m.clear());
+    this.lockedKeys.clear();
+    for (const spec of TRACKS) {
+      this.soundCache[spec.id].fill(NaN);
+      this.busCache.delete(`${spec.id}:d`);
+      this.busCache.delete(`${spec.id}:r`);
+    }
   }
 
   setTempo(bpm: number, anchorTime: number, time?: number): void {
@@ -302,7 +324,7 @@ export class Groovebox {
       const [track, i] = w.key.split(":").map(Number);
       if (this.soundCache[track][i] === w.value) continue;
       // a lock is sounding or scheduled on this control: the base comes back with the step that ends it (see scheduleLocks)
-      if (!future && this.lockedControls[track].has(i)) continue;
+      if (!future && this.lockedKeys.has(w.key)) continue;
       this.soundCache[track][i] = w.value;
       if (future) events.push({ time: time!, target: { instrument: w.instrument }, param: w.param, value: w.value });
       else this.runtime.setInstrumentParameter(w.instrument, w.param, w.value);
@@ -310,33 +332,34 @@ export class Groovebox {
     if (events.length) this.runtime.scheduleParams(events);
   }
 
-  /** Parameter locks for step `step` of `pattern`, which sounds at audio time `time`: the step's locked controls go to the engine as
-   * scheduled parameter writes (applied before that block's notes), and a control the previous step locked that this one does not
-   * goes back to its base value. Nothing is sent for the common step with no locks and none to undo. */
+  /** Parameter locks for step `step` of `pattern`, which sounds at audio time `time`: the step's locked parameters go to the engine at
+   * that time (sound controls as scheduled parameter writes, applied before that block's notes; sends from the ticker, as the mixer's
+   * are), and a parameter the previous step locked that this one does not goes back to its base value. Nothing is sent for the common
+   * step with no locks and none to undo. */
   scheduleLocks(pattern: Pattern, step: number, time: number): void {
     const events: ScheduledParam[] = [];
     for (const spec of TRACKS) {
       const t = spec.id;
       const tp = pattern.tracks[t];
       const locks = tp.steps[step].parameterLocks;
-      const before = this.lockedControls[t];
+      const before = this.lockedParams[t];
       if (!locks && before.size === 0) continue;
-      const now = new Set<number>();
+      const now = new Map<string, string>();
       for (const p of lockParams(t)) {
-        const c = spec.controls[p.control];
-        const target = { instrument: this.inst[t] };
         const locked = locks?.[p.id];
-        if (locked !== undefined) {
-          now.add(p.control);
-          events.push({ time, target, param: c.param, value: normToUnits(c, locked) });
-          this.soundCache[t][p.control] = NaN;
-        } else if (before.has(p.control)) {
-          const base = normToUnits(c, p.base(tp));
-          events.push({ time, target, param: c.param, value: base });
-          this.soundCache[t][p.control] = base;
+        if (locked === undefined && !before.has(p.id)) continue;
+        const w = lockWrite(this.ids, t, p, locked ?? p.base(tp));
+        if (locked !== undefined) now.set(p.id, w.key);
+        if (w.kind === "inst") {
+          events.push({ time, target: { instrument: w.instrument }, param: w.param, value: w.value });
+          this.soundCache[t][(p.target as { control: number }).control] = locked !== undefined ? NaN : w.value;
+        } else if (w.kind === "bus") {
+          this.when(time, () => this.setBus(w.bus, w.key, w.param, w.value));
         }
       }
-      this.lockedControls[t] = now;
+      for (const key of before.values()) this.lockedKeys.delete(key);
+      for (const key of now.values()) this.lockedKeys.add(key);
+      this.lockedParams[t] = now;
     }
     if (events.length) this.runtime.scheduleParams(events);
   }
@@ -346,7 +369,7 @@ export class Groovebox {
   /** `group` limits the bus writes: "pattern" leaves the punch section (bus C) alone. */
   applyMix(mix: MixInput, time?: number, group: "pattern" | "punch" | "all" = "all"): void {
     this.when(time, () => {
-      for (const w of mixWrites(this.ids, mix, group)) if (w.kind === "bus") this.setBus(w.bus, w.key, w.param, w.value);
+      for (const w of mixWrites(this.ids, mix, group)) if (w.kind === "bus" && !this.lockedKeys.has(w.key)) this.setBus(w.bus, w.key, w.param, w.value);
       for (const w of trackFxWrites(this.ids, mix.pattern, this.clampFx)) if (w.kind === "fx") this.setFx(w.bus, w.effect, w.key, w.param, w.value);
     });
   }

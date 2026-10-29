@@ -167,3 +167,11 @@ has started and sent the sequence: about a second after the window opens. The pr
 - No hardware MIDI controllers in a macOS plugin WebView (WKWebView has no Web MIDI); no MIDI output. Pulse.8's MIDI mapping works
   on the DAW's MIDI (CCs, program changes) while the window is open.
 - VST3, macOS, ad-hoc signed. Verified headless (above) against the real engine; not yet loaded in REAPER or Live, so do that first.
+
+## Parameter locks in the native sequence
+
+`nativeseq.ts` bakes a step's `parameterLocks` (see `engine/plock.ts`) as `param` events at the step's swung beat: sound controls to the
+instrument, sends to the track bus (protocol 4 bus targets). The next step writes a parameter the step before had locked back to its base
+(a lock on a cycle's last step is undone on the loop). Where a lock lands on a beat that a per-bar state write also covers, the lock
+wins. It is the same rule as the live scheduler (`Groovebox.scheduleLocks`), and `lockWrite` builds both. When the DAW stops, the page
+forgets what the engine holds (`forgetLocks`) and re-sends the base sound.

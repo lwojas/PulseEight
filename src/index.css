@@ -174,7 +174,7 @@ button.oled { cursor: pointer; text-align: left; }
 .plock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
 .plock-bar .btn { flex: none; }
 .plock-bar .silk { flex-basis: 100%; }
-.plock-bar .btn[data-active="true"] { background: var(--fx); border-color: var(--fx); }
+.plock-bar .btn[data-active="true"], .plock-key[data-active="true"] { background: var(--fx); border-color: var(--fx); }
 .plock-bar .silk { color: var(--fx); }
 .pad[data-acc="true"][data-on="true"] { box-shadow: inset 0 0 0 3px var(--ink); }
 /* playhead: a bar across the top of the lit step. Toggled by JS via data-play. */

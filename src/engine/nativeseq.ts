@@ -25,8 +25,10 @@
 // live scheduler lets a held punch win), and live keyboard arpeggios.
 import type { Sequence, SequenceEvent } from "webdsp";
 import { Arpeggiator } from "./arp";
-import { manglerWrites, mixWrites, soundWrites, trackFxWrites, type GraphIds, type Write } from "./audio";
+import { lockWrite, manglerWrites, mixWrites, soundWrites, trackFxWrites, type GraphIds, type Write } from "./audio";
 import { baseValues, laneLayers, layeredTarget, MANGLER_KEYS, type ManglerKey } from "./mangler";
+import { lockParams } from "./plock";
+import { NUM_TRACKS } from "./spec";
 import { StepCompiler, MELODIC, type StepNote } from "./stepcompile";
 import type { ArpSettings } from "./arp";
 import type { Pattern } from "./state";
@@ -202,6 +204,7 @@ function cycleEvents(song: Song, layout: Layout, ctx: NativeCtx): { events: Sequ
   }
 
   // per-pattern state, only where the patterns disagree
+  const stateFrom = events.length;
   if (entries.length > 1) {
     const states = entries.map((e) => patternState(song, e.pattern, ctx));
     const varying = new Set<string>();
@@ -219,10 +222,47 @@ function cycleEvents(song: Song, layout: Layout, ctx: NativeCtx): { events: Sequ
     }
   }
 
+  // parameter locks; where one lands on a beat a per-bar state write also covers, the lock is what plays
+  const locks = lockEvents(song, entries, ctx);
+  if (locks.length) {
+    const at = (e: SequenceEvent) => (e.kind === "param" ? `${e.beat}|${JSON.stringify(e.target)}|${e.param}` : "");
+    const taken = new Set(locks.map(at));
+    const kept = events.slice(stateFrom).filter((e) => !taken.has(at(e)));
+    events.length = stateFrom;
+    events.push(...kept, ...locks);
+  }
+
   // written FX lanes
   if (song.lanes && song.fxPlay) laneEvents(song, entries, ctx, events);
 
   return { events, beats: cycle };
+}
+
+/** Parameter locks: on a step, each locked parameter is written at the step's (swung) beat; on the step after, a parameter the
+ * step before had locked is written back to its base. The step before a cycle's first is its last, so a lock on the last step is undone
+ * on the loop. The same rule as the live scheduler (`Groovebox.scheduleLocks`). */
+function lockEvents(song: Song, entries: Entry[], ctx: NativeCtx): SequenceEvent[] {
+  const flat: Array<{ e: Entry; s: number }> = [];
+  for (const e of entries) for (let s = 0; s < song.patterns[e.pattern].length; s++) flat.push({ e, s });
+  const out: SequenceEvent[] = [];
+  const swingBeats = (song.swing - 0.5) * 2 * STEP_BEATS;
+  flat.forEach(({ e, s }, g) => {
+    const pat = song.patterns[e.pattern];
+    const prev = flat[(g + flat.length - 1) % flat.length];
+    const prevPat = song.patterns[prev.e.pattern];
+    const beat = e.start + s * STEP_BEATS + (s % 2 === 1 ? swingBeats : 0);
+    for (let t = 0; t < NUM_TRACKS; t++) {
+      const locks = pat.tracks[t].steps[s].parameterLocks;
+      const before = prevPat.tracks[t].steps[prev.s].parameterLocks;
+      if (!locks && !before) continue;
+      for (const p of lockParams(t)) {
+        const locked = locks?.[p.id];
+        if (locked !== undefined) out.push(writeEvent(lockWrite(ctx.ids, t, p, locked), beat));
+        else if (before?.[p.id] !== undefined) out.push(writeEvent(lockWrite(ctx.ids, t, p, p.base(pat.tracks[t])), beat));
+      }
+    }
+  });
+  return out;
 }
 
 /** The written lanes: per step, the layered punch chain (a ramp across the step where a lane's level moves) and the punch section's

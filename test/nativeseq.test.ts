@@ -7,7 +7,7 @@ import type { GraphIds } from "../src/engine/audio";
 import {
   baseLayout, cueLayout, cycleBeats, nextBoundary, positionAt, steadySequence, transitionSequence, type NativeCtx, type Song,
 } from "../src/engine/nativeseq";
-import { NUM_TRACKS, TRACKS } from "../src/engine/spec";
+import { normToUnits, NUM_TRACKS, TRACKS } from "../src/engine/spec";
 import { newPattern, type Pattern } from "../src/engine/state";
 
 const ids: GraphIds = {
@@ -255,5 +255,54 @@ describe("the cue transition", () => {
     const to = cueLayout([a, b], false, [], 1, 8);
     const seq = transitionSequence(song([a, b]), { patterns: [0], origin: 0 }, to, 8, 5, ctx)!;
     expect(seq.lengthBeats % cycleBeats([a, b], to)).toBe(0);
+  });
+});
+
+describe("parameter locks", () => {
+  const FILTER = TRACKS[BASS].controls[0];
+  const lockOn = (p: Pattern, step: number, locks: Record<string, number>) => { p.tracks[BASS].steps[step].parameterLocks = locks; };
+  const seqOf = (p: Pattern[], over: Partial<Song> = {}) => steadySequence(song(p, over), { patterns: p.map((_, i) => i), origin: 0 }, ctx)!;
+
+  it("a pattern with no locks bakes none (a looping pattern carries no state at all)", () => {
+    expect(steadySequence(song([blank()]), { patterns: [0], origin: 0 }, ctx)).toBeNull();
+  });
+
+  it("writes the lock on its step and the base back on the next, to the instrument or the send bus", () => {
+    const p = blank();
+    p.tracks[BASS].sound[0] = 0.6;
+    lockOn(p, 4, { "instrument.cutoff": 0.2, "fx.delaySend": 0.9 });
+    const ev = params(seqOf([p]).events);
+    const at = (beat: number) => ev.filter((e) => e.beat === beat);
+    expect(at(1)).toHaveLength(2);
+    expect(at(1).find((e) => "instrument" in (e as any).target)).toMatchObject({ target: { instrument: ids.inst[BASS] }, param: FILTER.param });
+    expect(at(1).find((e) => "bus" in (e as any).target)).toMatchObject({ target: { bus: ids.trackBus[BASS] }, value: 0.9 });
+    expect(at(1.25)).toHaveLength(2);
+    expect(at(1.25).find((e) => "bus" in (e as any).target)).toMatchObject({ value: p.tracks[BASS].dly.send }); // back to base
+    expect(ev).toHaveLength(4);
+  });
+
+  it("a lock on the last step is undone on the loop's first step", () => {
+    const p = blank();
+    lockOn(p, 15, { "fx.reverbSend": 1 });
+    const ev = params(seqOf([p]).events);
+    expect(ev.map((e) => e.beat).sort()).toEqual([0, 3.75]);
+    expect(ev.find((e) => e.beat === 0)).toMatchObject({ target: { bus: ids.busB[BASS] }, value: p.tracks[BASS].rev.send });
+  });
+
+  it("follows swing, like the live scheduler", () => {
+    const p = blank();
+    lockOn(p, 1, { "instrument.cutoff": 0.2 });
+    expect(params(seqOf([p], { swing: 0.75 }).events)[0].beat).toBeCloseTo(0.25 + 0.125, 6);
+  });
+
+  it("wins over a per-bar state write on the same beat", () => {
+    const a = blank();
+    const b = blank();
+    a.tracks[BASS].sound[0] = 0.3;
+    b.tracks[BASS].sound[0] = 0.8; // patterns disagree: each bar start writes the sound
+    lockOn(b, 0, { "instrument.cutoff": 0.1 });
+    const ev = params(seqOf([a, b]).events).filter((e) => e.beat === 4 && "instrument" in (e as any).target && e.param === FILTER.param);
+    expect(ev).toHaveLength(1);
+    expect(ev[0].value).toBeCloseTo(normToUnits(FILTER, 0.1), 6);
   });
 });

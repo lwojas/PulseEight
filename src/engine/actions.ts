@@ -2,7 +2,7 @@
 // audition sounds. No React here.
 import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
-import { clearLocks, lockParams, setLock } from "./plock";
+import { clearLocks, lockParam, setLock, soundParam } from "./plock";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { TRACKS } from "./spec";
 import { clearTrackSteps, GATES, newPattern, PAGE, randomizeTrack } from "./state";
@@ -97,15 +97,25 @@ function selectLockStep(track: number, step: number): void {
   if (!getState().playing) controller.audition(track, getState().patterns[getState().pattern].tracks[track].steps[step].note);
 }
 
-/** A sound knob moved. In normal mode it edits the base sound. In P-LOCK mode it writes only that parameter's lock on the selected
- * step (and nothing when no step is selected: the base is not for P-LOCK mode to change). */
-export function setSoundControl(track: number, control: number, value: number): void {
+/** A lockable control moved (a sound knob, a send: `id` is its lock id). In normal mode it edits the base. In P-LOCK mode on the
+ * focused track it writes only that parameter's lock on the selected step, and nothing when no step is selected (the base is not
+ * for P-LOCK mode to change). A control of another track is not what P-LOCK mode is editing: it edits its base. */
+export function setLockable(track: number, id: string, value: number): void {
   const st = getState();
-  if (!st.plock) return setSound(track, control, value);
-  if (st.selStep < 0 || st.focus !== track) return;
-  const id = lockParams(track)[control].id;
-  editPattern((p) => setLock(p.tracks[track].steps[st.selStep], id, clamp01(value)));
+  const p = lockParam(track, id);
+  if (!p) return;
+  if (st.plock && st.focus === track) {
+    if (st.selStep < 0) return;
+    editPattern((pat) => setLock(pat.tracks[track].steps[st.selStep], id, clamp01(value)));
+    return;
+  }
+  if (p.target.kind === "sound") setSound(track, p.target.control, value);
+  else if (p.target.send === "dly") setDelay(track, { send: value });
+  else setReverb(track, { send: value });
 }
+
+/** A sound knob moved: see `setLockable`. */
+export const setSoundControl = (track: number, control: number, value: number): void => setLockable(track, soundParam(track, control).id, value);
 
 /** Remove every lock from a step; the step and the base sound stay as they are. */
 export function clearStepLocks(track: number, step: number): void {
