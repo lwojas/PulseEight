@@ -11,6 +11,7 @@ import { MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
 import { MELODIC, StepCompiler, type StepNote } from "./stepcompile";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
+import { gateForHeld, recordStep } from "./record";
 import { locateSong } from "./song";
 import { withSource } from "./source";
 import { startTicker } from "./ticker";
@@ -168,6 +169,7 @@ class Controller {
     this.punchScheduled = -1;
     gb.resetManglerSchedule();
     this.audibleStep = -1;
+    this.recHeld.clear();
     setAudible(-1, -1);
     clearLit();
     setState({ playing: false, cue: null });
@@ -237,6 +239,45 @@ class Controller {
       const n = note ?? spec.defaultNote ?? spec.rootMidi ?? 0;
       gb.note(track, { velocity: 0.9, pitch: n - (spec.rootMidi ?? 0) + 12 * tp.oct, duration: 0.28 });
     }
+  }
+
+  // --- realtime recording --------------------------------------------------------------------
+
+  /** Keys held while recording, by track and note: when they went down and which step they wrote. */
+  private recHeld = new Map<string, { time: number; pattern: number; step: number }>();
+
+  /** True when keys should be written onto the steps: armed, and the transport is running. */
+  get recording(): boolean {
+    const st = getState();
+    return st.rec && st.playing && this.audibleStep >= 0;
+  }
+
+  /** A melodic key went down while recording: write its note on the nearest step. */
+  recordDown(track: number, note: number): void {
+    const gb = this.gb;
+    if (!gb || !this.recording || TRACKS[track].role === "drum") return;
+    const st = getState();
+    const pattern = st.playPattern;
+    const stepDur = 15 / this.bpmNow();
+    const step = recordStep(this.audibleStep, (gb.now - this.audibleSince) / stepDur, st.patterns[pattern].length);
+    editPattern((p) => {
+      const s = p.tracks[track].steps[step];
+      s.on = true;
+      s.note = note;
+    }, pattern);
+    this.recHeld.set(`${track}:${note}`, { time: gb.now, pattern, step });
+  }
+
+  /** The key came up: the time it was held becomes the step's gate. */
+  recordUp(track: number, note: number): void {
+    const key = `${track}:${note}`;
+    const h = this.recHeld.get(key);
+    if (!h) return;
+    this.recHeld.delete(key);
+    const gb = this.gb;
+    if (!gb || !getState().rec) return;
+    const gate = gateForHeld((gb.now - h.time) / (15 / this.bpmNow()));
+    editPattern((p) => { p.tracks[track].steps[h.step].gate = gate; }, h.pattern);
   }
 
   // --- arpeggiator ---------------------------------------------------------------------------

@@ -368,7 +368,24 @@ function OctaveControl({ track }: { track: number }) {
  * to up) and feed the arp; otherwise a press is a single tap, as before. */
 function useKeyPress(track: number, step: number, press: (n: number) => void) {
   const arpOn = useStore((s) => s.arp[track].on);
+  // recording needs the time a key is held for the gate, so keys go down and up separately
+  const rec = useStore((s) => s.rec && s.playing);
   return (n: number) => {
+    if (rec) {
+      const arp = arpOn;
+      const down = () => {
+        flashKey(track, n);
+        controller.recordDown(track, n);
+        if (arp) controller.arpDown(track, n);
+        else controller.audition(track, n);
+      };
+      const up = () => { controller.recordUp(track, n); if (arp) controller.arpUp(track, n); };
+      return {
+        onPointerDown: (e: { button: number }) => e.button === 0 && down(),
+        onPointerUp: up, onPointerLeave: up, onPointerCancel: up,
+        onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+      };
+    }
     if (!arpOn || step >= 0) return { onClick: () => press(n) };
     const down = () => controller.arpDown(track, n);
     const up = () => controller.arpUp(track, n);

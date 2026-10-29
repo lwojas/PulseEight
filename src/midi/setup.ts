@@ -170,13 +170,16 @@ function keyboardNote(data: Uint8Array): boolean {
   if (!on) {
     // release whatever this note was held on, even if the selection moved meanwhile
     for (const [t, notes] of held) if (notes.delete(note)) controller.arpUp(t, note);
+    controller.recordUp(track, note);
     return true;
   }
   flashKey(track, note);
+  const recording = controller.recording;
+  if (recording) controller.recordDown(track, note);
   if (useArp) {
     (held.get(track) ?? held.set(track, new Set()).get(track)!).add(note);
     controller.arpDown(track, note);
-  } else if (st.selStep >= 0) setStepNote(track, st.selStep, note);
+  } else if (st.selStep >= 0 && !recording) setStepNote(track, st.selStep, note);
   else if (!routed()) controller.audition(track, note);
   return true;
 }

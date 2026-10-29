@@ -31,6 +31,7 @@ export function Header() {
   const swing = useStore((s) => s.swing);
   const pattern = useStore((s) => s.pattern);
   const cue = useStore((s) => s.cue);
+  const rec = useStore((s) => s.rec);
   const nudge = (d: number) => setState({ bpm: Math.min(200, Math.max(60, Math.round((projectBpm + d) * 10) / 10)) });
   return (
     <header className="topbar">
@@ -43,6 +44,14 @@ export function Header() {
         >
           <span aria-hidden="true">{playing ? "■" : "▶"}</span>
           <span className="lbl">{playing ? "STOP" : "PLAY"}</span>
+        </button>
+        <button
+          type="button" className="btn rec" data-active={rec} aria-pressed={rec} aria-label="Record notes"
+          title="Record notes played on the keyboard onto the steps while playing"
+          onClick={() => setState({ rec: !rec })}
+        >
+          <span className="rec-dot" aria-hidden="true" />
+          <span className="lbl">REC</span>
         </button>
         <div className="oled" aria-label="Tempo">
           <button type="button" className="oled-btn" aria-label="Slower" disabled={hostBpm !== null} onClick={() => nudge(-1)}>−</button>

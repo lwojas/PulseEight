@@ -143,6 +143,8 @@ export interface AppState {
   fxPlay: boolean;
   write: boolean;
   erase: boolean;
+  /** Realtime note recording is armed: while playing, keys (on screen or MIDI) write onto the steps. Not saved. */
+  rec: boolean;
   /** Punch id currently held by the player (0 = none). */
   punch: number;
   /** Punch whose character parameter is shown (the last one pressed). */
@@ -319,6 +321,7 @@ export function initialState(): AppState {
     fxPlay: true,
     write: false,
     erase: false,
+    rec: false,
     punch: 0,
     punchSel: 1,
     chainEdit: false,
