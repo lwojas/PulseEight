@@ -8,6 +8,7 @@ import { controller } from "../engine/controller";
 import { flashKey, registerKey } from "../engine/keyhl";
 import { PUNCHES } from "../engine/mangler";
 import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
+import { hasLocks } from "../engine/plock";
 import { noteName, TRACKS } from "../engine/spec";
 import { DEFAULT_GATE, FX_LANES, GATE_BUTTONS, GATES, LENGTHS, PAGE } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
@@ -199,11 +200,13 @@ interface PadProps {
   acc: boolean;
   slide: boolean;
   selected: boolean;
+  /** The step carries parameter locks. */
+  locked: boolean;
   note?: string;
 }
 
 /** One step. Tap toggles/selects, hold accents/selects. The playhead lights it via data-play (see playhead.ts). */
-const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, note }: PadProps) {
+const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, locked, note }: PadProps) {
   const press = usePress(() => tapStep(track, abs), () => holdStep(track, abs));
   const playRef = usePlayheadCell(abs);
   return (
@@ -214,10 +217,11 @@ const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, note }: Pa
       data-acc={acc}
       data-slide={slide}
       data-sel={selected}
+      data-lock={locked}
       data-beat={abs % 4 === 0}
       aria-pressed={on}
       ref={playRef}
-      aria-label={`${TRACKS[track].name} step ${abs + 1}${on ? (note ? ` ${note}` : "") : " off"}${acc ? " accent" : ""}${slide ? " slide" : ""}`}
+      aria-label={`${TRACKS[track].name} step ${abs + 1}${on ? (note ? ` ${note}` : "") : " off"}${acc ? " accent" : ""}${slide ? " slide" : ""}${locked ? " with parameter locks" : ""}`}
       {...press}
     >
       <span className="pad-num">{pad2(abs + 1)}</span>
@@ -234,16 +238,17 @@ function Pads({ track }: { track: number }) {
   const page = useStore((s) => s.page);
   const tp = useStore((s) => s.patterns[s.pattern].tracks[track]);
   const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
+  const plock = useStore((s) => s.plock);
   const spec = TRACKS[track];
   const melodic = spec.role !== "drum";
   return (
-    <div className="pads" style={accentStyle(track)} role="group" aria-label={`${spec.name} steps`}>
+    <div className="pads" style={accentStyle(track)} data-plock={plock} role="group" aria-label={`${spec.name} steps`}>
       {Array.from({ length: PAGE }, (_, i) => {
         const abs = page * PAGE + i;
         const s = tp.steps[abs];
         return (
           <Pad
-            key={i} track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs}
+            key={i} track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs} locked={hasLocks(s)}
             note={melodic && s.on ? noteName(s.note + 12 * tp.oct) : undefined}
           />
         );
@@ -257,8 +262,8 @@ function Pads({ track }: { track: number }) {
 /** Gate length of the selected step: how long its note is held. Disabled until a step is selected.
  * Inline buttons on wide screens; on a phone a GATE button opens them in a modal. */
 function GateControl({ track }: { track: number }) {
-  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
-  const gate = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep].gate ?? DEFAULT_GATE : -1));
+  const selStep = useStore((s) => (s.focus === track && !s.plock ? s.selStep : -1));
+  const gate = useStore((s) => (s.selStep >= 0 && s.focus === track && !s.plock ? s.patterns[s.pattern].tracks[track].steps[s.selStep].gate ?? DEFAULT_GATE : -1));
   const phone = useMedia("(max-width: 699px)");
   const [open, setOpen] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
@@ -475,13 +480,15 @@ function Keys({ track, step, scale }: { track: number; step: number; scale: Proj
 
 function StepEditor({ track }: { track: number }) {
   const spec = TRACKS[track];
-  const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
-  const step = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
+  // In P-LOCK mode a selected step is only a target for locks: its note, flags and gate are not edited from here.
+  const plock = useStore((s) => s.plock);
+  const selStep = useStore((s) => (s.focus === track && !s.plock ? s.selStep : -1));
+  const step = useStore((s) => (s.selStep >= 0 && s.focus === track && !s.plock ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
   const scale = useStore((s) => s.scale);
   if (spec.role === "drum") {
     return (
       <div className="step-editor hint" style={accentStyle(track)}>
-        <span className="silk">TAP A STEP TO TOGGLE · HOLD FOR ACCENT</span>
+        <span className="silk">{plock ? "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB" : "TAP A STEP TO TOGGLE · HOLD FOR ACCENT"}</span>
       </div>
     );
   }
@@ -494,7 +501,7 @@ function StepEditor({ track }: { track: number }) {
             <button type="button" className="btn sm" data-active={step.slide} aria-pressed={step.slide} onClick={() => toggleStepFlag(track, selStep, "slide")}>SLIDE</button>
           </>
         ) : (
-          <span className="silk">PLAY THE KEYS · TAP A STEP TO ENTER NOTES</span>
+          <span className="silk">{plock ? "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB" : "PLAY THE KEYS · TAP A STEP TO ENTER NOTES"}</span>
         )}
         <span className="step-editor-tools">
           <ArpControl track={track} />

@@ -1,6 +1,7 @@
 // Saves patterns, the chain and the transport settings to IndexedDB (db.ts): an autosave slot
 // plus named saves. Performance state (mutes, solos, FX arming, the screen) is deliberately not
 // saved. Project files (export / import) are separate and unchanged.
+import { sanitizeLocks } from "./plock";
 import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { normalizeArp, type ArpSettings } from "./arp";
@@ -72,6 +73,17 @@ function parseProject(s: Saved): (Saved & { patterns: Pattern[] }) | null {
   }
   for (const p of patterns) migrate(p);
   if (!patterns.every(valid)) return null;
+  // Parameter locks (absent in older saves): keep only known parameters with sane values.
+  for (const p of patterns) {
+    p.tracks.forEach((t, i) => {
+      for (const st of t.steps) {
+        if (!st.parameterLocks) continue;
+        const clean = sanitizeLocks(i, st.parameterLocks);
+        if (clean) st.parameterLocks = clean;
+        else delete st.parameterLocks;
+      }
+    });
+  }
   return {
     projectName: typeof s.projectName === "string" ? s.projectName.slice(0, 40) : "",
     patterns,

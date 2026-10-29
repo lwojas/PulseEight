@@ -167,6 +167,15 @@ button.oled { cursor: pointer; text-align: left; }
 .pad[data-on="true"] { background: var(--acc); border-color: var(--acc); color: var(--ink); }
 .pad:nth-child(8n+4):not(:nth-child(8n)) { margin-right: 3px; }
 .pad[data-sel="true"] { outline: 2px solid var(--text); outline-offset: 1px; z-index: 1; }
+.pads[data-plock="true"] .pad[data-sel="true"] { outline-color: var(--fx); }
+.pad[data-lock="true"]::before { content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--fx); box-shadow: 0 0 0 1px var(--ink); }
+.knob[data-lock="true"] .knob-fill { stroke: var(--fx); }
+.knob[data-lock="true"] .knob-readout { color: var(--fx); }
+.plock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.plock-bar .btn { flex: none; }
+.plock-bar .silk { flex-basis: 100%; }
+.plock-bar .btn[data-active="true"] { background: var(--fx); border-color: var(--fx); }
+.plock-bar .silk { color: var(--fx); }
 .pad[data-acc="true"][data-on="true"] { box-shadow: inset 0 0 0 3px var(--ink); }
 /* playhead: a bar across the top of the lit step. Toggled by JS via data-play. */
 .pad[data-play]::after, .fx-cell[data-play]::after { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 3px; background: #fff; border-radius: 3px 3px 0 0; }

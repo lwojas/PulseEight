@@ -31,10 +31,12 @@ interface KnobProps {
   accent?: string;
   /** Called when a gesture starts (e.g. to audition). */
   onTouch?: () => void;
+  /** The shown value is a step's parameter lock rather than the base value. */
+  locked?: boolean;
 }
 
 /** Drag up/down (or left/right) to turn; double-tap resets; arrow keys nudge. */
-export function Knob({ label, value, readout, onChange, def, steps, accent, onTouch }: KnobProps) {
+export function Knob({ label, value, readout, onChange, def, steps, accent, onTouch, locked }: KnobProps) {
   const drag = useRef<{ y: number; x: number; v: number } | null>(null);
   const lastTap = useRef(0);
 
@@ -79,7 +81,7 @@ export function Knob({ label, value, readout, onChange, def, steps, accent, onTo
   const style = { "--k": accent ?? "var(--acc, var(--bass))" } as CSSProperties;
 
   return (
-    <div className="knob" style={style}>
+    <div className="knob" style={style} data-lock={locked || undefined}>
       <div className="knob-label">{label}</div>
       <div
         className="knob-dial"

@@ -24,6 +24,9 @@ export interface Step {
   slide: boolean;
   /** Gate length: index into `GATES` (melodic tracks only). Absent in saves from before it existed. */
   gate?: number;
+  /** Parameter locks: per-step overrides of the track's base sound, by parameter id (see plock.ts) to a normalised 0..1 value.
+   * Holds only deviations; absent (the usual case, and in saves from before locks) means the step plays the base sound. */
+  parameterLocks?: Record<string, number>;
 }
 
 /** Selectable note lengths in steps. Saved steps store an index, so new entries are only ever appended.
@@ -147,6 +150,8 @@ export interface AppState {
   // pattern bank tools
   chainEdit: boolean;
   copyArm: boolean;
+  /** P-LOCK mode: taps select steps (empty ones too) instead of editing them, and sound controls write the selected step's locks. */
+  plock: boolean;
 }
 
 const emptyStep = (note: number): Step => ({ on: false, note, acc: false, slide: false });
@@ -227,6 +232,7 @@ export function clearTrackSteps(p: Pattern, track: number) {
     s.acc = false;
     s.slide = false;
     delete s.gate;
+    delete s.parameterLocks;
     s.note = spec.defaultNote ?? 0;
   }
 }
@@ -317,6 +323,7 @@ export function initialState(): AppState {
     punchSel: 1,
     chainEdit: false,
     copyArm: false,
+    plock: false,
   };
 }
 

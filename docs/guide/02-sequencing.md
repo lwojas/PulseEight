@@ -90,3 +90,14 @@ Open the full panel with the arpeggiator button on a melodic track. Settings are
 Selecting a track in the rail plays it once when stopped. Mute and solo live in the rail (wide screens) and the Mix tab.
 
 Next: [Sound design](03-sound.md).
+
+## Parameter locks (P-LOCK)
+
+The sound knobs hold the track's **base** sound. P-LOCK lets single steps deviate from it.
+
+1. Press **P-LOCK** (under the sound knobs). Tapping a step now only *selects* it, empty steps included. Nothing is added or removed.
+2. Turn a sound knob: only that parameter is locked, on the selected step. The knob turns pink and the step gets a pink dot. The knobs show the selected step's values (its locks over the base).
+3. Select another step and repeat. **CLEAR** removes the selected step's locks; the step itself and the base sound are untouched.
+4. Press **P-LOCK** again to leave. Locks stay; the knobs edit the base again, which moves every step that has no lock for that parameter.
+
+Locks are saved with the pattern. Sends, MIDI-mapped knobs and the plugin's native playback are not locked yet.

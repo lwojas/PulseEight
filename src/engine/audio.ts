@@ -24,6 +24,7 @@ import {
 } from "webdsp";
 import { defaultWorkletUrl } from "webdsp/worklet-url";
 import { baseValues, MANGLER_KEYS, MANGLER_PARAMS, type FxSlot, type ManglerValues } from "./mangler";
+import { lockParams } from "./plock";
 import { normToUnits, NUM_TRACKS, TRACKS } from "./spec";
 import type { Pattern } from "./state";
 import {
@@ -168,6 +169,8 @@ export class Groovebox {
   private fxCache = new Map<string, number>();
 
   private soundCache: number[][] = TRACKS.map((t) => new Array(t.controls.length).fill(NaN));
+  /** Per track: the sound controls a scheduled parameter lock has put away from the base value (until a later step restores them). */
+  private lockedControls: Array<Set<number>> = TRACKS.map(() => new Set());
   private busCache = new Map<string, number>();
   private manglerCache: Partial<ManglerValues> = {};
 
@@ -275,6 +278,11 @@ export class Groovebox {
   /** Release held notes and drop scheduled ones (transport stop). */
   silence(): void {
     this.runtime.cancelScheduled();
+    // the restores that were scheduled are gone with the rest: the engine may hold locked values, so forget what it holds
+    this.lockedControls.forEach((set, t) => {
+      for (const i of set) this.soundCache[t][i] = NaN;
+      set.clear();
+    });
     for (const spec of TRACKS) if (spec.role !== "drum") this.runtime.instrumentNoteOff(this.inst[spec.id]);
   }
 
@@ -293,9 +301,42 @@ export class Groovebox {
       if (w.kind !== "inst") continue;
       const [track, i] = w.key.split(":").map(Number);
       if (this.soundCache[track][i] === w.value) continue;
+      // a lock is sounding or scheduled on this control: the base comes back with the step that ends it (see scheduleLocks)
+      if (!future && this.lockedControls[track].has(i)) continue;
       this.soundCache[track][i] = w.value;
       if (future) events.push({ time: time!, target: { instrument: w.instrument }, param: w.param, value: w.value });
       else this.runtime.setInstrumentParameter(w.instrument, w.param, w.value);
+    }
+    if (events.length) this.runtime.scheduleParams(events);
+  }
+
+  /** Parameter locks for step `step` of `pattern`, which sounds at audio time `time`: the step's locked controls go to the engine as
+   * scheduled parameter writes (applied before that block's notes), and a control the previous step locked that this one does not
+   * goes back to its base value. Nothing is sent for the common step with no locks and none to undo. */
+  scheduleLocks(pattern: Pattern, step: number, time: number): void {
+    const events: ScheduledParam[] = [];
+    for (const spec of TRACKS) {
+      const t = spec.id;
+      const tp = pattern.tracks[t];
+      const locks = tp.steps[step].parameterLocks;
+      const before = this.lockedControls[t];
+      if (!locks && before.size === 0) continue;
+      const now = new Set<number>();
+      for (const p of lockParams(t)) {
+        const c = spec.controls[p.control];
+        const target = { instrument: this.inst[t] };
+        const locked = locks?.[p.id];
+        if (locked !== undefined) {
+          now.add(p.control);
+          events.push({ time, target, param: c.param, value: normToUnits(c, locked) });
+          this.soundCache[t][p.control] = NaN;
+        } else if (before.has(p.control)) {
+          const base = normToUnits(c, p.base(tp));
+          events.push({ time, target, param: c.param, value: base });
+          this.soundCache[t][p.control] = base;
+        }
+      }
+      this.lockedControls[t] = now;
     }
     if (events.length) this.runtime.scheduleParams(events);
   }

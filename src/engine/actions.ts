@@ -2,6 +2,7 @@
 // audition sounds. No React here.
 import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
+import { clearLocks, lockParams, setLock } from "./plock";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { TRACKS } from "./spec";
 import { clearTrackSteps, GATES, newPattern, PAGE, randomizeTrack } from "./state";
@@ -16,6 +17,7 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
  * unselected note to select it for editing, tap the selected note to remove it. */
 export function tapStep(track: number, step: number): void {
   const st = getState();
+  if (st.plock) return selectLockStep(track, step);
   const spec = TRACKS[track];
   const cur = st.patterns[st.pattern].tracks[track].steps[step];
   if (spec.role === "drum") {
@@ -41,6 +43,7 @@ export function tapStep(track: number, step: number): void {
 
 /** Long-press a step: accent a drum hit; select (and place) a melodic step for editing. */
 export function holdStep(track: number, step: number): void {
+  if (getState().plock) return selectLockStep(track, step);
   const spec = TRACKS[track];
   if (spec.role === "drum") {
     editPattern((p) => {
@@ -76,6 +79,37 @@ export function toggleStepFlag(track: number, step: number, flag: "acc" | "slide
 /** Set a step's gate length (index into `GATES`). */
 export function setStepGate(track: number, step: number, gate: number): void {
   editPattern((p) => { p.tracks[track].steps[step].gate = Math.max(0, Math.min(GATES.length - 1, Math.round(gate))); });
+}
+
+// --- parameter locks (see plock.ts) -------------------------------------------------------------
+
+/** P-LOCK mode on or off. Locks are never touched by this; leaving the mode just returns the pads to normal editing. */
+export function setPlockMode(on: boolean): void {
+  const st = getState();
+  if (st.plock === on) return;
+  // a drum step is only ever selected for locking: do not leave it looking selected in normal mode
+  setState({ plock: on, ...(!on && TRACKS[st.focus].role === "drum" ? { selStep: -1 } : {}) });
+}
+
+/** In P-LOCK mode a tap only selects the step (empty or not): nothing is added, removed or sounded differently. */
+function selectLockStep(track: number, step: number): void {
+  setState({ focus: track, selStep: step });
+  if (!getState().playing) controller.audition(track, getState().patterns[getState().pattern].tracks[track].steps[step].note);
+}
+
+/** A sound knob moved. In normal mode it edits the base sound. In P-LOCK mode it writes only that parameter's lock on the selected
+ * step (and nothing when no step is selected: the base is not for P-LOCK mode to change). */
+export function setSoundControl(track: number, control: number, value: number): void {
+  const st = getState();
+  if (!st.plock) return setSound(track, control, value);
+  if (st.selStep < 0 || st.focus !== track) return;
+  const id = lockParams(track)[control].id;
+  editPattern((p) => setLock(p.tracks[track].steps[st.selStep], id, clamp01(value)));
+}
+
+/** Remove every lock from a step; the step and the base sound stay as they are. */
+export function clearStepLocks(track: number, step: number): void {
+  editPattern((p) => clearLocks(p.tracks[track].steps[step]));
 }
 
 // --- sound / mix ---------------------------------------------------------------------------------
@@ -181,7 +215,7 @@ export function setLength(length: number, copyPage?: number): void {
       const from = copyPage * PAGE;
       for (let i = p.length; i < length; i++) {
         const src = from + (i % PAGE);
-        for (const t of p.tracks) t.steps[i] = { ...t.steps[src] };
+        for (const t of p.tracks) t.steps[i] = structuredClone(t.steps[src]);
         for (const lane of p.fxLanes) {
           lane.fx[i] = lane.fx[src];
           lane.fxLvl[i] = lane.fxLvl[src];

@@ -171,6 +171,7 @@ class Controller {
     setAudible(-1, -1);
     clearLit();
     setState({ playing: false, cue: null });
+    this.syncNow(); // put the base sound back where a parameter lock left it
     const held = getState().punch;
     this.applyLayers(heldLayers(held, held ? this.heldLevel(gb.now) : 0));
   }
@@ -189,6 +190,7 @@ class Controller {
       gb.silence();
       gb.clearPending();
       this.events = [];
+      this.syncNow();
     }
     this.realignArps();
     this.punchScheduled = -1;
@@ -523,6 +525,7 @@ class Controller {
 
   private scheduleStep(): void {
     const st = getState();
+    const gb = this.gb!;
     const pat = st.patterns[this.schedPattern];
     const len = pat.length;
     const step = this.step;
@@ -530,6 +533,8 @@ class Controller {
     const swingOff = (st.swing - 0.5) * 2 * stepDur;
     const t = this.gridTime + (step % 2 === 1 ? swingOff : 0);
 
+    // parameter locks first: they land before the notes of the same block
+    gb.scheduleLocks(pat, step, t);
     const notes = this.compiler.step(pat, step, this.stepCount, this.gridTime, { stepDur, swing: st.swing, arp: st.arp }, this.playNote);
     this.events.push({ time: t, step, pattern: this.schedPattern, chainPos: this.chainPos, notes });
 

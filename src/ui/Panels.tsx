@@ -1,11 +1,12 @@
 // Sound, mixer, FX mangler and pattern panels.
 import { useRef, useState, type CSSProperties } from "react";
 import {
-  clearChain, clearPattern, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPunchParam, setPunchSend, setReverb,
-  setSound, setSweep, toggleMute, toggleSolo,
+  clearChain, clearPattern, clearStepLocks, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setPlockMode, setPunchParam,
+  setPunchSend, setReverb, setSoundControl, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
+import { lockParams, hasLocks } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
 import { BANK_SIZE, DEFAULT_LEVELS, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
@@ -62,9 +63,28 @@ function PresetChips({ track }: { track: number }) {
   );
 }
 
+/** P-LOCK mode toggle and CLEAR (the selected step's locks), under the instrument knobs. */
+function PlockBar({ track }: { track: number }) {
+  const on = useStore((s) => s.plock);
+  const selStep = useStore((s) => s.selStep);
+  const locked = useStore((s) => s.plock && s.selStep >= 0 && hasLocks(s.patterns[s.pattern].tracks[track].steps[s.selStep]));
+  return (
+    <div className="plock-bar" role="group" aria-label="Parameter locks">
+      <button type="button" className="btn sm" data-active={on} aria-pressed={on} onClick={() => setPlockMode(!on)}>P-LOCK</button>
+      <button type="button" className="btn sm" disabled={!locked} aria-label="Clear the selected step's parameter locks" onClick={() => clearStepLocks(track, selStep)}>CLEAR</button>
+      {on && <span className="silk">{selStep < 0 ? "SELECT A STEP, THEN TURN A KNOB" : `STEP ${selStep + 1} · KNOBS LOCK THIS STEP ONLY`}</span>}
+    </div>
+  );
+}
+
 export function SoundPanel() {
   const track = useStore((s) => s.focus);
-  const sound = useStore((s) => s.patterns[s.pattern].tracks[track].sound);
+  const baseSound = useStore((s) => s.patterns[s.pattern].tracks[track].sound);
+  // In P-LOCK mode the knobs show the selected step: its locks over the base. Neither is changed by looking.
+  const locks = useStore((s) => (s.plock && s.selStep >= 0 ? s.patterns[s.pattern].tracks[track].steps[s.selStep].parameterLocks : undefined));
+  const plock = useStore((s) => s.plock);
+  const params = lockParams(track);
+  const sound = baseSound.map((v, i) => locks?.[params[i].id] ?? v);
   const playing = useStore((s) => s.playing);
   const dlySend = useStore((s) => s.patterns[s.pattern].tracks[track].dly.send);
   const revSend = useStore((s) => s.patterns[s.pattern].tracks[track].rev.send);
@@ -72,7 +92,7 @@ export function SoundPanel() {
   const spec = TRACKS[track];
   const defaults = defaultSound(spec);
   return (
-    <div className="sound" style={accentStyle(track)}>
+    <div className="sound" style={accentStyle(track)} data-plock={plock}>
       <TrackStrip />
       <header className="panel-title">
         <span className="dot" />
@@ -89,11 +109,13 @@ export function SoundPanel() {
             def={defaults[i] ?? unitsToNorm(c, c.def)}
             steps={c.steps?.length}
             readout={formatControl(c, sound[i])}
-            onChange={(v) => setSound(track, i, v)}
-            onTouch={() => { if (!playing) controller.audition(track); }}
+            locked={locks?.[params[i].id] !== undefined}
+            onChange={(v) => setSoundControl(track, i, v)}
+            onTouch={() => { if (!playing && !plock) controller.audition(track); }}
           />
         ))}
       </div>
+      <PlockBar track={track} />
       <div className="sends" role="group" aria-label="FX sends">
         <span className="silk">SENDS</span>
         <div className="knobs sends-knobs">
