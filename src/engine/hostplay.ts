@@ -10,7 +10,7 @@ import type { Groovebox } from "./audio";
 import { baseLayout, cueLayout, nextBoundary, positionAt, steadySequence, transitionSequence, type Layout, type Song } from "./nativeseq";
 import { MELODIC } from "./stepcompile";
 import { getState, setState } from "./store";
-import type { AppState } from "./state";
+import { trackStepAt, type AppState } from "./state";
 
 /** A step the host has played, for the playhead, the key lights and the FX recorder. */
 export interface AudibleStep {
@@ -19,6 +19,8 @@ export interface AudibleStep {
   step: number;
   pattern: number;
   chainPos: number;
+  /** Steps into the run of this pattern (see `trackStepAt`). */
+  run: number;
   /** Notes the melodic tracks start on it: [track, note]. */
   notes: Array<[number, number]>;
 }
@@ -136,8 +138,11 @@ export class HostPlayback {
       const pos = positionAt(patterns, this.layoutAt(at), at);
       const pat = patterns[pos.pattern];
       const notes: Array<[number, number]> = [];
-      for (const track of MELODIC) if (pat.tracks[track].steps[pos.step].on) notes.push([track, pat.tracks[track].steps[pos.step].note]);
-      out.push({ time: hostTimeAt(t, at), step: pos.step, pattern: pos.pattern, chainPos: pos.entry, notes });
+      for (const track of MELODIC) {
+        const s = pat.tracks[track].steps[trackStepAt(pat, track, pos.step, pos.run)];
+        if (s.on) notes.push([track, s.note]);
+      }
+      out.push({ time: hostTimeAt(t, at), step: pos.step, pattern: pos.pattern, chainPos: pos.entry, run: pos.run, notes });
     }
     this.lastStep = n;
     if (out.length) this.hooks.steps(out);

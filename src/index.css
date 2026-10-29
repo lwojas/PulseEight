@@ -173,6 +173,7 @@ button.oled { cursor: pointer; text-align: left; }
 .pad:nth-child(8n+4):not(:nth-child(8n)) { margin-right: 3px; }
 .pad[data-sel="true"] { outline: 2px solid var(--text); outline-offset: 1px; z-index: 1; }
 .pads[data-plock="true"] .pad[data-sel="true"] { outline-color: var(--fx); }
+.pad[data-out="true"] { opacity: 0.38; }
 .pad[data-lock="true"]::before { content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--fx); box-shadow: 0 0 0 1px var(--ink); }
 .knob[data-lock="true"] .knob-fill { stroke: var(--fx); }
 .knob[data-lock="true"] .knob-readout { color: var(--fx); }
@@ -591,6 +592,12 @@ button.oled { cursor: pointer; text-align: left; }
 .modal-backdrop[data-anchored="true"] .modal { position: fixed; max-width: calc(100vw - 16px); box-shadow: 0 0 0 1px #000; }
 
 .arp-modal { width: min(340px, 100%); }
+.seq-modal { width: min(340px, 100%); }
+.seq-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seq-menu .btn { min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.seq-menu .btn small { font-size: 9px; color: var(--silk); }
+.seq-menu .seq-last { grid-column: 1 / -1; justify-content: space-between; height: 56px; }
+.seq-menu .seq-last .oled-btn { width: 44px; height: 44px; }
 .gate-modal { width: min(340px, 100%); }
 .gate-modal .step-gate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0; }
 .gate-modal .step-gate .btn.sm { min-height: 44px; }

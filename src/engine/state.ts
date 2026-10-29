@@ -59,7 +59,46 @@ export interface TrackPattern {
   oct: number;
   /** Name of the preset last loaded into this track (cosmetic). */
   preset: string;
+  /** Last step (1-based, absolute across the bars): the track plays steps 1..last and wraps. Absent (older saves, and whenever the
+   * pattern length is set) means the whole pattern. Steps past it keep their data, they just do not play. See `trackLast`. */
+  last?: number;
 }
+
+/** The track's effective last step, 1..`pat.length`: its own `last`, or the whole pattern when it has none. */
+export const trackLast = (pat: Pattern, track: number): number => {
+  const last = pat.tracks[track].last;
+  return typeof last === "number" && last >= 1 ? Math.min(Math.floor(last), pat.length) : pat.length;
+};
+
+/** The longest cycle (in steps) a polymetric pattern repeats over. The host plays one repeating cycle of the song, so an unlucky mix
+ * of last steps (64 steps against 13, 11 and 7) is cut off here: past it every track starts over together. */
+export const MAX_RUN_STEPS = 4096;
+
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+
+/** Steps until every track is back on its first step together: the pattern length and the tracks' last steps, as a least common
+ * multiple, held to `MAX_RUN_STEPS`. Always a whole number of passes through the pattern. */
+export function runSteps(pat: Pattern): number {
+  let r = pat.length;
+  for (let t = 0; t < pat.tracks.length; t++) {
+    const last = trackLast(pat, t);
+    if (last >= pat.length) continue;
+    const next = (r / gcd(r, last)) * last;
+    if (next > MAX_RUN_STEPS) return Math.max(pat.length, Math.floor(MAX_RUN_STEPS / pat.length) * pat.length);
+    r = next;
+  }
+  return r;
+}
+
+/**
+ * The step of `track` that plays while the pattern is at `step`, `run` steps into the current run of this pattern (a run starts when
+ * the pattern does and carries on across its repeats). A track shorter than the pattern wraps at its own last step and keeps counting
+ * through the repeats, so tracks of different lengths drift against each other (polymeter); one as long as the pattern is just `step`.
+ */
+export const trackStepAt = (pat: Pattern, track: number, step: number, run: number, r: number = runSteps(pat)): number => {
+  const last = trackLast(pat, track);
+  return last >= pat.length ? step : (run % r) % last;
+};
 
 export interface ManglerBase {
   /** Index into `SWEEPS`: how long a held punch takes to reach full effect. */

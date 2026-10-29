@@ -1,7 +1,36 @@
 // Touch-first control primitives: Knob, Slider, and the tap / long-press hook.
-import { useCallback, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent as RPointerEvent } from "react";
+import { useCallback, useRef, type CSSProperties, type KeyboardEvent, type ReactNode, type PointerEvent as RPointerEvent } from "react";
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+
+// --- Stepper: the OLED readout between a minus and a plus (BPM, last step) ----------------------------
+
+interface StepperProps {
+  label: string;
+  value: ReactNode;
+  onNudge: (delta: -1 | 1) => void;
+  /** Accessible names of the two buttons, and whether each is out of range. */
+  decLabel: string;
+  incLabel: string;
+  decDisabled?: boolean;
+  incDisabled?: boolean;
+  className?: string;
+  /** Accessible name of the group when it differs from the visible label. */
+  ariaLabel?: string;
+}
+
+export function Stepper({ label, ariaLabel, value, onNudge, decLabel, incLabel, decDisabled, incDisabled, className }: StepperProps) {
+  return (
+    <div className={className ? `oled ${className}` : "oled"} aria-label={ariaLabel ?? label}>
+      <button type="button" className="oled-btn" aria-label={decLabel} disabled={decDisabled} onClick={() => onNudge(-1)}>−</button>
+      <div className="oled-main">
+        <span className="silk">{label}</span>
+        <b>{value}</b>
+      </div>
+      <button type="button" className="oled-btn" aria-label={incLabel} disabled={incDisabled} onClick={() => onNudge(1)}>+</button>
+    </div>
+  );
+}
 
 // --- Knob --------------------------------------------------------------------------------------
 

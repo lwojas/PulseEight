@@ -7,7 +7,7 @@
 import type { InstrumentNoteParams } from "webdsp";
 import { Arpeggiator, type ArpSettings } from "./arp";
 import { NUM_TRACKS, TRACKS } from "./spec";
-import { DEFAULT_GATE, GATES, type Pattern } from "./state";
+import { DEFAULT_GATE, GATES, runSteps, trackLast, trackStepAt, type Pattern } from "./state";
 
 export const VEL_NORMAL = 0.7;
 export const VEL_ACCENT = 1;
@@ -55,22 +55,25 @@ export class StepCompiler {
   }
 
   /**
-   * Step `step` of `pat`, which begins on the grid at `gridTime` (seconds; swing moves odd steps later). `stepCount` is the
+   * Step `step` of `pat` (`run` steps into the run of this pattern, see `trackStepAt`), which begins on the grid at `gridTime` (seconds; swing moves odd steps later). `stepCount` is the
    * song step count (never wraps), for timing the holds. Calls `emit` for every note, and returns the melodic notes the
    * sequencer starts on this step (to light the piano keys).
    */
-  step(pat: Pattern, step: number, stepCount: number, gridTime: number, clock: StepClock, emit: (n: StepNote) => void): Array<[number, number]> {
+  step(pat: Pattern, step: number, run: number, stepCount: number, gridTime: number, clock: StepClock, emit: (n: StepNote) => void): Array<[number, number]> {
     const { stepDur, swing } = clock;
-    const len = pat.length;
     const swingOff = (swing - 0.5) * 2 * stepDur;
     const t = gridTime + (step % 2 === 1 ? swingOff : 0);
     const nextStart = gridTime + stepDur + ((step + 1) % 2 === 1 ? swingOff : 0);
     const lit: Array<[number, number]> = [];
+    const cycle = runSteps(pat);
 
     for (let track = 0; track < NUM_TRACKS; track++) {
       const spec = TRACKS[track];
       const tp = pat.tracks[track];
-      const s = tp.steps[step];
+      // a track wraps at its own last step; swing and the arp grid stay on the shared pattern step
+      const len = trackLast(pat, track);
+      const ts = trackStepAt(pat, track, step, run, cycle);
+      const s = tp.steps[ts];
       this.releaseHolds(track, stepCount);
       if (!s.on) continue;
       if (spec.role === "drum") {
@@ -87,8 +90,8 @@ export class StepCompiler {
         this.arps.get(track)?.noteDown(s.note);
         continue;
       }
-      const next = tp.steps[(step + 1) % len];
-      const prev = tp.steps[(step + len - 1) % len];
+      const next = tp.steps[(ts + 1) % len];
+      const prev = tp.steps[(ts + len - 1) % len];
       const holdsIntoNext = next.on && next.slide;
       emit({
         track,

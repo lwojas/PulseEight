@@ -49,6 +49,9 @@ function migrate(p: Pattern): void {
     if (!t.dly) t.dly = { ...newDelay(i), send: typeof old.send === "number" ? old.send : newDelay(i).send };
     if (!t.rev) t.rev = newReverb(i);
     if (typeof t.punch !== "boolean") t.punch = true;
+    // last step: whole numbers inside the pattern; anything else (or the full length) is "no last step"
+    if (typeof t.last !== "number" || !Number.isFinite(t.last) || t.last < 1 || t.last >= p.length) delete t.last;
+    else t.last = Math.floor(t.last);
     delete old.send;
   });
   if (!Array.isArray(p.mangler?.param)) p.mangler = defaultMangler();

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef } from "react";
 import { listenPlayhead, registerCell } from "../engine/playhead";
 
 /** Ref callback that lets the playhead module light this element when step `abs` is audible. */
-export function usePlayheadCell(abs: number) {
+export function usePlayheadCell(abs: number, track?: number) {
   const off = useRef<(() => void) | undefined>(undefined);
   return useCallback(
     (el: HTMLElement | null) => {
       off.current?.();
-      off.current = el ? registerCell(abs, el) : undefined;
+      off.current = el ? registerCell(abs, el, track) : undefined;
     },
-    [abs],
+    [abs, track],
   );
 }
 

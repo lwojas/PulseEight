@@ -2,7 +2,7 @@
 // step editor (accent / slide / note keys).
 import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import {
-  clearTrack, holdStep, randomize, setLength, setOctave, setPlockMode, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
+  clearTrack, holdStep, randomize, setLastStep, setLength, setOctave, setPlockMode, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { flashKey, registerKey } from "../engine/keyhl";
@@ -10,10 +10,10 @@ import { PUNCHES } from "../engine/mangler";
 import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
 import { hasLocks } from "../engine/plock";
 import { noteName, TRACKS } from "../engine/spec";
-import { DEFAULT_GATE, FX_LANES, GATE_BUTTONS, GATES, LENGTHS, PAGE } from "../engine/state";
+import { DEFAULT_GATE, FX_LANES, GATE_BUTTONS, GATES, LENGTHS, PAGE, trackLast } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { ArpControl } from "./ArpControl";
-import { usePress } from "./controls";
+import { Stepper, usePress } from "./controls";
 import { Modal } from "./Modal";
 import { usePlayheadCell, usePlayheadEffect } from "./usePlayhead";
 import { useMedia, WIDE } from "./useMedia";
@@ -200,15 +200,17 @@ interface PadProps {
   acc: boolean;
   slide: boolean;
   selected: boolean;
+  /** Past the track's last step: kept, but not played. */
+  outside: boolean;
   /** The step carries parameter locks. */
   locked: boolean;
   note?: string;
 }
 
 /** One step. Tap toggles/selects, hold accents/selects. The playhead lights it via data-play (see playhead.ts). */
-const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, locked, note }: PadProps) {
+const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, outside, locked, note }: PadProps) {
   const press = usePress(() => tapStep(track, abs), () => holdStep(track, abs));
-  const playRef = usePlayheadCell(abs);
+  const playRef = usePlayheadCell(abs, track);
   return (
     <button
       type="button"
@@ -217,6 +219,7 @@ const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, locked, no
       data-acc={acc}
       data-slide={slide}
       data-sel={selected}
+      data-out={outside}
       data-lock={locked}
       data-beat={abs % 4 === 0}
       aria-pressed={on}
@@ -238,6 +241,7 @@ function Pads({ track }: { track: number }) {
   const page = useStore((s) => s.page);
   const tp = useStore((s) => s.patterns[s.pattern].tracks[track]);
   const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
+  const last = useStore((s) => trackLast(s.patterns[s.pattern], track));
   const plock = useStore((s) => s.plock);
   const spec = TRACKS[track];
   const melodic = spec.role !== "drum";
@@ -248,7 +252,7 @@ function Pads({ track }: { track: number }) {
         const s = tp.steps[abs];
         return (
           <Pad
-            key={i} track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs} locked={hasLocks(s)}
+            key={i} track={track} abs={abs} on={s.on} acc={s.acc} slide={s.slide} selected={selStep === abs} outside={abs >= last} locked={hasLocks(s)}
             note={melodic && s.on ? noteName(s.note + 12 * tp.oct) : undefined}
           />
         );
@@ -313,10 +317,35 @@ function TrackHeader({ track }: { track: number }) {
             P
           </button>
         )}
-        <button type="button" className="btn sm" onClick={() => randomize(track)}>RND</button>
-        <ConfirmButton label="CLR" onConfirm={() => clearTrack(track)} />
+        <SeqMenu track={track} />
       </div>
     </div>
+  );
+}
+
+/** One button for the track's sequencer actions: RND, CLR and the last step (where the track wraps, counted over all the bars). */
+function SeqMenu({ track }: { track: number }) {
+  const [open, setOpen] = useState(false);
+  const length = useStore((s) => s.patterns[s.pattern].length);
+  const last = useStore((s) => trackLast(s.patterns[s.pattern], track));
+  const close = () => setOpen(false);
+  return (
+    <>
+      <button type="button" className="btn sm" aria-haspopup="dialog" aria-expanded={open} aria-label="Sequencer actions" title="Random, clear, last step" onClick={() => setOpen(true)}>
+        SEQ
+      </button>
+      <Modal open={open} title={`Sequence · ${TRACKS[track].name}`} onClose={close} className="seq-modal">
+        <div className="seq-menu">
+          <button type="button" className="btn" onClick={() => { randomize(track); close(); }}>RND<small>Random pattern</small></button>
+          <ConfirmButton label="CLR" className="btn" onConfirm={() => { clearTrack(track); close(); }} />
+          <Stepper
+            className="seq-last" label="LAST STEP" ariaLabel={`Last step of ${TRACKS[track].name}, of ${length}`} value={<>{last}<small>/{length}</small></>}
+            decLabel="Earlier last step" incLabel="Later last step" decDisabled={last <= 1} incDisabled={last >= length}
+            onNudge={(d) => setLastStep(track, last + d)}
+          />
+        </div>
+      </Modal>
+    </>
   );
 }
 

@@ -233,8 +233,19 @@ export function setLength(length: number, copyPage?: number): void {
       }
     }
     p.length = length;
+    // a new length is the new last step of every track
+    for (const t of p.tracks) delete t.last;
   });
   setState((s) => ({ page: Math.min(s.page, length / PAGE - 1), selStep: -1 }));
+}
+
+/** Set a track's last step (1-based, absolute across the bars). The pattern's full length is stored as "no last step". Steps past it keep their data. */
+export function setLastStep(track: number, last: number): void {
+  editPattern((p) => {
+    const v = Math.min(p.length, Math.max(1, Math.round(last)));
+    if (v >= p.length) delete p.tracks[track].last;
+    else p.tracks[track].last = v;
+  });
 }
 
 export function clearTrack(track: number): void {

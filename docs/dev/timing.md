@@ -28,6 +28,15 @@ For the step at `gridTime`:
    step (`layeredTarget`), sends the chain values as scheduled ramps, and applies routing at `t`.
 5. Advance `gridTime`, `step`, `stepCount`. At the pattern end, `advancePattern` decides what comes next.
 
+## Per-track last step (polymeter)
+
+A track may loop before the pattern ends (`TrackPattern.last`). The pattern clock is unchanged; each step also carries a `run`, the steps
+since the current pattern began playing, which is *not* reset when the same pattern repeats. A track shorter than the pattern plays
+step `(run mod runSteps) mod last` (`trackStepAt`), so it keeps its own loop through the repeats. `run` restarts when the pattern changes
+(a cue, or a chain moving on to another pattern). `runSteps` is the least common multiple of the pattern length and the tracks' last steps,
+capped at `MAX_RUN_STEPS` (4096), after which everything starts over together. The host's native sequence unrolls a looping single
+pattern to that many steps (`entriesOf`) so the DAW plays the same thing.
+
 ## Pattern boundaries
 
 At the wrap, `advancePattern`:

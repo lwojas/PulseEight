@@ -31,7 +31,7 @@ import { lockParams } from "./plock";
 import { NUM_TRACKS } from "./spec";
 import { StepCompiler, MELODIC, type StepNote } from "./stepcompile";
 import type { ArpSettings } from "./arp";
-import type { Pattern } from "./state";
+import { runSteps, trackStepAt, type Pattern } from "./state";
 
 /** The tempo the compile runs at: 120 bpm makes a second exactly two quarter notes. */
 const REF_STEP_SECONDS = 15 / 120;
@@ -74,14 +74,33 @@ interface Entry {
   /** Beats from the layout's start. */
   start: number;
   beats: number;
+  /** Index into the layout's patterns (the chain position). */
+  slot: number;
+  /** Passes through this pattern since its run began: a pattern that repeats back to back is one run, which is what lets a track
+   * shorter than the pattern keep its own loop (`trackStepAt`). A run starts at the layout's start and wherever the pattern changes. */
+  pass: number;
 }
 
+const lcm = (a: number, b: number): number => {
+  let x = a, y = b;
+  while (y) [x, y] = [y, x % y];
+  return (a / x) * b;
+};
+
+/** The layout's entries in one cycle. A layout that is one pattern repeated (a single looping pattern) is unrolled to as many passes
+ * as it takes for every track to come back to its first step together (`runSteps`), so the cycle can be longer than the layout. */
 function entriesOf(song: Pick<Song, "patterns">, layout: Layout): { entries: Entry[]; cycle: number } {
   const entries: Entry[] = [];
   let at = 0;
-  for (const pattern of layout.patterns) {
+  const first = layout.patterns[0];
+  const uniform = layout.patterns.length > 0 && layout.patterns.every((p) => p === first);
+  const count = uniform ? lcm(layout.patterns.length, runSteps(song.patterns[first]) / song.patterns[first].length) : layout.patterns.length;
+  for (let i = 0; i < count; i++) {
+    const slot = i % layout.patterns.length;
+    const pattern = layout.patterns[slot];
     const beats = beatsOf(song.patterns[pattern]);
-    entries.push({ pattern, start: at, beats });
+    const pass = uniform ? i : i > 0 && layout.patterns[i - 1] === pattern ? entries[i - 1].pass + 1 : 0;
+    entries.push({ pattern, start: at, beats, slot, pass });
     at += beats;
   }
   return { entries, cycle: at };
@@ -102,6 +121,8 @@ export interface SongPos {
   /** Step within the pattern, and how far into it (0..1 of a step). */
   step: number;
   frac: number;
+  /** Steps into this pattern's run (see `Entry.pass`). */
+  run: number;
 }
 
 /** Where the song is at absolute beat `beat`. */
@@ -113,7 +134,7 @@ export function positionAt(patterns: readonly Pattern[], layout: Layout, beat: n
   const e = entries[entry];
   const inPattern = Math.max(0, x - e.start) / STEP_BEATS;
   const step = Math.min(Math.floor(inPattern + 1e-9), patterns[e.pattern].length - 1);
-  return { entry, pattern: e.pattern, step, frac: Math.max(0, inPattern - step) };
+  return { entry: e.slot, pattern: e.pattern, step, frac: Math.max(0, inPattern - step), run: e.pass * patterns[e.pattern].length + step };
 }
 
 /** The first pattern boundary at or after absolute beat `min`: where a cued change can take effect. */
@@ -199,7 +220,7 @@ function cycleEvents(song: Song, layout: Layout, ctx: NativeCtx): { events: Sequ
   for (const e of entries) {
     const pat = song.patterns[e.pattern];
     for (let s = 0; s < pat.length; s++) {
-      compiler.step(pat, s, stepCount++, (e.start / STEP_BEATS + s) * REF_STEP_SECONDS, clock, (n) => events.push(noteEvent(n, ctx.ids)));
+      compiler.step(pat, s, e.pass * pat.length + s, stepCount++, (e.start / STEP_BEATS + s) * REF_STEP_SECONDS, clock, (n) => events.push(noteEvent(n, ctx.ids)));
     }
   }
 
@@ -246,14 +267,16 @@ function lockEvents(song: Song, entries: Entry[], ctx: NativeCtx): SequenceEvent
   for (const e of entries) for (let s = 0; s < song.patterns[e.pattern].length; s++) flat.push({ e, s });
   const out: SequenceEvent[] = [];
   const swingBeats = (song.swing - 0.5) * 2 * STEP_BEATS;
+  const cycles = new Map<number, number>();
+  const cycleOf = (pattern: number) => cycles.get(pattern) ?? (cycles.set(pattern, runSteps(song.patterns[pattern])), cycles.get(pattern)!);
   flat.forEach(({ e, s }, g) => {
     const pat = song.patterns[e.pattern];
     const prev = flat[(g + flat.length - 1) % flat.length];
     const prevPat = song.patterns[prev.e.pattern];
     const beat = e.start + s * STEP_BEATS + (s % 2 === 1 ? swingBeats : 0);
     for (let t = 0; t < NUM_TRACKS; t++) {
-      const locks = pat.tracks[t].steps[s].parameterLocks;
-      const before = prevPat.tracks[t].steps[prev.s].parameterLocks;
+      const locks = pat.tracks[t].steps[trackStepAt(pat, t, s, e.pass * pat.length + s, cycleOf(e.pattern))].parameterLocks;
+      const before = prevPat.tracks[t].steps[trackStepAt(prevPat, t, prev.s, prev.e.pass * prevPat.length + prev.s, cycleOf(prev.e.pattern))].parameterLocks;
       if (!locks && !before) continue;
       for (const p of lockParams(t)) {
         const locked = locks?.[p.id];

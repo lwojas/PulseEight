@@ -14,6 +14,7 @@ AppState
 │       │    ├─ steps[64]: { on, note, acc, slide, gate? }
 │       │    ├─ sound[]   normalised 0..1, one per control in spec.ts
 │       │    ├─ level, oct, preset (name of last loaded preset; cosmetic)
+│       │    ├─ last?: 1-based last step (absent = pattern length); the track loops there, see timing
 │       │    ├─ dly: { send, mode, time, div }
 │       │    └─ rev: { send, size }
 │       ├─ fxLanes[3]  one recorded punch-in take each (FX_LANES):

@@ -3,7 +3,7 @@ import { useRef, type CSSProperties } from "react";
 import { PRODUCT } from "../product";
 import { controller } from "../engine/controller";
 import { setState, useStore } from "../engine/store";
-import { Knob } from "./controls";
+import { Knob, Stepper } from "./controls";
 import { PatternBar } from "./Panels";
 import { ProjectMenu } from "./ProjectMenu";
 import { usePlayheadEffect } from "./usePlayhead";
@@ -54,14 +54,10 @@ export function Header() {
           <span className="rec-dot" aria-hidden="true" />
           <span className="lbl">REC</span>
         </button>
-        <div className="oled" aria-label="Tempo">
-          <button type="button" className="oled-btn" aria-label="Slower" disabled={hostBpm !== null} onClick={() => nudge(-1)}>−</button>
-          <div className="oled-main">
-            <span className="silk">BPM</span>
-            <b>{bpm.toFixed(1)}</b>
-          </div>
-          <button type="button" className="oled-btn" aria-label="Faster" disabled={hostBpm !== null} onClick={() => nudge(1)}>+</button>
-        </div>
+        <Stepper
+          label="BPM" ariaLabel="Tempo" value={bpm.toFixed(1)} onNudge={nudge}
+          decLabel="Slower" incLabel="Faster" decDisabled={hostBpm !== null} incDisabled={hostBpm !== null}
+        />
         <button type="button" className="oled ptn" aria-label="Pattern, tap to open the pattern list" onClick={() => setState({ tab: "ptn" })}>
           <div className="oled-main">
             <span className="silk">PTN{cue !== null ? " → " + String(cue + 1).padStart(2, "0") : ""}</span>

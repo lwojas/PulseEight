@@ -7,7 +7,7 @@ import type { AudibleStep, HostPlayback } from "./hostplay";
 import { laneLayers, layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { TRACKS } from "./spec";
-import { MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
+import { MAX_CHAIN, pickWriteLane, trackStepAt, type Pattern } from "./state";
 import { MELODIC, StepCompiler, type StepNote } from "./stepcompile";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
@@ -26,6 +26,8 @@ interface StepEvent {
   step: number;
   pattern: number;
   chainPos: number;
+  /** Steps into the run of this pattern (it carries on across the pattern's repeats; see `trackStepAt`). */
+  run: number;
   /** Notes the melodic tracks start on this step: [track, note] */
   notes: Array<[number, number]>;
 }
@@ -36,6 +38,8 @@ class Controller {
   // scheduler cursor
   private gridTime = 0;
   private step = 0;
+  /** Steps since the current pattern started playing, carried across its repeats so shorter tracks keep their own loop. */
+  private run = 0;
   /** Steps scheduled since the transport started (plus the song step it started at): never wraps. */
   private stepCount = 0;
   private schedPattern = 0;
@@ -46,6 +50,7 @@ class Controller {
   /** The step being heard now. Kept out of the store: it changes every step and only the
    * playhead module (direct DOM writes) needs it. */
   private audibleStep = -1;
+  private audibleRun = 0;
 
   // FX
   /** The punches the chain was last put in the state of (held, or the written lanes layered). */
@@ -135,6 +140,8 @@ class Controller {
     this.chainPos = at.chainPos;
     this.schedPattern = idx;
     this.step = at.step;
+    // an external clock locating into a looping pattern lands where the song is, in every track's loop
+    this.run = from && !(st.chainOn && st.chain.length) ? Math.max(0, Math.floor(from.songStep)) : at.step;
     this.stepCount = from?.songStep ?? 0;
     this.gridTime = from ? Math.max(from.time, gb.now + 0.03) : gb.now + 0.06;
     this.events = [];
@@ -144,7 +151,7 @@ class Controller {
     this.audibleSince = this.gridTime;
     gb.setTempo(st.bpm, this.gridTime);
     this.audibleStep = -1;
-    setAudible(-1, -1);
+    setAudible(-1, -1, 0);
     setState({ playing: true, playPattern: idx, pattern: idx, cue: null, chainPos: this.chainPos });
     this.syncNow();
   }
@@ -176,7 +183,7 @@ class Controller {
     gb.resetManglerSchedule();
     this.audibleStep = -1;
     this.recHeld.clear();
-    setAudible(-1, -1);
+    setAudible(-1, -1, 0);
     clearLit();
     setState({ playing: false, cue: null });
     this.syncNow(); // put the base sound back where a parameter lock left it
@@ -217,7 +224,7 @@ class Controller {
     this.punchScheduled = -1;
     gb.resetManglerSchedule();
     this.audibleStep = -1;
-    setAudible(-1, -1);
+    setAudible(-1, -1, 0);
     clearLit();
     setState({ playing: false, cue: null });
     // the host's locks may have left the engine away from the base sound: send it again
@@ -265,7 +272,10 @@ class Controller {
     const st = getState();
     const pattern = st.playPattern;
     const stepDur = 15 / this.bpmNow();
-    const step = recordStep(this.audibleStep, (gb.now - this.audibleSince) / stepDur, st.patterns[pattern].length);
+    const pat = st.patterns[pattern];
+    // the nearest step boundary, in the pattern and in the track's own loop
+    const at = recordStep(this.audibleStep, (gb.now - this.audibleSince) / stepDur, pat.length);
+    const step = trackStepAt(pat, track, at, this.audibleRun + ((at - this.audibleStep + pat.length) % pat.length));
     editPattern((p) => {
       const s = p.tracks[track].steps[step];
       s.on = true;
@@ -584,9 +594,10 @@ class Controller {
     const t = this.gridTime + (step % 2 === 1 ? swingOff : 0);
 
     // parameter locks first: they land before the notes of the same block
-    gb.scheduleLocks(pat, step, t);
-    const notes = this.compiler.step(pat, step, this.stepCount, this.gridTime, { stepDur, swing: st.swing, arp: st.arp }, this.playNote);
-    this.events.push({ time: t, step, pattern: this.schedPattern, chainPos: this.chainPos, notes });
+    const run = this.run;
+    gb.scheduleLocks(pat, step, t, run);
+    const notes = this.compiler.step(pat, step, run, this.stepCount, this.gridTime, { stepDur, swing: st.swing, arp: st.arp }, this.playNote);
+    this.events.push({ time: t, step, pattern: this.schedPattern, chainPos: this.chainPos, run, notes });
 
     // Written FX. A punch the player is holding right now wins over the written lane.
     if (st.punch !== 0) {
@@ -601,6 +612,7 @@ class Controller {
 
     this.gridTime += stepDur;
     this.step++;
+    this.run++;
     this.stepCount++;
     if (this.step >= len) {
       this.step = 0;
@@ -622,8 +634,11 @@ class Controller {
     } else if (st.chainOn && st.chain.length) {
       this.chainPos = (this.chainPos + 1) % st.chain.length;
       next = st.chain[this.chainPos];
+      // a chain that comes round again starts its patterns afresh (unless it is one pattern repeated, which just carries on)
+      if (this.chainPos === 0 && !st.chain.every((i) => i === st.chain[0])) this.run = 0;
     }
     if (next === this.schedPattern) return;
+    this.run = 0;
     this.schedPattern = next;
     gb.applySound(st.patterns[next], time);
     gb.when(time, () => this.applyLayers(this.layersApplied));
@@ -660,7 +675,8 @@ class Controller {
     if (this.host?.playing) this.schedPattern = latest.pattern;
     this.audibleSince = latest.time;
     this.audibleStep = latest.step;
-    setAudible(latest.step, latest.pattern);
+    this.audibleRun = latest.run;
+    setAudible(latest.step, latest.pattern, latest.run);
     this.lightKeys(latest);
     // The store only hears about things that change rarely (pattern, cue, chain position, page);
     // the per-step playhead goes straight to the DOM.

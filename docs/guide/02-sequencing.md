@@ -83,8 +83,10 @@ Open the full panel with the arpeggiator button on a melodic track. Settings are
 
 | Button | Does |
 |---|---|
+| **SEQ** | Opens the track's sequencer menu: **RND**, **CLR** and **LAST STEP**. |
 | **RND** | Writes a fresh pattern for the selected track. Drums get a density map per instrument; melodic tracks get notes from the project scale, with accents and slides. |
 | **CLR** | Clears the selected track's steps in this pattern (confirm with a second tap). |
+| **LAST STEP** | Where the selected track loops back to step 1, counted over all the bars (27 means step 27 of 32, whichever bar you are on). Each track has its own, and a shorter track keeps looping through the pattern's repeats, so tracks of different lengths drift against each other (polymeter) while sharing one clock. Steps past it stay (dimmed) and play again when it is raised. Changing the pattern length (page buttons, **LEN**) resets every track's last step to the new length. In a chain each pattern starts its tracks afresh; the loops only carry on while one pattern repeats. |
 | **GATE** | Melodic tracks: note length of the selected step. |
 
 Selecting a track in the rail plays it once when stopped. Mute and solo live in the rail (wide screens) and the Mix tab.
