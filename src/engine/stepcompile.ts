@@ -7,7 +7,7 @@
 import type { InstrumentNoteParams } from "webdsp";
 import { Arpeggiator, type ArpSettings } from "./arp";
 import { NUM_TRACKS, TRACKS } from "./spec";
-import { DEFAULT_GATE, GATES, runSteps, trackLast, trackStepAt, type Pattern } from "./state";
+import { DEFAULT_GATE, GATES, trackLast, trackStepAt, type Pattern } from "./state";
 
 export const VEL_NORMAL = 0.7;
 export const VEL_ACCENT = 1;
@@ -48,6 +48,14 @@ export class StepCompiler {
     for (const a of this.arps.values()) a.realign();
   }
 
+  /** A track's loop came round: let go of what the sequencer was holding into its arp and start the arp over. */
+  private restartLoop(track: number): void {
+    const arp = this.arps.get(track);
+    for (const h of this.seqHolds.get(track) ?? []) arp?.noteUp(h.note);
+    this.seqHolds.delete(track);
+    arp?.restart();
+  }
+
   /** An arp was switched off: forget what the sequencer held into it. */
   forget(track: number): void {
     this.arps.get(track)?.clear();
@@ -57,22 +65,24 @@ export class StepCompiler {
   /**
    * Step `step` of `pat` (`run` steps into the run of this pattern, see `trackStepAt`), which begins on the grid at `gridTime` (seconds; swing moves odd steps later). `stepCount` is the
    * song step count (never wraps), for timing the holds. Calls `emit` for every note, and returns the melodic notes the
-   * sequencer starts on this step (to light the piano keys).
+   * sequencer starts on this step (to light the piano keys). `include` limits it to some tracks (a polymetric track is compiled apart from the rest).
    */
-  step(pat: Pattern, step: number, run: number, stepCount: number, gridTime: number, clock: StepClock, emit: (n: StepNote) => void): Array<[number, number]> {
+  step(pat: Pattern, step: number, run: number, stepCount: number, gridTime: number, clock: StepClock, emit: (n: StepNote) => void, include: (track: number) => boolean = () => true): Array<[number, number]> {
     const { stepDur, swing } = clock;
     const swingOff = (swing - 0.5) * 2 * stepDur;
     const t = gridTime + (step % 2 === 1 ? swingOff : 0);
     const nextStart = gridTime + stepDur + ((step + 1) % 2 === 1 ? swingOff : 0);
     const lit: Array<[number, number]> = [];
-    const cycle = runSteps(pat);
 
     for (let track = 0; track < NUM_TRACKS; track++) {
+      if (!include(track)) continue;
       const spec = TRACKS[track];
       const tp = pat.tracks[track];
       // a track wraps at its own last step; swing and the arp grid stay on the shared pattern step
       const len = trackLast(pat, track);
-      const ts = trackStepAt(pat, track, step, run, cycle);
+      const ts = trackStepAt(pat, track, step, run);
+      // a track's loop coming round starts its arp over too: the loop is then the same every lap, which is what lets the host repeat it
+      if (ts === 0 && len < pat.length) this.restartLoop(track);
       const s = tp.steps[ts];
       this.releaseHolds(track, stepCount);
       if (!s.on) continue;
@@ -105,13 +115,14 @@ export class StepCompiler {
       });
     }
 
-    this.arpNotes(t, stepDur, step, pat, clock, emit);
+    // a looping track's arp lines up on its own loop, the rest on the grid
+    this.arpNotes(t, stepDur, (track) => (trackLast(pat, track) < pat.length ? trackStepAt(pat, track, step, run) : step), pat, clock, emit);
     return lit;
   }
 
   /** The arp notes of every track that has them, for the step window starting at `t`. `gridPos` is the step's position on
-   * the grid (the first note lines up with the rate on it). `pat` supplies the octave. */
-  arpNotes(t: number, stepDur: number, gridPos: number, pat: Pattern, clock: Pick<StepClock, "arp" | "rnd">, emit: (n: StepNote) => void): void {
+   * the grid, or per track (the first note lines up with the rate on it). `pat` supplies the octave. */
+  arpNotes(t: number, stepDur: number, gridPos: number | ((track: number) => number), pat: Pattern, clock: Pick<StepClock, "arp" | "rnd">, emit: (n: StepNote) => void): void {
     for (const [track, arp] of this.arps) {
       if (!arp.active) continue;
       const cfg = clock.arp[track];
@@ -121,7 +132,7 @@ export class StepCompiler {
       }
       const spec = TRACKS[track];
       const oct = pat.tracks[track].oct;
-      for (const e of arp.advance(cfg, gridPos, clock.rnd)) {
+      for (const e of arp.advance(cfg, typeof gridPos === "number" ? gridPos : gridPos(track), clock.rnd)) {
         const time = t + e.offset * stepDur;
         emit({
           track,

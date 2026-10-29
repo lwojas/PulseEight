@@ -126,6 +126,14 @@ export class Arpeggiator {
     this.cursor = 0;
   }
 
+  /** Start the pattern over (a track's loop came round): forget the notes already released, and line the first note up and walk from the
+   * first note of the pool again. Keys still held stay held. */
+  restart(): void {
+    this.held = this.held.filter((h) => !h.released);
+    this.aligned = false;
+    this.cursor = 0;
+  }
+
   /** The host's grid restarted (transport start/stop): line up with it again on the next window. */
   realign(): void {
     this.aligned = false;

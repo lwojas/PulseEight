@@ -32,10 +32,15 @@ For the step at `gridTime`:
 
 A track may loop before the pattern ends (`TrackPattern.last`). The pattern clock is unchanged; each step also carries a `run`, the steps
 since the current pattern began playing, which is *not* reset when the same pattern repeats. A track shorter than the pattern plays
-step `(run mod runSteps) mod last` (`trackStepAt`), so it keeps its own loop through the repeats. `run` restarts when the pattern changes
-(a cue, or a chain moving on to another pattern). `runSteps` is the least common multiple of the pattern length and the tracks' last steps,
-capped at `MAX_RUN_STEPS` (4096), after which everything starts over together. The host's native sequence unrolls a looping single
-pattern to that many steps (`entriesOf`) so the DAW plays the same thing.
+step `run mod last` (`trackStepAt`), so it keeps its own loop through the repeats and drifts against the others. `run` restarts when the
+pattern changes, a cue lands, or a chain moves on to another pattern (a chain of one pattern is one run). That is all the live
+scheduler does: no cycle is ever built, however the lengths combine.
+
+In a plugin host the same thing is expressed as loops (`nativeseq.ts`): when a layout is one pattern repeating for good, each polymetric
+track is left out of the pattern's cycle and sent as a `Sequence` loop of its own length (`trackLoop`), which the host repeats against the
+DAW position. Swing moves odd steps of the grid, so a track of odd length is a loop of two laps. Any other layout plays each pattern once per
+cycle, so a shorter track just wraps inside it, and a cue transition is laid out event by event. This needs a host that reports
+`sequenceLoops` (webdsp's `Sequence.loops`); without it the page sequences as in a browser.
 
 ## Pattern boundaries
 

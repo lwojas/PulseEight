@@ -34,10 +34,11 @@ export interface HostPlayHooks {
   steps(steps: AudibleStep[]): void;
 }
 
-/** Whether this host can play Pulse.8 itself: it plays a Sequence and takes mixer writes in one (protocol 4). */
+/** Whether this host can play Pulse.8 itself: it plays a Sequence, takes mixer writes in one (protocol 4), and plays its loops (the tracks
+ * that are shorter than their pattern are loops of their own length). */
 export function hostPlayback(gb: Groovebox): boolean {
   const caps = gb.runtime.getCapabilities();
-  return caps.nativeSequence === true && (caps.hostProtocolVersion ?? 0) >= 4;
+  return caps.nativeSequence === true && caps.sequenceLoops === true && (caps.hostProtocolVersion ?? 0) >= 4;
 }
 
 /** A cued change is made this far ahead of its boundary at the earliest, so the new sequence has time to reach the host. */

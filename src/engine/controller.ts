@@ -625,20 +625,29 @@ class Controller {
     const gb = this.gb!;
     const st = getState();
     let next = this.schedPattern;
+    // The run of tracks shorter than the pattern: it carries on through repeats of one pattern (a looping pattern, a chain of one pattern),
+    // and starts again when the pattern changes, a cue lands or a chain moves on. This is what the host's layout says (nativeseq.ts).
+    const chained = st.chainOn && st.chain.length > 0;
+    const one = chained && st.chain.every((i) => i === st.chain[0]);
+    let run = 0;
     if (st.cue !== null) {
       next = st.cue;
       if (st.chainOn) {
         const ix = st.chain.indexOf(next);
-        if (ix >= 0) this.chainPos = ix;
+        if (ix >= 0) {
+          this.chainPos = ix;
+          if (one) run = ix * st.patterns[next].length; // a chain of one pattern is one run, counted from the chain's start
+        }
       }
-    } else if (st.chainOn && st.chain.length) {
+    } else if (chained) {
       this.chainPos = (this.chainPos + 1) % st.chain.length;
       next = st.chain[this.chainPos];
-      // a chain that comes round again starts its patterns afresh (unless it is one pattern repeated, which just carries on)
-      if (this.chainPos === 0 && !st.chain.every((i) => i === st.chain[0])) this.run = 0;
+      if (one && next === this.schedPattern) run = this.run;
+    } else if (next === this.schedPattern) {
+      run = this.run;
     }
+    this.run = run;
     if (next === this.schedPattern) return;
-    this.run = 0;
     this.schedPattern = next;
     gb.applySound(st.patterns[next], time);
     gb.when(time, () => this.applyLayers(this.layersApplied));

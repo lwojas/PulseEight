@@ -84,6 +84,40 @@ describe.skipIf(!available)("Pulse.8 in the plugin (headless end to end)", () =>
     got.forEach((b, i) => expect(Math.abs(b - want[i]) * BEAT, `hit ${i} at beat ${b.toFixed(3)}, wanted ${want[i]}`).toBeLessThan(TOL));
   };
 
+  it("loops a track shorter than its pattern on its own length, straight through the pattern's repeats", async () => {
+    await stopDaw();
+    const p = pattern(2, [0]); // closed hat: short, so every hit is heard apart
+    p.tracks[2].last = 3; // loops every 3 steps = 0.75 beat; the pattern is 4 beats, and 3 steps do not divide it
+    load({ 0: p });
+    await rig.wait(0.3);
+    expect(rig.sent.filter((m) => m.type === "set-sequence").pop()?.sequence.loops?.length).toBe(1);
+    await play(0);
+    await rig.until(9.2);
+    // a hit every 0.75 beat with no restart at the bar lines (4 and 8): 4.5 and 5.25, not 4 and 4.75
+    strict(await hitBeats(0, 0, 9), Array.from({ length: 12 }, (_, i) => i * 0.75));
+    await stopDaw();
+  });
+
+  it("plays a loop of odd length with swing on the grid, and a locate lands every loop where the song is", async () => {
+    await stopDaw();
+    const p = pattern(0, [0]);
+    p.tracks[0].last = 5;
+    load({ 0: p }, { swing: 0.5 });
+    await rig.wait(0.3);
+    const at = await (async () => {
+      await play(0);
+      await rig.until(1.2);
+      return rig.locate(10); // 10 beats = step 40: 40 mod 5 = 0, so a hit lands right on the locate
+    })();
+    await rig.until(14.2);
+    const audio = await rig.audio();
+    const beats = onsets(audio).filter((f) => f > at).map((f) => 10 + (f - at - LATENCY) / BEAT);
+    // every 5 steps = 1.25 beats: 10, 11.25, 12.5, 13.75
+    expect(beats.length).toBe(4);
+    beats.forEach((b, i) => expect(Math.abs(b - (10 + i * 1.25)) * BEAT).toBeLessThan(TOL));
+    await stopDaw();
+  });
+
   it("follows a locate in phase: the next bar line is where the song's next bar starts", async () => {
     await stopDaw();
     load({ 0: pattern(0, [0]) }); // one kick, on the first beat of each bar

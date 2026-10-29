@@ -28,7 +28,7 @@ cp -R vst/build/Pulse8_artefacts/VST3/Pulse8.vst3 ~/Library/Audio/Plug-Ins/VST3/
 - The DAW caches plugins: replace the bundle with the host closed, then rescan.
 - Build against the same webdsp the page uses (the sibling checkout); after updating it, rebuild the plugin. The protocol is
   additive, so an older plugin still runs a newer page, with a console warning. **Native playback needs protocol 4** (bus targets in
-  scheduled params, the `fixedPitch` MIDI route): against an older plugin the page falls back to sequencing itself, as in a
+  scheduled params, the `fixedPitch` MIDI route) and the `sequenceLoops` capability (a sequence's loops, which tracks with a last step play as; rebuild the plugin from current webvst and webdsp): against an older plugin the page falls back to sequencing itself, as in a
   browser, and the DAW's transport is not followed.
 
 ## Serving the page

@@ -26,7 +26,7 @@ import { defaultWorkletUrl } from "webdsp/worklet-url";
 import { baseValues, MANGLER_KEYS, MANGLER_PARAMS, type FxSlot, type ManglerValues } from "./mangler";
 import { lockParams, type LockParam } from "./plock";
 import { normToUnits, NUM_TRACKS, TRACKS } from "./spec";
-import { runSteps, trackStepAt, type Pattern } from "./state";
+import { trackStepAt, type Pattern } from "./state";
 import {
   BEAT_DIVISIONS, DELAY_FEEDBACK_BEAT, DELAY_FEEDBACK_FREE, DELAY_TONE, freeDelaySeconds, reverbDamping, reverbDecay,
 } from "./trackfx";
@@ -338,11 +338,10 @@ export class Groovebox {
    * step with no locks and none to undo. */
   scheduleLocks(pattern: Pattern, step: number, time: number, run: number = step): void {
     const events: ScheduledParam[] = [];
-    const cycle = runSteps(pattern);
     for (const spec of TRACKS) {
       const t = spec.id;
       const tp = pattern.tracks[t];
-      const locks = tp.steps[trackStepAt(pattern, t, step, run, cycle)].parameterLocks;
+      const locks = tp.steps[trackStepAt(pattern, t, step, run)].parameterLocks;
       const before = this.lockedParams[t];
       if (!locks && before.size === 0) continue;
       const now = new Map<string, string>();
