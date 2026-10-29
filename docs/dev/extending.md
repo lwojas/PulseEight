@@ -196,7 +196,7 @@ If it is performance state (not part of the music), do not persist it; put it in
    `controller.audition(...)` for immediate feedback. No React.
 2. In the component, call the action from the handler and read state with `useStore((s) => …)`. Pick selectors that
    return primitives so only this component re-renders.
-3. Use `Knob`/`Slider` from `ui/controls.tsx` for a continuous value (they give double-tap reset and keyboard nudge).
+3. Use `Knob`/`Slider` from `ui/controls.tsx` for a continuous value (they give double-tap reset and keyboard nudge), and `Stepper` (the BPM readout between − and +) for a small integer or decimal value.
 4. Do not read `getState()` during render, and do not call the controller to change state.
 5. If the change must reach the audio engine, you normally need nothing: the controller observes `patterns`, `mutes`,
    `solos` and `pattern`, and `applySound`/`applyMix` push what changed. New *kinds* of audio parameter belong in

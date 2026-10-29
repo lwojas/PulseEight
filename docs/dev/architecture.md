@@ -50,7 +50,7 @@ musically, and [webdsp](https://github.com/lwojas/webdsp) for sound. The one rul
 |---|---|
 | `../product.ts` | Product identity: name, logo, and the `id` that prefixes every storage key and file stamp. Start a clone here (see [REFERENCE_RESKIN.md](../../REFERENCE_RESKIN.md)). |
 | `spec.ts` | **The track definitions.** Which webdsp instrument backs each role, which parameters are exposed as macro controls, over what range and taper. Normalised ↔ engine-unit conversion and readout formatting. Note naming. |
-| `state.ts` | `AppState`, `Pattern`, `TrackPattern`, `Step`; constructors; the demo groove; the pure pattern edits (`randomizeTrack`, `clearTrackSteps`). |
+| `state.ts` | `AppState`, `Pattern`, `TrackPattern` (with its optional `last` step, `trackLast` / `trackStepAt`), `Step`; constructors; the demo groove; the pure pattern edits (`randomizeTrack`, `clearTrackSteps`). |
 | `store.ts` | The store. `setState`, `observe`, `editPattern`, the `useStore` hook. |
 | `actions.ts` | User-level edits. UI components and `params.ts` call these. They edit the store and audition. |
 | `stepcompile.ts`, `nativeseq.ts`, `hostplay.ts` | One step's notes, shared by the live scheduler and the native sequence; the song as a webdsp `Sequence` for a plugin host; following the DAW's transport. See [VST3 build](vst.md). |
@@ -67,7 +67,7 @@ musically, and [webdsp](https://github.com/lwojas/webdsp) for sound. The one rul
 | `params.ts` | The registry of externally controllable parameters, by stable id, with change notification. |
 | `source.ts` | The ambient *origin* tag for a change (`ui`, `midi`, `host`, `automation`, `internal`). |
 | `song.ts` | Maps a linear song position onto the chain or the current pattern. |
-| `playhead.ts`, `keyhl.ts` | Direct-to-DOM playhead and piano-key highlights, bypassing React. |
+| `playhead.ts`, `keyhl.ts` | Direct-to-DOM playhead (per track: a track with a last step lights its own step) and piano-key highlights, bypassing React. |
 | `ticker.ts` | A Web Worker timer that drives the scheduler. |
 
 ### `src/midi/`

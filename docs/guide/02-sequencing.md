@@ -8,7 +8,7 @@ The step pads show 16 steps at a time. Pages are labelled `1-16`, `17-32`, `33-4
 
 - **Length (`LEN`)** cycles 16 → 32 → 48 → 64. When it grows, the new bars are filled with a copy of the page you are
   looking at, so a longer pattern starts out as a loop of what you already have.
-- Tapping a page beyond the current length extends the pattern to reach it.
+- Tapping a page beyond the current length extends the pattern to reach it. Changing the length this way (or with **LEN**) also resets every track's **LAST STEP** to the new length.
 - **FOLLOW** makes the page track the playhead while the pattern plays.
 - On a keyboard, `[` and `]` change page.
 

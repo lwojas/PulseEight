@@ -34,7 +34,7 @@ A track may loop before the pattern ends (`TrackPattern.last`). The pattern cloc
 since the current pattern began playing, which is *not* reset when the same pattern repeats. A track shorter than the pattern plays
 step `run mod last` (`trackStepAt`), so it keeps its own loop through the repeats and drifts against the others. `run` restarts when the
 pattern changes, a cue lands, or a chain moves on to another pattern (a chain of one pattern is one run). That is all the live
-scheduler does: no cycle is ever built, however the lengths combine.
+scheduler does: no cycle is ever built, however the lengths combine. A looping track's arp starts over when its loop comes round (`StepCompiler`), which is what lets the host repeat the loop exactly.
 
 In a plugin host the same thing is expressed as loops (`nativeseq.ts`): when a layout is one pattern repeating for good, each polymetric
 track is left out of the pattern's cycle and sent as a `Sequence` loop of its own length (`trackLoop`), which the host repeats against the

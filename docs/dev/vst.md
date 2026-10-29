@@ -50,7 +50,7 @@ webvst's "ship the clients inside the plugin" work ([RELEASE.md](https://github.
 ## Playing in the DAW
 
 Everything below is gated on the host (`hasEmbeddedHost()`, `getHostState()`, `getHostFiles()`, and for playback
-`capabilities.nativeSequence` with protocol 4); in a browser the app behaves exactly as before.
+`capabilities.nativeSequence` with protocol 4 and `capabilities.sequenceLoops`); in a browser the app behaves exactly as before.
 
 | | In a browser | In the plugin |
 |---|---|---|
@@ -70,7 +70,7 @@ per sound apply; the page bundle is 2.5 kB gzip larger.
 
 ### The song as a native sequence (`nativeseq.ts`, `hostplay.ts`)
 
-The plugin repeats one cycle of events against the DAW's position. The page builds that cycle, and sends it again (after a 60 ms
+The plugin repeats one cycle of events against the DAW's position, plus a loop of its own length for each track that has a last step shorter than its pattern (below). The page builds them, and sends it again (after a 60 ms
 pause, and only if it differs) whenever the song changes. It is not a second compiler: notes come from the same `StepCompiler`
 (`stepcompile.ts`) that the live scheduler uses, at a fixed 120 bpm turned into beats, and the mixer, sound and FX values come from
 the same pure functions (`audio.ts`: `mixWrites`, `soundWrites`, `trackFxWrites`, `manglerWrites`) that the live engine applies. So what
@@ -79,6 +79,14 @@ the host plays is what the page would have scheduled; the e2e test below checks 
 **What plays when.** A *layout* is a list of patterns (the chain, or the one pattern looping) and an *origin* beat. Song position at
 DAW beat `P` is `(P - origin) mod cycle`, so a DAW that starts at bar 1 plays the song from its start and a locate lands where the song
 is (as a MIDI Song Position Pointer does). A start, stop, locate or loop wrap resets the layout to the project's own (origin 0).
+
+**Tracks with a last step.** When a layout is one pattern repeating for good (a looping pattern, or a chain of one pattern), each track whose
+last step is shorter than the pattern is left out of the pattern's cycle and sent as a `Sequence` loop (`trackLoop`): its steps up to the last
+one, repeating on the DAW timeline on their own length, so it drifts against the other tracks with no cycle as long as the lengths' least
+common multiple. A track of odd length is a loop of two laps, because swing moves odd steps of the grid, and a looping track's arp restarts
+with its loop (`StepCompiler`), so the loop is the same every lap. In any other layout each pattern is played once per cycle and a shorter
+track simply wraps inside it, and a cue transition is laid out event by event with the loops' events placed in its window. See
+[Timing](timing.md#per-track-last-step-polymeter).
 
 **What is baked into the sequence:**
 - notes: drums, bass, FM, and the arpeggiator rendered from the sequencer's notes (the RND direction is seeded so a loop repeats;
@@ -151,13 +159,14 @@ instruments) in the same order every time, or reopening falls back to the fresh 
 ## Tests
 
 - `npm test`: unit tests, including `test/nativeseq.test.ts` (the sequence compiler: beats, swing, ties, arps, per-pattern state,
-  lanes, layouts, the cue transition) and `test/hoststate.test.ts` (session restore and publish).
+  lanes, layouts, the cue transition) and `test/laststep.test.ts` (last step: polymeter loops, swing, arps, locks, chains), and `test/hoststate.test.ts` (session restore and publish).
 - `npm run vst:e2e`: **headless end to end**, no DAW. Builds `vst/build/.../Pulse8Harness` (the plugin's real `EngineHost` behind
   stdin/stdout) and runs `vst/test/pulse8.e2e.ts`, which drives Pulse.8's own page code (Groovebox, controller, MIDI) through webvst's
   page shim against it, with a DAW simulated in real time, and measures the audio it renders: hits land on the DAW's timeline within
   4 ms; playback continues with the window closed; a locate stays in phase; a chain applies each pattern's mix; a cue swaps exactly
   on the boundary; a mute is live; a written filter lane closes and reopens the chain; DAW MIDI plays once, on its own frame, as a
-  fixed-pitch drum or a held synth note; the arp and step entry give the route back to the page. About 45 s. Skipped when the harness
+  fixed-pitch drum or a held synth note; the arp and step entry give the route back to the page; a track with a last step keeps its own
+  period through the pattern's repeats and after a locate. About 60 s. Skipped when the harness
   is not built.
 
 ## Known limits

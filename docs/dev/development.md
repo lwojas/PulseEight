@@ -68,7 +68,7 @@ When a change touches one of the invariants below, add the test that pins it.
 
 ## Performance
 
-- One `data-play` attribute flip per step on the old and new cell; about 20 attribute writes, no React render.
+- One `data-play` attribute flip per step on the old and new cell (per track for the step pads, since a track with a last step has its own position); about 20 attribute writes, no React render.
 - Animation is `transform`/`opacity` only. No blurred shadows or filters on step cells, knob arcs or sliders.
 - The scheduler runs from a Web Worker timer, so UI work cannot delay it.
 - `Groovebox` caches the last value it sent for every parameter; do not bypass the caches with direct runtime calls.
