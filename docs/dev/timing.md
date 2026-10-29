@@ -78,3 +78,10 @@ read from the same tempo, so the arpeggiator sounds identical whether or not the
 clock, and `followPhase(songStep, time)` nudges `gridTime` by 25% of the error per step (a small phase-locked loop,
 bounded to half a step). It runs 50 ms behind the sender (`CLOCK_LATENCY`). If pulses stop for 1 s the transport stops.
 Details: [MIDI](midi.md).
+
+## In a plugin host
+
+Inside the VST3 build the lookahead scheduler described above is not the clock: the DAW's transport is, and the plugin plays the song
+itself from a native sequence (`nativeseq.ts`) built with the same step compile. The page follows the DAW's position to draw the
+playhead and record FX. See [VST3 build](vst.md#playing-in-the-daw). The scheduler still runs when the DAW is stopped (PLAY works as in
+a browser) and for held-key arps.

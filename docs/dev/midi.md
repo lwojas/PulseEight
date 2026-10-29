@@ -71,9 +71,11 @@ one contract" shape, no `midi-core` dependency, status/channel parsing. Not reus
    it (JUCE needs them at construction; ids are stable, so sessions keep their automation). Page to host: parameter changed;
    host to page: `setParam(id, v, "host")`. `host`-origin changes must not be sent back to the host. Needs a small webdsp
    bridge command pair; nothing in the app changes.
-4. **Host transport** (`webdsp/docs/host-transport.md`) can drive the same two controller entry points as MIDI clock
-   (`play({songStep,time})` / `followPhase`), so clock and DAW sync share one follower path. Not wired yet.
-5. `hasEmbeddedHost()` turns MIDI on at boot in the plugin.
+4. **Host transport** is wired, but not through the MIDI clock follower: a plugin that can play a native sequence plays the song
+   itself against the DAW's transport (`engine/hostplay.ts`, [VST3 build](vst.md)), so there is nothing to follow. The clock follower
+   stays for hardware clocks in a browser.
+5. `hasEmbeddedHost()` turns MIDI on at boot in the plugin, with the keyboard playing the focused track. When the host can route
+   (`capabilities.midiRouting`) the page declares a MIDI route and the host plays those notes natively (`midi/setup.ts`).
 
 ## Open design questions (plugin build)
 - Per-pattern parameters (volume, sends, knobs): a DAW needs one value per parameter. Decide whether host parameters mean "the

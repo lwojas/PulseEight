@@ -57,6 +57,98 @@ export interface MixInput {
   boost: number;
 }
 
+/** The ids of everything the graph is made of: what the pure functions below address. */
+export interface GraphIds {
+  /** Per track: A (fader, delay send), B (reverb send), C (punch send, takeover cut). */
+  trackBus: readonly BusId[];
+  busB: readonly BusId[];
+  busC: readonly BusId[];
+  delayBus: readonly BusId[];
+  reverbBus: readonly BusId[];
+  delayFx: ReadonlyArray<{ dub: EffectId; free: EffectId }>;
+  reverbFx: readonly EffectId[];
+  inst: readonly InstrumentId[];
+  manglerBus: BusId;
+  fx: Readonly<Record<FxSlot, EffectId>>;
+}
+
+/** One parameter write the graph needs. `key` names the parameter (the live engine skips a write that repeats its last). */
+export type Write =
+  | { kind: "bus"; key: string; bus: BusId; param: NodeParam; value: number }
+  | { kind: "fx"; key: string; bus: BusId; effect: EffectId; param: NodeParam; value: number }
+  | { kind: "inst"; key: string; instrument: InstrumentId; param: number; value: number };
+
+/** The mixer's bus writes for a pattern's levels and sends, the mutes and solos, and the punch section's state
+ * (`takeover`, `boost`). "pattern" is what travels with the pattern (fader/mute, delay and reverb sends); "punch" is the
+ * punch send and takeover cut on bus C, which the written FX lanes drive; "all" is both. */
+export function mixWrites(ids: GraphIds, mix: MixInput, group: "pattern" | "punch" | "all" = "all"): Write[] {
+  const out: Write[] = [];
+  const anySolo = mix.solos.some(Boolean);
+  const bus = (b: BusId, key: string, param: NodeParam, value: number) => out.push({ kind: "bus", key, bus: b, param, value });
+  for (let t = 0; t < NUM_TRACKS; t++) {
+    const audible = anySolo ? mix.solos[t] : !mix.mutes[t];
+    const tp = mix.pattern.tracks[t];
+    if (group !== "punch") {
+      // the fader/mute sits before every tap, so a muted track's delay and reverb go quiet too
+      bus(ids.trackBus[t], `${t}:g`, NodeParam.BusGain, audible ? levelToGain(tp.level) : 0);
+      bus(ids.trackBus[t], `${t}:d`, NodeParam.BusSendAmount, tp.dly.send);
+      bus(ids.busB[t], `${t}:r`, NodeParam.BusSendAmount, tp.rev.send);
+    }
+    if (group !== "pattern") {
+      // a track with its punch send off is neither fed to the punch section nor cut by a takeover
+      const punched = tp.punch !== false;
+      bus(ids.busC[t], `${t}:s`, NodeParam.BusSendAmount, punched ? (mix.takeover ? 1 : mix.boost) : 0);
+      bus(ids.busC[t], `${t}:m`, NodeParam.BusMainGain, punched && mix.takeover ? 0 : 1);
+    }
+  }
+  return out;
+}
+
+/** Every track's delay mode/time and reverb size for a pattern (the sends themselves are bus levels). `clamp` keeps a value inside
+ * its effect parameter's range. */
+export function trackFxWrites(ids: GraphIds, pattern: Pattern, clamp: (param: number, value: number) => number): Write[] {
+  const out: Write[] = [];
+  for (let t = 0; t < NUM_TRACKS; t++) {
+    const { dly, rev } = pattern.tracks[t];
+    const bus = ids.delayBus[t];
+    const { dub, free } = ids.delayFx[t];
+    const beat = dly.mode === 1;
+    const fx = (b: BusId, effect: EffectId, key: string, param: NodeParam, value: number) =>
+      out.push({ kind: "fx", key: `${t}:${key}`, bus: b, effect, param, value: clamp(param, value) });
+    fx(bus, dub, "dubMix", NodeParam.DubDelayMix, beat ? 1 : 0);
+    fx(bus, free, "freeMix", NodeParam.DelayMix, beat ? 0 : 1);
+    if (beat) {
+      const div = BEAT_DIVISIONS[Math.min(BEAT_DIVISIONS.length - 1, Math.max(0, dly.div))].value;
+      fx(bus, dub, "dubDiv", NodeParam.DubDelayDivision, div);
+      fx(bus, dub, "dubFb", NodeParam.DubDelayFeedback, DELAY_FEEDBACK_BEAT);
+    } else {
+      fx(bus, free, "freeTime", NodeParam.DelayTime, freeDelaySeconds(dly.time));
+      fx(bus, free, "freeFb", NodeParam.DelayFeedback, DELAY_FEEDBACK_FREE);
+    }
+    fx(ids.reverbBus[t], ids.reverbFx[t], "decay", NodeParam.ReverbDecay, reverbDecay(rev.size));
+    fx(ids.reverbBus[t], ids.reverbFx[t], "damp", NodeParam.ReverbDamping, reverbDamping(rev.size));
+  }
+  return out;
+}
+
+/** A pattern's instrument settings, in engine units. */
+export function soundWrites(ids: GraphIds, pattern: Pattern): Write[] {
+  const out: Write[] = [];
+  for (const spec of TRACKS) {
+    const sound = pattern.tracks[spec.id].sound;
+    spec.controls.forEach((c, i) => out.push({ kind: "inst", key: `${spec.id}:${i}`, instrument: ids.inst[spec.id], param: c.param, value: normToUnits(c, sound[i]) }));
+  }
+  return out;
+}
+
+/** The mangler chain's values as effect writes (clamped to each parameter's range). */
+export function manglerWrites(ids: GraphIds, values: ManglerValues, clamp: (param: number, value: number) => number): Write[] {
+  return MANGLER_KEYS.map((key) => {
+    const { fx, param } = MANGLER_PARAMS[key];
+    return { kind: "fx", key, bus: ids.manglerBus, effect: ids.fx[fx], param, value: clamp(param, values[key]) };
+  });
+}
+
 export class Groovebox {
   private readonly queue = new TimedQueue();
   /** Per track: A (fader, delay send), B (reverb send), C (punch send, takeover cut). */
@@ -78,6 +170,9 @@ export class Groovebox {
   private soundCache: number[][] = TRACKS.map((t) => new Array(t.controls.length).fill(NaN));
   private busCache = new Map<string, number>();
   private manglerCache: Partial<ManglerValues> = {};
+
+  /** The graph's ids, for the pure write functions (and the native sequence, which writes the same parameters). */
+  readonly ids: GraphIds;
 
   private constructor(readonly runtime: AudioRuntime) {
     this.manglerBus = runtime.createBus();
@@ -133,8 +228,18 @@ export class Groovebox {
       runtime.setInstrumentParameter(inst, InstrumentCommonParam.Gain, spec.gainDb);
       for (const [param, value] of spec.fixed) runtime.setInstrumentParameter(inst, param, value);
     }
+    this.ids = {
+      trackBus: this.trackBus, busB: this.busB, busC: this.busC, delayBus: this.delayBus, reverbBus: this.reverbBus,
+      delayFx: this.delayFx, reverbFx: this.reverbFx, inst: this.inst, manglerBus: this.manglerBus, fx: this.fx,
+    };
     this.applyManglerValues(baseValues());
   }
+
+  /** `value` kept inside the effect parameter's range. */
+  clampFx = (param: number, value: number): number => {
+    const range = this.effectRange.get(param);
+    return range ? Math.min(range.max, Math.max(range.min, value)) : value;
+  };
 
   static async create(): Promise<Groovebox> {
     const runtime = await AudioRuntime.create({ workletModuleUrl: defaultWorkletUrl, maxVoices: 32 });
@@ -184,57 +289,25 @@ export class Groovebox {
   applySound(pattern: Pattern, time?: number): void {
     const future = time !== undefined && time > this.now + 0.004;
     const events: ScheduledParam[] = [];
-    for (const spec of TRACKS) {
-      const sound = pattern.tracks[spec.id].sound;
-      spec.controls.forEach((c, i) => {
-        const value = normToUnits(c, sound[i]);
-        if (this.soundCache[spec.id][i] === value) return;
-        this.soundCache[spec.id][i] = value;
-        if (future) events.push({ time: time!, target: { instrument: this.inst[spec.id] }, param: c.param, value });
-        else this.runtime.setInstrumentParameter(this.inst[spec.id], c.param, value);
-      });
+    for (const w of soundWrites(this.ids, pattern)) {
+      if (w.kind !== "inst") continue;
+      const [track, i] = w.key.split(":").map(Number);
+      if (this.soundCache[track][i] === w.value) continue;
+      this.soundCache[track][i] = w.value;
+      if (future) events.push({ time: time!, target: { instrument: w.instrument }, param: w.param, value: w.value });
+      else this.runtime.setInstrumentParameter(w.instrument, w.param, w.value);
     }
     if (events.length) this.runtime.scheduleParams(events);
   }
 
   // --- mixer + routing -----------------------------------------------------------------------
 
-  applyMix(mix: MixInput, time?: number): void {
+  /** `group` limits the bus writes: "pattern" leaves the punch section (bus C) alone. */
+  applyMix(mix: MixInput, time?: number, group: "pattern" | "punch" | "all" = "all"): void {
     this.when(time, () => {
-      const anySolo = mix.solos.some(Boolean);
-      for (let t = 0; t < NUM_TRACKS; t++) {
-        const audible = anySolo ? mix.solos[t] : !mix.mutes[t];
-        const tp = mix.pattern.tracks[t];
-        // the fader/mute sits before every tap, so a muted track's delay and reverb go quiet too
-        this.setBus(this.trackBus[t], `${t}:g`, NodeParam.BusGain, audible ? levelToGain(tp.level) : 0);
-        this.setBus(this.trackBus[t], `${t}:d`, NodeParam.BusSendAmount, tp.dly.send);
-        this.setBus(this.busB[t], `${t}:r`, NodeParam.BusSendAmount, tp.rev.send);
-        // a track with its punch send off is neither fed to the punch section nor cut by a takeover
-        const punched = tp.punch !== false;
-        this.setBus(this.busC[t], `${t}:s`, NodeParam.BusSendAmount, punched ? (mix.takeover ? 1 : mix.boost) : 0);
-        this.setBus(this.busC[t], `${t}:m`, NodeParam.BusMainGain, punched && mix.takeover ? 0 : 1);
-        this.applyTrackFx(t, tp.dly, tp.rev);
-      }
+      for (const w of mixWrites(this.ids, mix, group)) if (w.kind === "bus") this.setBus(w.bus, w.key, w.param, w.value);
+      for (const w of trackFxWrites(this.ids, mix.pattern, this.clampFx)) if (w.kind === "fx") this.setFx(w.bus, w.effect, w.key, w.param, w.value);
     });
-  }
-
-  /** Delay mode/time and reverb size of one track (the sends themselves are bus levels). */
-  private applyTrackFx(t: number, dly: Pattern["tracks"][number]["dly"], rev: Pattern["tracks"][number]["rev"]): void {
-    const bus = this.delayBus[t];
-    const { dub, free } = this.delayFx[t];
-    const beat = dly.mode === 1;
-    this.setFx(bus, dub, `${t}:dubMix`, NodeParam.DubDelayMix, beat ? 1 : 0);
-    this.setFx(bus, free, `${t}:freeMix`, NodeParam.DelayMix, beat ? 0 : 1);
-    if (beat) {
-      const div = BEAT_DIVISIONS[Math.min(BEAT_DIVISIONS.length - 1, Math.max(0, dly.div))].value;
-      this.setFx(bus, dub, `${t}:dubDiv`, NodeParam.DubDelayDivision, div);
-      this.setFx(bus, dub, `${t}:dubFb`, NodeParam.DubDelayFeedback, DELAY_FEEDBACK_BEAT);
-    } else {
-      this.setFx(bus, free, `${t}:freeTime`, NodeParam.DelayTime, freeDelaySeconds(dly.time));
-      this.setFx(bus, free, `${t}:freeFb`, NodeParam.DelayFeedback, DELAY_FEEDBACK_FREE);
-    }
-    this.setFx(this.reverbBus[t], this.reverbFx[t], `${t}:decay`, NodeParam.ReverbDecay, reverbDecay(rev.size));
-    this.setFx(this.reverbBus[t], this.reverbFx[t], `${t}:damp`, NodeParam.ReverbDamping, reverbDamping(rev.size));
   }
 
   private setFx(bus: BusId, effect: EffectId, key: string, param: NodeParam, value: number): void {

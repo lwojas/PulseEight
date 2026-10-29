@@ -9,6 +9,7 @@ import { newDelay, newReverb } from "./trackfx";
 import { normalizeScale, type ProjectScale } from "./scale";
 import { CURRENT_STORE, idbRequest, openDb, SAVES_STORE, txDone } from "./db";
 import { getState, observe, setState } from "./store";
+import { getHostFiles, getHostState, type HostStateBridge, type HostStateSnapshot } from "webdsp";
 
 const CURRENT_ID = "current";
 
@@ -183,13 +184,28 @@ export function loadSaved(entry: SavedProject): boolean {
   return true;
 }
 
-export function exportProject(name: string): void {
+/** The project as the text of an export file (and of a host snapshot): untouched patterns are written as null. */
+function projectText(name: string): string {
+  return JSON.stringify({ app: FILE_APP, version: 1, name, project: { ...snapshot(), patterns: sparse(getState().patterns) } });
+}
+
+/** Whether export / import must go through the host's own dialogs: a plugin's WKWebView has no file input and ignores
+ * `<a download>`. False in a browser, where the input and the download link are used. */
+export const hasHostFiles = (): boolean => getHostFiles() !== null;
+
+export async function exportProject(name: string): Promise<void> {
   const clean = name.trim() || "pulse8-project";
-  const blob = new Blob([JSON.stringify({ app: FILE_APP, version: 1, name: clean, project: { ...snapshot(), patterns: sparse(getState().patterns) } })], { type: "application/json" });
+  const fileName = clean.replace(/[^\w.-]+/g, "-").toLowerCase() + ".pulse8.json";
+  const files = getHostFiles();
+  if (files) {
+    await files.saveFile({ suggestedName: fileName, data: projectText(clean) });
+    return;
+  }
+  const blob = new Blob([projectText(clean)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = clean.replace(/[^\w.-]+/g, "-").toLowerCase() + ".pulse8.json";
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -198,29 +214,114 @@ export function exportProject(name: string): void {
 
 /** Reads an exported file (or a bare project) and loads it. Resolves to the project name, or rejects. */
 export async function importProject(file: File): Promise<string> {
+  return importProjectText(await file.text(), file.name);
+}
+
+/** The same through the host's open dialog. Resolves to the project name, or null if the user cancelled. */
+export async function importProjectFromHost(beforeReplace: () => void): Promise<string | null> {
+  const picked = await getHostFiles()?.openFile({ extensions: ["json"] });
+  if (picked) beforeReplace(); // only once a file was chosen: cancelling leaves playback alone
+  return picked ? importProjectText(new TextDecoder().decode(picked.data), picked.name) : null;
+}
+
+function importProjectText(text: string, fileName: string): string {
   let data: { app?: string; name?: string; project?: Saved } & Partial<Saved>;
   try {
-    data = JSON.parse(await file.text());
+    data = JSON.parse(text);
   } catch {
     throw new Error("That file is not valid JSON.");
   }
   const project = parseProject((data?.project ?? data) as Saved);
   if (!project) throw new Error("That file is not a Pulse.8 project.");
-  const name = (typeof data.name === "string" && data.name ? data.name : file.name.replace(/\.pulse8\.json$|\.json$/i, "")).slice(0, 40);
+  const name = (typeof data.name === "string" && data.name ? data.name : fileName.replace(/\.pulse8\.json$|\.json$/i, "")).slice(0, 40);
   replaceProject(project, name);
   return name;
 }
 
-/** Writes the project to the autosave slot shortly after each change, and straight away when the
- * page is hidden or closed so the last edit is not lost. */
+// ---- the project in a plugin host's session ------------------------------------------------------
+//
+// In a DAW plugin the session is the source of truth (webdsp getHostState(), docs/host-state.md): the page's IndexedDB is
+// shared by every instance of the plugin, so the autosave slot is not used at all there. The rules that made reopening the
+// window recover the project (learnt in webvst / webseq):
+//  - nothing is published before the host has answered (a pristine default would overwrite the saved session), so the
+//    first render waits for the answer (`restoreFromHost`), and edits are observed only after it;
+//  - the answer is a snapshot or null; null is "nothing saved" and leaves the demo project, never an error;
+//  - publish on a short debounce, and at once when the page hides: a plugin window can close at any moment;
+//  - a snapshot that is not ours or not readable starts fresh instead of wedging startup.
+
+/** The persisted fields, compared by reference: if you add a persisted field, add it here too (and to `snapshot`). */
+const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName, s.scale, s.arp];
+const projectChanged = (next: AppState, prev: AppState) => {
+  const a = persisted(next);
+  const b = persisted(prev);
+  return !a.every((v, i) => v === b[i]);
+};
+
+export const HOST_APP = FILE_APP;
+/** Version of a snapshot's `data` (the export file's JSON). Bump when older code could no longer read it. */
+export const HOST_FORMAT = 1;
+export const HOST_PUBLISH_DEBOUNCE_MS = 300;
+/** An older plugin never answers: give up waiting after this long and run on the default project. */
+export const HOST_ANSWER_TIMEOUT_MS = 2500;
+
+export function toHostSnapshot(): HostStateSnapshot {
+  return { app: HOST_APP, format: HOST_FORMAT, data: projectText(getState().projectName), blobs: {} };
+}
+
+/** The project in a snapshot, or null when it is not ours, not a format we read, or malformed. */
+export function fromHostSnapshot(snap: HostStateSnapshot): (Saved & { patterns: Pattern[] }) | null {
+  if (snap.app !== HOST_APP || snap.format !== HOST_FORMAT) return null;
+  try {
+    const data = JSON.parse(snap.data) as { project?: Saved };
+    return parseProject(data?.project as Saved);
+  } catch {
+    return null;
+  }
+}
+
+/** Resolves once the host has answered (or after the timeout), with the saved project installed in the store. A later
+ * answer (the DAW reverting the session) installs that project too, after `beforeReplace` (stop playback). Returns after
+ * the first answer; the subscription lives as long as the page. */
+export function restoreFromHost(host: HostStateBridge, beforeReplace: () => void): Promise<void> {
+  return new Promise((resolve) => {
+    let answered = false;
+    let edited = false;
+    let lastData = "";
+    observe((next, prev) => { if (projectChanged(next, prev)) edited = true; });
+    const timer = window.setTimeout(resolve, HOST_ANSWER_TIMEOUT_MS);
+    host.onRestore((snap) => {
+      const first = !answered;
+      answered = true;
+      window.clearTimeout(timer);
+      // A first answer that came after the timeout must not clobber what was done meanwhile; null is a new session.
+      const stale = first && edited;
+      if (snap && !stale && snap.data !== lastData) {
+        lastData = snap.data;
+        const project = fromHostSnapshot(snap);
+        if (project) {
+          if (!first) beforeReplace();
+          replaceProject(project, project.projectName ?? "");
+        }
+      }
+      resolve();
+    });
+  });
+}
+
+/** Writes the project to the autosave slot shortly after each change (or, in a plugin host, publishes it to the host's
+ * session), and straight away when the page is hidden or closed so the last edit is not lost. */
 export function autosave(): void {
   let timer: number | undefined;
   let dirty = false;
-  const persisted = (s: AppState) => [s.patterns, s.chain, s.chainOn, s.bpm, s.swing, s.projectName, s.scale, s.arp];
+  const host = getHostState();
   const flush = () => {
     window.clearTimeout(timer);
     if (!dirty) return;
     dirty = false;
+    if (host) {
+      host.publish(toHostSnapshot());
+      return;
+    }
     void (async () => {
       try {
         const db = await openDb();
@@ -235,12 +336,10 @@ export function autosave(): void {
     })();
   };
   observe((next, prev) => {
-    const a = persisted(next);
-    const b = persisted(prev);
-    if (a.every((v, i) => v === b[i])) return;
+    if (!projectChanged(next, prev)) return;
     dirty = true;
     window.clearTimeout(timer);
-    timer = window.setTimeout(flush, 500);
+    timer = window.setTimeout(flush, host ? HOST_PUBLISH_DEBOUNCE_MS : 500);
   });
   document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flush());
   window.addEventListener("pagehide", flush);

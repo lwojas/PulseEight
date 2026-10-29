@@ -6,7 +6,7 @@
 // into the bus are lifted, DUB / ROLL / VERB). Each punch has one character parameter and a sweep
 // level 0..1: the level rises while the pad is held, so the effect is performed in, not switched on.
 import { DubDelayDivision, NodeParam } from "webdsp";
-import type { ManglerBase } from "./state";
+import type { ManglerBase, Pattern } from "./state";
 
 export type ManglerKey =
   | "fCut" | "fRes"
@@ -233,6 +233,10 @@ export function layeredTarget(base: ManglerBase, layers: readonly PunchLayer[], 
   }
   return { values, takeover, boost };
 }
+
+/** The punches the written lanes of a pattern hold at `step`, in lane order. */
+export const laneLayers = (pat: Pattern, step: number): PunchLayer[] =>
+  pat.fxLanes.flatMap((l) => (l.fx[step] ? [{ id: l.fx[step], lvl: l.fxLvl[step] }] : []));
 
 /** Punches whose level swings back and forth (0 → 1 → 0 …) for as long as the pad is held. */
 export const PING_PONG = new Set([7]);

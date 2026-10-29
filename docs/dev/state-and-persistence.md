@@ -78,6 +78,11 @@ field, add it to all three** (see recipe below).
 `storageBlocked`, which the UI surfaces. The initial restore (`loadProject`) runs before the first render and before
 autosave starts, so it cannot be overwritten by defaults.
 
+### In a plugin host
+
+Inside the VST3 build the autosave slot is replaced by the DAW session (`restoreFromHost`, `toHostSnapshot`, publishing from
+`autosave`). The rules, and why, are in [VST3 build](vst.md#project-recovery-closing-and-reopening-the-window).
+
 ### Export and import
 
 A JSON file `{ app, version: 1, name, project }` named `<name>.pulse8.json`. Untouched patterns serialise as `null`

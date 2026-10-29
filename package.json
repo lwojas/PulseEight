@@ -8,7 +8,10 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "vst:build": "cmake -S vst -B vst/build && cmake --build vst/build --target Pulse8_VST3 -j 4",
+    "vst:serve": "vite build && vite preview --port 5175 --strictPort",
+    "vst:e2e": "cmake -S vst -B vst/build -DPULSE8_BUILD_E2E=ON && cmake --build vst/build --target Pulse8Harness -j 4 && vitest run --config vst/vitest.config.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

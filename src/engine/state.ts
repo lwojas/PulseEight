@@ -124,6 +124,8 @@ export interface AppState {
   audio: "off" | "starting" | "ready" | "error";
   audioError: string;
   playing: boolean;
+  /** The DAW's tempo while a plugin host plays the song (the project's own tempo is not used then); null otherwise. */
+  hostBpm: number | null;
   playPattern: number;
   chainPos: number;
   cue: number | null;
@@ -297,6 +299,7 @@ export function initialState(): AppState {
     audio: "off",
     audioError: "",
     playing: false,
+    hostBpm: null,
     playPattern: 0,
     chainPos: 0,
     cue: null,

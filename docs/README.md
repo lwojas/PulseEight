@@ -27,5 +27,6 @@ The **developer documentation** explains how it works and how to change it.
 | [Timing & scheduling](dev/timing.md) | Lookahead, swing, chaining, the playhead, external clock |
 | [State & persistence](dev/state-and-persistence.md) | The data model, storage, migrations |
 | [Extending](dev/extending.md) | Recipes: knobs, tracks, presets, punch FX, scales, parameters, MIDI |
+| [VST3 build](dev/vst.md) | The optional, local-only plugin build; how the project survives closing the window |
 | [MIDI design](dev/midi.md) | The parameter model, origins, echo, clock follower, plugin plans |
 | [Development](dev/development.md) | Setup, tests, invariants, deployment, known limits |

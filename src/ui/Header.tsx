@@ -24,11 +24,14 @@ function StepReadout() {
 
 export function Header() {
   const playing = useStore((s) => s.playing);
-  const bpm = useStore((s) => s.bpm);
+  const projectBpm = useStore((s) => s.bpm);
+  // while a plugin host plays the song the DAW sets the tempo: show it, and do not offer to change it
+  const hostBpm = useStore((s) => s.hostBpm);
+  const bpm = hostBpm ?? projectBpm;
   const swing = useStore((s) => s.swing);
   const pattern = useStore((s) => s.pattern);
   const cue = useStore((s) => s.cue);
-  const nudge = (d: number) => setState({ bpm: Math.min(200, Math.max(60, Math.round((bpm + d) * 10) / 10)) });
+  const nudge = (d: number) => setState({ bpm: Math.min(200, Math.max(60, Math.round((projectBpm + d) * 10) / 10)) });
   return (
     <header className="topbar">
       <div className="transport">
@@ -36,17 +39,18 @@ export function Header() {
         <button
           type="button" className="btn play" data-active={playing} aria-pressed={playing}
           onClick={() => controller.togglePlay()}
+          title={hostBpm !== null ? "The DAW's transport is playing" : undefined}
         >
           <span aria-hidden="true">{playing ? "■" : "▶"}</span>
           <span className="lbl">{playing ? "STOP" : "PLAY"}</span>
         </button>
         <div className="oled" aria-label="Tempo">
-          <button type="button" className="oled-btn" aria-label="Slower" onClick={() => nudge(-1)}>−</button>
+          <button type="button" className="oled-btn" aria-label="Slower" disabled={hostBpm !== null} onClick={() => nudge(-1)}>−</button>
           <div className="oled-main">
             <span className="silk">BPM</span>
             <b>{bpm.toFixed(1)}</b>
           </div>
-          <button type="button" className="oled-btn" aria-label="Faster" onClick={() => nudge(1)}>+</button>
+          <button type="button" className="oled-btn" aria-label="Faster" disabled={hostBpm !== null} onClick={() => nudge(1)}>+</button>
         </div>
         <button type="button" className="oled ptn" aria-label="Pattern, tap to open the pattern list" onClick={() => setState({ tab: "ptn" })}>
           <div className="oled-main">

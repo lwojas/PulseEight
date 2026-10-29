@@ -1,12 +1,12 @@
 // Wires the generic MIDI pieces to Pulse.8: the parameter registry, the mapping, the transport.
 // This is the only MIDI module that imports the app.
-import { hasEmbeddedHost } from "webdsp";
+import { hasEmbeddedHost, sameMidiRoute, type MidiRoute } from "webdsp";
 import { controller } from "../engine/controller";
 import { setStepNote } from "../engine/actions";
 import { flashKey } from "../engine/keyhl";
 import { TRACKS } from "../engine/spec";
 import { cleanValue, getParam, onParamChange, paramInfo, setParam } from "../engine/params";
-import { getState, setState } from "../engine/store";
+import { getState, observe, setState } from "../engine/store";
 import { createClockFollower } from "./clock";
 import { createMidiControl, type MidiControl, type ParamBus } from "./control";
 import { midiMapping } from "./mapping";
@@ -102,6 +102,48 @@ setInterval(() => {
 
 // --- keyboard mode -----------------------------------------------------------------------------------
 
+// A plugin host that plays MIDI itself (capabilities.midiRouting) is told what a key plays and plays it on its audio thread,
+// sample-accurately, with no round trip through the page and with the window closed (webdsp docs/midi-routing.md). Then the page must
+// not play the same note. What a key plays is what the page's own keyboard path would play, so a route is declared only where that
+// path just auditions the focused track; the arpeggiator and step entry stay with the page.
+let routeSent: MidiRoute | null = null;
+
+/** The host plays keyboard notes itself right now. */
+const routed = (): boolean => routeSent !== null;
+
+function wantedRoute(): MidiRoute | null {
+  const gb = controller.engine;
+  if (!gb || !gb.runtime.getCapabilities().midiRouting) return null;
+  if (!settings.enabled || settings.keyboard === "off") return null;
+  const st = getState();
+  const track = st.focus;
+  const spec = TRACKS[track];
+  const id = gb.ids.inst[track];
+  // a drum pad: any key plays the drum at its own pitch
+  if (spec.role === "drum") return { kind: "instrument", id, unityNote: 60, fixedPitch: true, ...(spec.chokeGroup !== undefined ? { chokeGroup: spec.chokeGroup } : {}) };
+  if (st.arp[track].on || st.selStep >= 0) return null; // the arp, or entering a step's note: the page
+  // a key plays `key + keyboard octave - root + track octave` semitones, as the page's own audition does
+  const unity = (spec.rootMidi ?? 0) - 12 * (settings.keyboardOctave + controller.soundOct(track));
+  return { kind: "instrument", id, unityNote: Math.min(127, Math.max(0, unity)), holdUntilKeyUp: true };
+}
+
+/** Declares the route to the host when it has changed (what a key plays follows the focused track and the keyboard settings). */
+function syncRoute(): void {
+  const gb = controller.engine;
+  if (!gb) return;
+  const wanted = wantedRoute();
+  if (sameMidiRoute(routeSent, wanted)) return;
+  routeSent = wanted;
+  gb.runtime.setMidiRoute(wanted);
+}
+
+observe((next, prev) => {
+  if (
+    next.audio !== prev.audio || next.focus !== prev.focus || next.arp !== prev.arp || next.selStep !== prev.selStep ||
+    (next.patterns !== prev.patterns && controller.ready) || next.playPattern !== prev.playPattern
+  ) syncRoute();
+});
+
 /** Notes held by the keyboard, per track, so they can be released if the mode ends. */
 const held = new Map<number, Set<number>>();
 
@@ -118,7 +160,7 @@ function keyboardNote(data: Uint8Array): boolean {
   const st = getState();
   const track = st.focus;
   if (TRACKS[track].role === "drum") {
-    if (on) controller.audition(track);
+    if (on && !routed()) controller.audition(track);
     return true;
   }
   const spec = TRACKS[track];
@@ -135,7 +177,7 @@ function keyboardNote(data: Uint8Array): boolean {
     (held.get(track) ?? held.set(track, new Set()).get(track)!).add(note);
     controller.arpDown(track, note);
   } else if (st.selStep >= 0) setStepNote(track, st.selStep, note);
-  else controller.audition(track, note);
+  else if (!routed()) controller.audition(track, note);
   return true;
 }
 
@@ -161,6 +203,7 @@ ports.onPortsChanged(() => control?.sendAll());
 
 function apply(): void {
   if (!settings.enabled || settings.keyboard === "off") releaseHeld();
+  syncRoute();
   ports.choose({ output: settings.output });
   if (settings.enabled) {
     control ??= createMidiControl({ mapping: midiMapping, bus, send: (b) => ports.send(b) });
@@ -193,7 +236,8 @@ export const midi = {
   },
   /** Start at app boot when MIDI was left on, or when hosted as a plugin (the DAW's MIDI is the point). */
   boot(): void {
-    if (hasEmbeddedHost() && !settings.enabled) settings = { ...settings, enabled: true, clock: false };
+    // (in a DAW the notes it sends play the focused track unless the player turned that off)
+    if (hasEmbeddedHost() && !settings.enabled) settings = { ...settings, enabled: true, clock: false, keyboard: settings.keyboard === "off" ? "all" : settings.keyboard };
     if (settings.enabled) apply();
   },
 };

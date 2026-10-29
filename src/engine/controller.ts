@@ -1,12 +1,14 @@
 // The groovebox controller: transport, lookahead step scheduler, pattern switching/chaining and
 // the FX punch-in/write logic. It owns the Groovebox (audio) and keeps the store in sync with what
 // is *audible* (the scheduler runs ~120 ms ahead of the speakers).
-import { Arpeggiator } from "./arp";
+import { hasEmbeddedHost } from "webdsp";
 import { Groovebox, type MixInput } from "./audio";
-import { layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
+import type { AudibleStep, HostPlayback } from "./hostplay";
+import { laneLayers, layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
-import { NUM_TRACKS, TRACKS } from "./spec";
-import { DEFAULT_GATE, GATES, MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
+import { TRACKS } from "./spec";
+import { MAX_CHAIN, pickWriteLane, type Pattern } from "./state";
+import { MELODIC, StepCompiler, type StepNote } from "./stepcompile";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { locateSong } from "./song";
@@ -15,16 +17,8 @@ import { startTicker } from "./ticker";
 
 const LOOKAHEAD = 0.12; // seconds of audio scheduled ahead
 const TICK_MS = 10;
-const VEL_NORMAL = 0.7;
-const VEL_ACCENT = 1;
-const MELODIC = TRACKS.filter((t) => t.role !== "drum").map((t) => t.id);
 
-/** A step's gate length in steps (saves from before gates existed have none; so can a stale index). */
-const gateSteps = (gate: number | undefined): number => (GATES[gate ?? DEFAULT_GATE] ?? GATES[DEFAULT_GATE]).len;
-const heldLayers =(id: number, lvl: number): PunchLayer[] => (id ? [{ id, lvl }] : []);
-/** The punches the written lanes hold at `step`, in lane order. */
-const laneLayers = (pat: Pattern, step: number): PunchLayer[] =>
-  pat.fxLanes.flatMap((l) => (l.fx[step] ? [{ id: l.fx[step], lvl: l.fxLvl[step] }] : []));
+const heldLayers = (id: number, lvl: number): PunchLayer[] => (id ? [{ id, lvl }] : []);
 
 interface StepEvent {
   time: number;
@@ -64,15 +58,17 @@ class Controller {
   /** Keep the reverb return open until this audio time so a released VERB rings out. */
   private verbUntil = 0;
 
-  // arpeggiators: one per melodic track, all fed by the same transport grid
-  /** Notes the sequencer is holding into each track's arp (its steps feed the arp, held for their gate),
-   * as the song step count at which each is released. */
-  private seqHolds = new Map<number, Array<{ note: number; end: number }>>();
-  private arps = new Map<number, Arpeggiator>(MELODIC.map((t) => [t, new Arpeggiator()]));
+  // arpeggiators: one per melodic track, all fed by the same transport grid (the step compiler owns them: held keys go
+  // in here, sequencer steps go in through it)
+  private compiler = new StepCompiler();
+  private arps = this.compiler.arps;
   /** While the transport is stopped the arps walk a free grid of the same step length (tempo-driven),
    * started by the first held key. -1 = not running. */
   private arpFreeTime = -1;
   private arpFreeStep = 0;
+
+  /** The plugin host's transport and native playback, when this host can play Pulse.8 itself (see hostplay.ts). */
+  private host: HostPlayback | null = null;
 
   constructor() {
     observe((next, prev) => this.onState(next, prev));
@@ -80,6 +76,16 @@ class Controller {
 
   get ready(): boolean {
     return this.gb !== null;
+  }
+
+  /** The octave shift of a melodic track in the pattern whose sound is audible now. */
+  soundOct(track: number): number {
+    return this.soundPattern().tracks[track].oct;
+  }
+
+  /** The graph's ids and a runtime, for what talks to the engine directly (the MIDI route). Null before the engine is up. */
+  get engine(): Groovebox | null {
+    return this.gb;
   }
 
   // --- start-up (needs a user gesture) -------------------------------------------------------
@@ -92,6 +98,16 @@ class Controller {
       startTicker(() => this.tick(), TICK_MS);
       setState({ audio: "ready" });
       this.syncNow();
+      // A plugin that can play the song itself follows the DAW's transport and is handed the song; otherwise (a browser, an older
+      // plugin) the page sequences as always.
+      // (loaded only here: a browser never needs the native sequence compiler, so it does not download it)
+      if (hasEmbeddedHost()) {
+        const { HostPlayback, hostPlayback } = await import("./hostplay");
+        if (hostPlayback(this.gb)) {
+          this.host = new HostPlayback(this.gb, { begin: () => this.hostBegin(), end: () => this.hostEnd(), steps: (steps) => this.audibleSteps(steps) });
+          this.host.start();
+        }
+      }
     } catch (err) {
       this.gb = null;
       setState({ audio: "error", audioError: err instanceof Error ? err.message : String(err) });
@@ -105,7 +121,7 @@ class Controller {
   play(from?: { songStep: number; time: number }): void {
     const gb = this.gb;
     const st = getState();
-    if (!gb || st.playing) return;
+    if (!gb || st.playing) return; // (while a plugin host plays, `playing` is true: the DAW owns the transport)
     const at = from ? locateSong(st, from.songStep) : { pattern: st.pattern, chainPos: 0, step: 0 };
     let idx = at.pattern;
     if (!from && st.chainOn && st.chain.length) idx = st.chain[0];
@@ -144,7 +160,7 @@ class Controller {
 
   stop(): void {
     const gb = this.gb;
-    if (!gb) return;
+    if (!gb || this.host?.playing) return; // the DAW's transport is not ours to stop
     gb.silence();
     gb.clearPending();
     this.realignArps();
@@ -162,6 +178,45 @@ class Controller {
   togglePlay(): void {
     if (getState().playing) this.stop();
     else this.play();
+  }
+
+  // --- plugin host playback (the DAW plays the song; see hostplay.ts) ----------------------------
+
+  /** The DAW started (or jumped). A transport the page was running on its own gives way: the host's sequence plays from here. */
+  private hostBegin(): void {
+    const gb = this.gb!;
+    if (getState().playing) {
+      gb.silence();
+      gb.clearPending();
+      this.events = [];
+    }
+    this.realignArps();
+    this.punchScheduled = -1;
+    gb.resetManglerSchedule();
+    this.audibleStep = -1;
+    this.schedPattern = this.soundPatternIndex();
+    setState({ playing: true, cue: null });
+  }
+
+  /** The DAW stopped. It releases the sounding voices itself; the page puts the display and the punch chain back to rest. */
+  private hostEnd(): void {
+    const gb = this.gb!;
+    gb.clearPending();
+    this.realignArps();
+    this.events = [];
+    this.punchScheduled = -1;
+    gb.resetManglerSchedule();
+    this.audibleStep = -1;
+    setAudible(-1, -1);
+    clearLit();
+    setState({ playing: false, cue: null });
+    const held = getState().punch;
+    this.applyLayers(heldLayers(held, held ? this.heldLevel(gb.now) : 0));
+  }
+
+  /** The tempo steps are counted at: the DAW's while it plays. */
+  private bpmNow(): number {
+    return this.host?.bpm ?? getState().bpm;
   }
 
   // --- audible hits for editing --------------------------------------------------------------
@@ -194,45 +249,21 @@ class Controller {
   }
 
   private realignArps(): void {
-    for (const t of this.seqHolds.keys()) this.arps.get(t)?.clear();
-    this.seqHolds.clear();
-    for (const a of this.arps.values()) a.realign();
+    this.compiler.realign();
     this.arpFreeTime = -1;
   }
 
+  /** Hand a compiled note to the engine at its audio time, lighting its key when it is an arp note. */
+  private playNote = (n: StepNote): void => {
+    const gb = this.gb!;
+    gb.note(n.track, n.params);
+    const flash = n.flashMs;
+    if (flash) gb.when(n.params.time, () => flashKey(n.track, flash.note, flash.ms));
+  };
+
   /** Generate the arp notes of every track that has them for the step window starting at `t`. */
   private scheduleArps(t: number, stepDur: number, gridPos: number): void {
-    const gb = this.gb!;
-    const st = getState();
-    for (const [track, arp] of this.arps) {
-      if (!arp.active) continue;
-      const cfg = st.arp[track];
-      if (!cfg.on) { arp.clear(); continue; }
-      const spec = TRACKS[track];
-      const oct = this.soundPattern().tracks[track].oct;
-      for (const e of arp.advance(cfg, gridPos)) {
-        const time = t + e.offset * stepDur;
-        gb.note(track, {
-          time,
-          velocity: e.velocity,
-          pitch: e.note - (spec.rootMidi ?? 0) + 12 * oct,
-          duration: e.length * stepDur,
-        });
-        gb.when(time, () => flashKey(track, e.note, Math.min(180, e.length * stepDur * 1000)));
-      }
-    }
-  }
-
-  /** Let go of the arp notes whose step gate has run out (those no later step is still holding). */
-  private releaseSeqHolds(track: number): void {
-    const holds = this.seqHolds.get(track);
-    if (!holds?.length) return;
-    const arp = this.arps.get(track);
-    const live = holds.filter((h) => h.end > this.stepCount);
-    for (const h of holds) {
-      if (h.end <= this.stepCount && !live.some((l) => l.note === h.note)) arp?.noteUp(h.note);
-    }
-    this.seqHolds.set(track, live);
+    this.compiler.arpNotes(t, stepDur, gridPos, this.soundPattern(), getState(), this.playNote);
   }
 
   /** Stopped transport: keep the held arps going on their own grid. */
@@ -241,6 +272,20 @@ class Controller {
     const live = [...this.arps.values()].some((a) => a.active);
     if (!live) {
       this.arpFreeTime = -1;
+      return;
+    }
+    const host = this.host?.playing ? this.host : null;
+    if (host) {
+      // while the DAW plays, held keys arpeggiate on its 16th grid, so they line up with the song
+      if (this.arpFreeTime < 0) {
+        this.arpFreeStep = Math.ceil(host.beatAt(now + 0.005)! * 4);
+        this.arpFreeTime = host.timeAt(this.arpFreeStep / 4)!;
+      }
+      while (this.arpFreeTime < now + LOOKAHEAD) {
+        this.scheduleArps(this.arpFreeTime, 15 / host.bpm, this.arpFreeStep);
+        this.arpFreeStep++;
+        this.arpFreeTime = host.timeAt(this.arpFreeStep / 4)!;
+      }
       return;
     }
     if (this.arpFreeTime < 0) {
@@ -292,7 +337,7 @@ class Controller {
   /** Sweep level of the held punch at audio time `t`. */
   private levelAt(t: number, pattern = getState().playing ? this.schedPattern : getState().pattern): number {
     const st = getState();
-    return sweepLevel(st.patterns[pattern].mangler, st.bpm, t - this.punchSince, st.punch);
+    return sweepLevel(st.patterns[pattern].mangler, this.bpmNow(), t - this.punchSince, st.punch);
   }
 
   private heldLevel(now: number): number {
@@ -309,7 +354,7 @@ class Controller {
     const lvl = this.heldLevel(this.punchSince);
     this.applyLayers(heldLayers(id, lvl));
     if (st.playing && st.write && this.audibleStep >= 0) {
-      const stepDur = 15 / st.bpm;
+      const stepDur = 15 / this.bpmNow();
       const frac = gb ? (gb.now - this.audibleSince) / stepDur : 0;
       // A press late in a step is aimed at the next one; that step is written as it arrives.
       // The press step starts the recorded sweep from its beginning.
@@ -373,13 +418,14 @@ class Controller {
       this.syncNow();
     }
     if (next.arp !== prev.arp) {
-      next.arp.forEach((a, t) => { if (!a.on && prev.arp[t].on) { this.arps.get(t)?.clear(); this.seqHolds.delete(t); } });
+      next.arp.forEach((a, t) => { if (!a.on && prev.arp[t].on) this.compiler.forget(t); });
     }
-    if (next.bpm !== prev.bpm && next.playing) this.gb.setTempo(next.bpm, this.gridTime, this.gridTime);
+    if (next.bpm !== prev.bpm && next.playing && !this.host?.playing) this.gb.setTempo(next.bpm, this.gridTime, this.gridTime);
     if (next.fxPlay !== prev.fxPlay && next.punch === 0) {
       this.applyLayers(this.writtenLayersNow());
       this.punchScheduled = -1;
     }
+    this.host?.onState(next, prev);
   }
 
   /** The pattern whose sound is (about to be) audible. */
@@ -396,7 +442,10 @@ class Controller {
     const gb = this.gb;
     if (!gb) return;
     gb.applySound(this.soundPattern());
-    this.applyLayers(this.layersApplied);
+    // While the DAW plays, the written FX are the host's (they ride the sequence): re-applying the page's idea of the punch chain
+    // would cut a ramp that is running. Only a punch the player holds is the page's to apply.
+    if (this.host?.playing && getState().punch === 0) gb.applyMix(this.mixInput(false, 0), undefined, "pattern");
+    else this.applyLayers(this.layersApplied);
   }
 
   private mixInput(takeover: boolean, boost: number): MixInput {
@@ -446,6 +495,11 @@ class Controller {
     if (!gb) return;
     gb.tick();
     this.sweepHeldPunch(gb.now);
+    if (this.host?.playing) {
+      this.host.tick(gb.now);
+      this.runFreeArps(gb.now);
+      return;
+    }
     if (!getState().playing) {
       this.runFreeArps(gb.now);
       return;
@@ -468,7 +522,6 @@ class Controller {
   }
 
   private scheduleStep(): void {
-    const gb = this.gb!;
     const st = getState();
     const pat = st.patterns[this.schedPattern];
     const len = pat.length;
@@ -476,44 +529,9 @@ class Controller {
     const stepDur = 15 / st.bpm;
     const swingOff = (st.swing - 0.5) * 2 * stepDur;
     const t = this.gridTime + (step % 2 === 1 ? swingOff : 0);
-    const nextStart = this.gridTime + stepDur + ((step + 1) % 2 === 1 ? swingOff : 0);
 
-    const notes: Array<[number, number]> = [];
+    const notes = this.compiler.step(pat, step, this.stepCount, this.gridTime, { stepDur, swing: st.swing, arp: st.arp }, this.playNote);
     this.events.push({ time: t, step, pattern: this.schedPattern, chainPos: this.chainPos, notes });
-
-    for (let track = 0; track < NUM_TRACKS; track++) {
-      const spec = TRACKS[track];
-      const tp = pat.tracks[track];
-      const s = tp.steps[step];
-      this.releaseSeqHolds(track);
-      if (!s.on) continue;
-      if (spec.role === "drum") {
-        gb.note(track, { time: t, velocity: s.acc ? VEL_ACCENT : VEL_NORMAL, chokeGroup: spec.chokeGroup });
-        continue;
-      }
-      notes.push([track, s.note]);
-      if (st.arp[track].on) {
-        // With the arp on, a step is not played directly: it is held into the arp for its gate, so
-        // long gates stack into chords that the arp then walks.
-        const holds = this.seqHolds.get(track) ?? [];
-        holds.push({ note: s.note, end: this.stepCount + Math.max(1, Math.ceil(gateSteps(s.gate))) });
-        this.seqHolds.set(track, holds);
-        this.arps.get(track)?.noteDown(s.note);
-        continue;
-      }
-      const next = tp.steps[(step + 1) % len];
-      const prev = tp.steps[(step + len - 1) % len];
-      const holdsIntoNext = next.on && next.slide;
-      gb.note(track, {
-        time: t,
-        velocity: s.acc ? VEL_ACCENT : VEL_NORMAL,
-        pitch: s.note - (spec.rootMidi ?? 0) + 12 * tp.oct,
-        duration: holdsIntoNext ? nextStart - t + 0.015 : stepDur * gateSteps(s.gate),
-        tie: s.slide && prev.on,
-      });
-    }
-
-    this.scheduleArps(t, stepDur, step);
 
     // Written FX. A punch the player is holding right now wins over the written lane.
     if (st.punch !== 0) {
@@ -563,9 +581,15 @@ class Controller {
 
   /** Move the store's playhead to what is audible now; record/erase FX as steps pass. */
   private publishAudible(now: number): void {
-    let latest: StepEvent | null = null;
-    while (this.events.length && this.events[0].time <= now) {
-      const ev = this.events.shift()!;
+    const passed: StepEvent[] = [];
+    while (this.events.length && this.events[0].time <= now) passed.push(this.events.shift()!);
+    this.audibleSteps(passed);
+  }
+
+  /** Steps that have been heard (from the lookahead scheduler, or from the host's position), oldest first. */
+  private audibleSteps(steps: readonly AudibleStep[]): void {
+    let latest: AudibleStep | null = null;
+    for (const ev of steps) {
       latest = ev;
       const st = getState();
       if (st.punch !== 0 && st.write) {
@@ -576,6 +600,9 @@ class Controller {
       }
     }
     if (!latest) return;
+    // The host plays the song itself, so the audible pattern is the one to describe (the lookahead scheduler's own cursor runs ahead).
+    const moved = this.host?.playing && this.schedPattern !== latest.pattern;
+    if (this.host?.playing) this.schedPattern = latest.pattern;
     this.audibleSince = latest.time;
     this.audibleStep = latest.step;
     setAudible(latest.step, latest.pattern);
@@ -591,6 +618,8 @@ class Controller {
     if (st.follow && st.page !== Math.floor(latest.step / 16)) patch.page = Math.floor(latest.step / 16);
     // the scheduler, not a person, moved these: say so, so MIDI output can follow the pattern change
     if (Object.keys(patch).length) withSource("internal", () => setState(patch));
+    // After a locate the page's own settings may be another pattern's: the sequence repairs them within a bar, this at once.
+    if (moved) this.syncNow();
   }
 }
 

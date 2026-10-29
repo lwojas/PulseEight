@@ -52,6 +52,7 @@ musically, and [webdsp](https://github.com/lwojas/webdsp) for sound. The one rul
 | `state.ts` | `AppState`, `Pattern`, `TrackPattern`, `Step`; constructors; the demo groove; the pure pattern edits (`randomizeTrack`, `clearTrackSteps`). |
 | `store.ts` | The store. `setState`, `observe`, `editPattern`, the `useStore` hook. |
 | `actions.ts` | User-level edits. UI components and `params.ts` call these. They edit the store and audition. |
+| `stepcompile.ts`, `nativeseq.ts`, `hostplay.ts` | One step's notes, shared by the live scheduler and the native sequence; the song as a webdsp `Sequence` for a plugin host; following the DAW's transport. See [VST3 build](vst.md). |
 | `controller.ts` | The groovebox controller: transport, the lookahead scheduler, pattern switching and chaining, the punch-in and write logic, the arpeggiator hosts. Owns the `Groovebox`. |
 | `audio.ts` | `Groovebox`: builds and drives the webdsp graph. Mixer, sends, the punch bus, scheduled parameter ramps. |
 | `mangler.ts` | The Punch FX catalogue: what every pad does to the shared effect chain at a given amount and sweep level. Pure data and functions. |

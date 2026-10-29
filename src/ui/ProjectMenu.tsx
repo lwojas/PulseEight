@@ -2,7 +2,7 @@
 // file IMPORT / EXPORT.
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { controller } from "../engine/controller";
-import { deleteSave, exportProject, importProject, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
+import { deleteSave, exportProject, hasHostFiles, importProject, importProjectFromHost, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
 import { refreshKeys } from "../engine/keyhl";
 import { ROOT_NAMES, SCALES, SCALE_PRESETS, withPreset, withRoot, withScale } from "../engine/scale";
 import { saveKeyHighlight } from "../engine/state";
@@ -117,14 +117,25 @@ export function ProjectMenu() {
     if (loadSaved(entry)) close();
     else setNote("That save is damaged and could not be loaded.");
   };
-  const doImport = async (f: File | undefined) => {
-    if (!f) return;
-    stopFirst();
+  // `f` is the picked file in a browser; with the host's own dialogs (a plugin) there is no input, so it asks the host.
+  const doImport = async (f?: File) => {
+    if (!f && !hasHostFiles()) return;
     try {
-      await importProject(f);
+      if (f) {
+        stopFirst();
+        await importProject(f);
+      } else if ((await importProjectFromHost(stopFirst)) === null) return; // cancelled
       close();
     } catch (e) {
       setNote((e as Error).message);
+    }
+  };
+  const doExport = async () => {
+    try {
+      await exportProject(getState().projectName);
+      close();
+    } catch (e) {
+      setNote(`Could not save the file: ${(e as Error).message}`);
     }
   };
 
@@ -206,8 +217,8 @@ export function ProjectMenu() {
           <section className="menu-group" aria-label="Project file">
             <span className="silk">PROJECT FILE</span>
             <div className="menu-row">
-              <button type="button" className="btn" onClick={() => { exportProject(getState().projectName); close(); }}>EXPORT</button>
-              <button type="button" className="btn" onClick={() => file.current?.click()}>IMPORT</button>
+              <button type="button" className="btn" onClick={() => void doExport()}>EXPORT</button>
+              <button type="button" className="btn" onClick={() => (hasHostFiles() ? void doImport() : file.current?.click())}>IMPORT</button>
             </div>
             {note && <p className="modal-note err" role="alert">{note}</p>}
             <input ref={file} type="file" accept=".json,application/json" hidden onChange={(e) => { void doImport(e.target.files?.[0]); e.target.value = ""; }} />
