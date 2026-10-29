@@ -33,17 +33,19 @@ cp -R vst/build/Pulse8_artefacts/VST3/Pulse8.vst3 ~/Library/Audio/Plug-Ins/VST3/
 
 ## Serving the page
 
-The plugin loads Pulse.8 from a URL, default `http://localhost:5175/` (the port in `vite.config.ts`). Start one first:
+The plugin loads Pulse.8 from a URL, by default the hosted app, <https://lwojas.github.io/PulseEight/> (deployed by the GitHub
+workflow on every push to `main`). The plugin therefore needs network access, and runs whatever is deployed: native playback needs the
+deployed page to be at least the commit that added it. To develop against local code, start a server and point the plugin at it:
 
 ```bash
-npm run dev          # development, hot reload
+npm run dev          # development, hot reload, http://localhost:5175
 npm run vst:serve    # the production build, no HMR: steadier for actually using it
 ```
 
-Point a plugin at another URL (a deployed build, another port) with `WEBVST_URL_PULSE8`, or `WEBVST_URL`, in the DAW's
-environment, or rebuild with `-DPULSE8_DEFAULT_URL=…`. With no server running the editor is empty. Bundling the built page
-into the plugin (so it needs no server) is webvst's "ship the clients inside the plugin" work
-([RELEASE.md](https://github.com/lwojas/webvst/blob/main/docs/RELEASE.md)); it is not done there yet.
+Set `WEBVST_URL_PULSE8` (or `WEBVST_URL`) to `http://localhost:5175/` in the DAW's environment, or rebuild with
+`-DPULSE8_DEFAULT_URL=http://localhost:5175/` (a value cached in an existing `vst/build` wins over the default, so pass it explicitly
+when switching). With the URL unreachable the editor is empty. Bundling the built page into the plugin (so it needs no network) is
+webvst's "ship the clients inside the plugin" work ([RELEASE.md](https://github.com/lwojas/webvst/blob/main/docs/RELEASE.md)); it is not done there yet.
 
 ## Playing in the DAW
 

@@ -38,9 +38,10 @@ FetchContent_MakeAvailable(JUCE)
 # The page shim is a real .js file, embedded as BinaryData::shim_js.
 juce_add_binary_data(WebVstData SOURCES "${PULSE8_WEBVST_DIR}/src/shim.js")
 
-# The page this plugin opens. Default: the Pulse.8 dev server (`npm run dev`, or `npm run vst:serve` for the production
-# build), port 5175 as in vite.config.ts. Override per run in the DAW's environment: WEBVST_URL_PULSE8 (or WEBVST_URL).
-set(PULSE8_DEFAULT_URL "http://localhost:5175/" CACHE STRING "URL the plugin editor loads by default")
+# The page this plugin opens. Default: the hosted app (GitHub Pages, deployed from main), like webvst's own plugins. For development point
+# it at a dev server (`npm run dev` / `npm run vst:serve`, port 5175) with WEBVST_URL_PULSE8 (or WEBVST_URL) in the DAW's environment, or
+# rebuild with -DPULSE8_DEFAULT_URL=http://localhost:5175/ . (A cached value in an existing build directory wins over this default.)
+set(PULSE8_DEFAULT_URL "https://lwojas.github.io/PulseEight/" CACHE STRING "URL the plugin editor loads by default")
 
 juce_add_plugin(Pulse8
   PRODUCT_NAME "Pulse8"

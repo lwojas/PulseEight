@@ -49,7 +49,7 @@ A GitHub Actions workflow tests, builds and publishes to GitHub Pages on every p
 
 **Optional: a VST3 plugin**, built locally (not in CI) from the [webvst](https://github.com/lwojas/webvst) host, which
 needs a sibling checkout like webdsp. `npm run vst:build` produces `Pulse8.vst3` to copy into your plug-ins folder; the
-plugin loads the page from the dev server (`npm run dev`). In the DAW it follows the transport, plays the song on the audio thread
+plugin loads the hosted app (or a dev server, see the doc). In the DAW it follows the transport, plays the song on the audio thread
 (window open or closed, offline bounce included) and plays DAW MIDI natively. `npm run vst:e2e` checks all of it headless. See
 [VST3 build](docs/dev/vst.md).
 
