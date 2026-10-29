@@ -9,10 +9,11 @@ import { flashKey, registerKey } from "../engine/keyhl";
 import { PUNCHES } from "../engine/mangler";
 import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
 import { noteName, TRACKS } from "../engine/spec";
-import { DEFAULT_GATE, FX_LANES, GATES, LENGTHS, PAGE } from "../engine/state";
+import { DEFAULT_GATE, FX_LANES, GATE_BUTTONS, GATES, LENGTHS, PAGE } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { ArpControl } from "./ArpControl";
 import { usePress } from "./controls";
+import { Modal } from "./Modal";
 import { usePlayheadCell, usePlayheadEffect } from "./usePlayhead";
 import { useMedia, WIDE } from "./useMedia";
 
@@ -253,22 +254,37 @@ function Pads({ track }: { track: number }) {
 
 // --- the focused track: header, steps, keyboard ---------------------------------------------------
 
-/** Gate length of the selected step: how long its note is held. Disabled until a step is selected. */
+/** Gate length of the selected step: how long its note is held. Disabled until a step is selected.
+ * Inline buttons on wide screens; on a phone a GATE button opens them in a modal. */
 function GateControl({ track }: { track: number }) {
   const selStep = useStore((s) => (s.focus === track ? s.selStep : -1));
   const gate = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep].gate ?? DEFAULT_GATE : -1));
-  return (
+  const phone = useMedia("(max-width: 699px)");
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const buttons = (
     <span className="step-gate" role="group" aria-label="Gate length">
-      <span className="silk">GATE</span>
-      {GATES.map((g, i) => (
+      {!phone && <span className="silk">GATE</span>}
+      {GATE_BUTTONS.map((i) => (
         <button
-          key={g.label} type="button" className="btn sm" disabled={selStep < 0} data-active={gate === i} aria-pressed={gate === i}
-          aria-label={`${g.name} gate`} title={g.name} onClick={() => setStepGate(track, selStep, i)}
+          key={GATES[i].label} type="button" className="btn sm" disabled={selStep < 0} data-active={gate === i} aria-pressed={gate === i}
+          aria-label={`${GATES[i].name} gate`} title={GATES[i].name} onClick={() => setStepGate(track, selStep, gate === i ? DEFAULT_GATE : i)}
         >
-          {g.label}
+          {GATES[i].label}
         </button>
       ))}
     </span>
+  );
+  if (!phone) return buttons;
+  return (
+    <>
+      <button ref={btn} type="button" className="btn sm" disabled={selStep < 0} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+        GATE
+      </button>
+      <Modal open={open} title="Gate length" onClose={() => setOpen(false)} className="gate-modal">
+        {buttons}
+      </Modal>
+    </>
   );
 }
 

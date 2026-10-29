@@ -26,12 +26,19 @@ export interface Step {
   gate?: number;
 }
 
-/** Selectable note lengths in steps: the default short gate, a quarter bar (one beat) or a whole bar. */
+/** Selectable note lengths in steps. Saved steps store an index, so new entries are only ever appended.
+ * Index 0 is the short default (no button: it is what a step has until a length is picked). */
 export const GATES = [
   { label: "DEF", name: "Default", len: 0.62 },
   { label: "1/4", name: "Quarter bar", len: 4 },
   { label: "BAR", name: "One bar", len: 16 },
+  { label: "1", name: "1 step", len: 1 },
+  { label: "2", name: "2 steps", len: 2 },
+  { label: "3", name: "3 steps", len: 3 },
+  { label: "1/2", name: "Half bar", len: 8 },
 ] as const;
+/** Gate indexes of the buttons, in display order. */
+export const GATE_BUTTONS = [3, 4, 5, 1, 6, 2] as const;
 export const DEFAULT_GATE = 0;
 
 export interface TrackPattern {
