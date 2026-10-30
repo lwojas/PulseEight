@@ -4,7 +4,7 @@ import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
 import { clearLocks, lockParam, setLock, soundParam } from "./plock";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
-import { TRACKS } from "./spec";
+import { BASS_TRACK, TRACKS } from "./spec";
 import { clearTrackSteps, GATES, newPattern, PAGE, randomizeTrack } from "./state";
 import { BEAT_DIVISIONS, type DelaySend, type ReverbSend } from "./trackfx";
 import { editPattern, getState, setState } from "./store";
@@ -110,6 +110,7 @@ export function setLockable(track: number, id: string, value: number): void {
     return;
   }
   if (p.target.kind === "sound") setSound(track, p.target.control, value);
+  else if (p.target.kind === "dist") setDistortion(track, value);
   else if (p.target.send === "dly") setDelay(track, { send: value });
   else setReverb(track, { send: value });
 }
@@ -152,6 +153,12 @@ export function setReverb(track: number, patch: Partial<ReverbSend>): void {
     r.send = clamp01(r.send);
     r.size = clamp01(r.size);
   });
+}
+
+/** The acid bass's distortion amount (0..1). Only the bass has the insert: any other track is left alone. */
+export function setDistortion(track: number, value: number): void {
+  if (track !== BASS_TRACK) return;
+  editPattern((p) => { p.tracks[track].dist = clamp01(value); });
 }
 
 export function setPunchSend(track: number, on: boolean): void {

@@ -148,10 +148,14 @@ interface SliderProps {
   accent?: string;
   /** Normalised default restored on double-tap. */
   def?: number;
+  /** Text for the value side (default: the percentage). */
+  readout?: string;
+  /** The value is a parameter lock (P-LOCK mode). */
+  locked?: boolean;
 }
 
 /** A chunky horizontal bar you drag across. */
-export function Slider({ label, value, onChange, accent, def }: SliderProps) {
+export function Slider({ label, value, onChange, accent, def, readout, locked }: SliderProps) {
   const lastTap = useRef(0);
   const active = useRef(false);
   const set = (e: RPointerEvent<HTMLDivElement>) => {
@@ -167,6 +171,7 @@ export function Slider({ label, value, onChange, accent, def }: SliderProps) {
   return (
     <div
       className="slider"
+      data-locked={locked || undefined}
       role="slider"
       tabIndex={0}
       aria-label={label}
@@ -189,7 +194,7 @@ export function Slider({ label, value, onChange, accent, def }: SliderProps) {
     >
       <div className="slider-fill" style={{ transform: `scaleX(${value})` }} />
       <span className="slider-label">{label}</span>
-      <span className="slider-value">{Math.round(value * 100)}</span>
+      <span className="slider-value">{readout ?? Math.round(value * 100)}</span>
     </div>
   );
 }

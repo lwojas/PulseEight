@@ -188,5 +188,5 @@ instruments) in the same order every time, or reopening falls back to the fresh 
 `nativeseq.ts` bakes a step's `parameterLocks` (see `engine/plock.ts`) as `param` events at the step's swung beat: sound controls to the
 instrument, sends to the track bus (protocol 4 bus targets). The next step writes a parameter the step before had locked back to its base
 (a lock on a cycle's last step is undone on the loop). Where a lock lands on a beat that a per-bar state write also covers, the lock
-wins. It is the same rule as the live scheduler (`Groovebox.scheduleLocks`), and `lockWrite` builds both. When the DAW stops, the page
+wins. It is the same rule as the live scheduler (`Groovebox.scheduleLocks`), and `lockWrites` builds both. When the DAW stops, the page
 forgets what the engine holds (`forgetLocks`) and re-sends the base sound.

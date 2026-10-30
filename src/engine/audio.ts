@@ -3,9 +3,10 @@
 // Topology (all webdsp primitives, nothing custom). A bus has one main route and one send, so each
 // track is a short chain of buses, each adding one tap:
 //
-//   instrument ─▶ A (fader/mute) ─main─▶ B ─main─▶ C ─main─▶ master ─▶ limiter
+//   instrument ─▶ [Saturation: acid bass only] ─▶ A (fader/mute) ─main─▶ B ─main─▶ C ─main─▶ master ─▶ limiter
 //                    └─send─▶ DELAY_t     └─send─▶ REVERB_t   └─send─▶ PUNCH bus ─▶ master
 //
+//   The acid bass has one more effect on bus A, ahead of the fader and both sends: its distortion insert (webdsp Saturation).
 //   DELAY_t  (per track, wet-only): Dub Delay (Beat) ▶ Delay (Free), one of them active
 //   REVERB_t (per track, wet-only): Reverb. Idle while its send is 0 (webdsp sleeps unfed buses).
 //   PUNCH bus chain: Filter ▶ Saturation ▶ Bitcrusher ▶ Phaser ▶ Flanger ▶ Dub Delay ▶ Reverb
@@ -25,10 +26,10 @@ import {
 import { defaultWorkletUrl } from "webdsp/worklet-url";
 import { baseValues, MANGLER_KEYS, MANGLER_PARAMS, type FxSlot, type ManglerValues } from "./mangler";
 import { lockParams, type LockParam } from "./plock";
-import { normToUnits, NUM_TRACKS, TRACKS } from "./spec";
+import { BASS_TRACK, normToUnits, NUM_TRACKS, TRACKS } from "./spec";
 import { trackStepAt, type Pattern } from "./state";
 import {
-  BEAT_DIVISIONS, DELAY_FEEDBACK_BEAT, DELAY_FEEDBACK_FREE, DELAY_TONE, freeDelaySeconds, reverbDamping, reverbDecay,
+  BEAT_DIVISIONS, DELAY_FEEDBACK_BEAT, DELAY_FEEDBACK_FREE, DELAY_TONE, distDriveDb, distMix, distTrimDb, freeDelaySeconds, reverbDamping, reverbDecay,
 } from "./trackfx";
 
 /** Work that has to land at a point on the audio clock but is not a sample-accurate event
@@ -68,6 +69,8 @@ export interface GraphIds {
   reverbBus: readonly BusId[];
   delayFx: ReadonlyArray<{ dub: EffectId; free: EffectId }>;
   reverbFx: readonly EffectId[];
+  /** The acid bass's distortion insert (Saturation) on its bus A, ahead of the fader and both sends. */
+  distFx: EffectId;
   inst: readonly InstrumentId[];
   manglerBus: BusId;
   fx: Readonly<Record<FxSlot, EffectId>>;
@@ -128,20 +131,33 @@ export function trackFxWrites(ids: GraphIds, pattern: Pattern, clamp: (param: nu
     }
     fx(ids.reverbBus[t], ids.reverbFx[t], "decay", NodeParam.ReverbDecay, reverbDecay(rev.size));
     fx(ids.reverbBus[t], ids.reverbFx[t], "damp", NodeParam.ReverbDamping, reverbDamping(rev.size));
+    if (t === BASS_TRACK) for (const w of distWrites(ids, t, pattern.tracks[t].dist ?? 0)) out.push(w);
   }
   return out;
 }
 
-/** The engine write that puts parameter `p` of `track` at normalised `value`. Its key is the one the mixer and sound writes use for
- * the same parameter, so a lock and the base share caches. */
-export function lockWrite(ids: GraphIds, track: number, p: LockParam, value: number): Write {
+/** The acid bass's distortion insert at amount `dist` (0..1): Saturation drive, output trim and mix, which move together. */
+function distWrites(ids: GraphIds, track: number, dist: number): Write[] {
+  const bus = ids.trackBus[track];
+  const fx = (key: string, param: NodeParam, value: number): Write => ({ kind: "fx", key: `${track}:${key}`, bus, effect: ids.distFx, param, value });
+  return [
+    fx("satDrive", NodeParam.SatDrive, distDriveDb(dist)),
+    fx("satOut", NodeParam.SatOutputGain, distTrimDb(dist)),
+    fx("satMix", NodeParam.SatMix, distMix(dist)),
+  ];
+}
+
+/** The engine writes that put parameter `p` of `track` at normalised `value` (one for most parameters; the distortion moves three
+ * effect parameters). Their keys are the ones the mixer and sound writes use for the same parameter, so a lock and the base share caches. */
+export function lockWrites(ids: GraphIds, track: number, p: LockParam, value: number): Write[] {
   const t = p.target;
   if (t.kind === "sound") {
     const c = TRACKS[track].controls[t.control];
-    return { kind: "inst", key: `${track}:${t.control}`, instrument: ids.inst[track], param: c.param, value: normToUnits(c, value) };
+    return [{ kind: "inst", key: `${track}:${t.control}`, instrument: ids.inst[track], param: c.param, value: normToUnits(c, value) }];
   }
+  if (t.kind === "dist") return distWrites(ids, track, value);
   const delay = t.send === "dly";
-  return { kind: "bus", key: `${track}:${delay ? "d" : "r"}`, bus: delay ? ids.trackBus[track] : ids.busB[track], param: NodeParam.BusSendAmount, value };
+  return [{ kind: "bus", key: `${track}:${delay ? "d" : "r"}`, bus: delay ? ids.trackBus[track] : ids.busB[track], param: NodeParam.BusSendAmount, value }];
 }
 
 /** A pattern's instrument settings, in engine units. */
@@ -172,6 +188,7 @@ export class Groovebox {
   private readonly reverbBus: BusId[] = [];
   private readonly delayFx: Array<{ dub: EffectId; free: EffectId }> = [];
   private readonly reverbFx: EffectId[] = [];
+  private readonly distFx: EffectId;
   private readonly inst: InstrumentId[] = [];
   private readonly manglerBus: BusId;
   private readonly fx = {} as Record<FxSlot, EffectId>;
@@ -181,8 +198,8 @@ export class Groovebox {
   private fxCache = new Map<string, number>();
 
   private soundCache: number[][] = TRACKS.map((t) => new Array(t.controls.length).fill(NaN));
-  /** Per track: the write key of each parameter a scheduled lock has put away from the base value (until a later step restores it), by lock id. */
-  private lockedParams: Array<Map<string, string>> = TRACKS.map(() => new Map());
+  /** Per track: the write keys of each parameter a scheduled lock has put away from the base value (until a later step restores it), by lock id. */
+  private lockedParams: Array<Map<string, string[]>> = TRACKS.map(() => new Map());
   /** Every key in `lockedParams`: what the immediate base writes leave alone. */
   private lockedKeys = new Set<string>();
   private busCache = new Map<string, number>();
@@ -211,6 +228,7 @@ export class Groovebox {
     for (const kind of [EffectKind.Delay, EffectKind.DubDelay, EffectKind.Reverb]) {
       for (const p of runtime.getEffectParams(kind)) this.effectRange.set(p.id, { min: p.min, max: p.max });
     }
+    let distFx: EffectId | undefined;
     for (const spec of TRACKS) {
       const bus = runtime.createBus();
       const b = runtime.createBus();
@@ -240,14 +258,17 @@ export class Groovebox {
       const verb = runtime.addEffect(rev, EffectKind.Reverb);
       runtime.setEffectParameter(rev, verb, NodeParam.ReverbMix, 1);
       this.reverbFx.push(verb);
+      // the bass's distortion sits on its bus A, so it follows the synth and comes before the fader and both sends; Saturation starts at mix 0, a pass-through
+      if (spec.id === BASS_TRACK) distFx = runtime.addEffect(bus, EffectKind.Saturation);
       const inst = runtime.createInstrument(spec.kind, { bus });
       this.inst.push(inst);
       runtime.setInstrumentParameter(inst, InstrumentCommonParam.Gain, spec.gainDb);
       for (const [param, value] of spec.fixed) runtime.setInstrumentParameter(inst, param, value);
     }
+    this.distFx = distFx!;
     this.ids = {
       trackBus: this.trackBus, busB: this.busB, busC: this.busC, delayBus: this.delayBus, reverbBus: this.reverbBus,
-      delayFx: this.delayFx, reverbFx: this.reverbFx, inst: this.inst, manglerBus: this.manglerBus, fx: this.fx,
+      delayFx: this.delayFx, reverbFx: this.reverbFx, distFx: this.distFx, inst: this.inst, manglerBus: this.manglerBus, fx: this.fx,
     };
     this.applyManglerValues(baseValues());
   }
@@ -306,6 +327,7 @@ export class Groovebox {
       this.busCache.delete(`${spec.id}:d`);
       this.busCache.delete(`${spec.id}:r`);
     }
+    for (const key of ["satDrive", "satOut", "satMix"]) this.fxCache.delete(`${BASS_TRACK}:${key}`);
   }
 
   setTempo(bpm: number, anchorTime: number, time?: number): void {
@@ -344,21 +366,28 @@ export class Groovebox {
       const locks = tp.steps[trackStepAt(pattern, t, step, run)].parameterLocks;
       const before = this.lockedParams[t];
       if (!locks && before.size === 0) continue;
-      const now = new Map<string, string>();
+      const now = new Map<string, string[]>();
       for (const p of lockParams(t)) {
         const locked = locks?.[p.id];
         if (locked === undefined && !before.has(p.id)) continue;
-        const w = lockWrite(this.ids, t, p, locked ?? p.base(tp));
-        if (locked !== undefined) now.set(p.id, w.key);
-        if (w.kind === "inst") {
-          events.push({ time, target: { instrument: w.instrument }, param: w.param, value: w.value });
-          this.soundCache[t][(p.target as { control: number }).control] = locked !== undefined ? NaN : w.value;
-        } else if (w.kind === "bus") {
-          this.when(time, () => this.setBus(w.bus, w.key, w.param, w.value));
+        const writes = lockWrites(this.ids, t, p, locked ?? p.base(tp));
+        if (locked !== undefined) now.set(p.id, writes.map((w) => w.key));
+        for (const w of writes) {
+          if (w.kind === "inst") {
+            events.push({ time, target: { instrument: w.instrument }, param: w.param, value: w.value });
+            this.soundCache[t][(p.target as { control: number }).control] = locked !== undefined ? NaN : w.value;
+          } else if (w.kind === "bus") {
+            this.when(time, () => this.setBus(w.bus, w.key, w.param, w.value));
+          } else {
+            events.push({ time, target: { effect: { bus: w.bus, effect: w.effect } }, param: w.param, value: w.value });
+            // as for a sound control: while locked the engine's value is not the base, so the next base write must send
+            if (locked !== undefined) this.fxCache.delete(w.key);
+            else this.fxCache.set(w.key, w.value);
+          }
         }
       }
-      for (const key of before.values()) this.lockedKeys.delete(key);
-      for (const key of now.values()) this.lockedKeys.add(key);
+      for (const keys of before.values()) for (const key of keys) this.lockedKeys.delete(key);
+      for (const keys of now.values()) for (const key of keys) this.lockedKeys.add(key);
       this.lockedParams[t] = now;
     }
     if (events.length) this.runtime.scheduleParams(events);
@@ -370,7 +399,7 @@ export class Groovebox {
   applyMix(mix: MixInput, time?: number, group: "pattern" | "punch" | "all" = "all"): void {
     this.when(time, () => {
       for (const w of mixWrites(this.ids, mix, group)) if (w.kind === "bus" && !this.lockedKeys.has(w.key)) this.setBus(w.bus, w.key, w.param, w.value);
-      for (const w of trackFxWrites(this.ids, mix.pattern, this.clampFx)) if (w.kind === "fx") this.setFx(w.bus, w.effect, w.key, w.param, w.value);
+      for (const w of trackFxWrites(this.ids, mix.pattern, this.clampFx)) if (w.kind === "fx" && !this.lockedKeys.has(w.key)) this.setFx(w.bus, w.effect, w.key, w.param, w.value);
     });
   }
 

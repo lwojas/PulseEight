@@ -11,11 +11,11 @@
 // A lockable parameter is a `LockParam`; today the track's sound controls are the only ones
 // (`instrument.<control key>`, normalised 0..1). Others (track level, sends, ...) opt in by being
 // returned from `lockParams`, which the sequencer, the UI and playback all go through.
-import { TRACKS } from "./spec";
+import { BASS_TRACK, TRACKS } from "./spec";
 import type { AppState, Step, TrackPattern } from "./state";
 
-/** What a lock drives: one of the track's sound controls, or one of its FX sends. */
-export type LockTarget = { kind: "sound"; control: number } | { kind: "send"; send: "dly" | "rev" };
+/** What a lock drives: one of the track's sound controls, one of its FX sends, or the acid bass's distortion insert. */
+export type LockTarget = { kind: "sound"; control: number } | { kind: "send"; send: "dly" | "rev" } | { kind: "dist" };
 
 export interface LockParam {
   /** Stable id: the key in `Step.parameterLocks` (saved with the project, so never renamed). */
@@ -28,7 +28,7 @@ export interface LockParam {
 
 const cache = new Map<number, readonly LockParam[]>();
 
-/** Every parameter of `track` a step can lock: its sound controls (first, in control order), then its delay and reverb sends. */
+/** Every parameter of `track` a step can lock: its sound controls (first, in control order), then its delay and reverb sends, then (acid bass only) its distortion. */
 export function lockParams(track: number): readonly LockParam[] {
   let list = cache.get(track);
   if (!list) {
@@ -36,6 +36,7 @@ export function lockParams(track: number): readonly LockParam[] {
       ...TRACKS[track].controls.map((c, i): LockParam => ({ id: `instrument.${c.key}`, label: c.label, target: { kind: "sound", control: i }, base: (tp) => tp.sound[i] })),
       { id: "fx.delaySend", label: "DLY", target: { kind: "send", send: "dly" }, base: (tp) => tp.dly.send },
       { id: "fx.reverbSend", label: "REV", target: { kind: "send", send: "rev" }, base: (tp) => tp.rev.send },
+      ...(track === BASS_TRACK ? [{ id: "fx.distortion", label: "DIST", target: { kind: "dist" }, base: (tp: TrackPattern) => tp.dist ?? 0 } satisfies LockParam] : []),
     ];
     cache.set(track, list);
   }

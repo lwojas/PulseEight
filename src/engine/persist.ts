@@ -7,7 +7,7 @@ import { BASS_TRACK, defaultSound, NUM_TRACKS, TRACKS } from "./spec";
 import { emptyStep, FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { normalizeArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
-import { newDelay, newReverb } from "./trackfx";
+import { newDelay, newDist, newReverb } from "./trackfx";
 import { normalizeScale, type ProjectScale } from "./scale";
 import { CURRENT_STORE, idbRequest, openDb, SAVES_STORE, txDone } from "./db";
 import { getState, observe, setState } from "./store";
@@ -49,6 +49,9 @@ function migrate(p: Pattern): void {
     if (!t.dly) t.dly = { ...newDelay(i), send: typeof old.send === "number" ? old.send : newDelay(i).send };
     if (!t.rev) t.rev = newReverb(i);
     if (typeof t.punch !== "boolean") t.punch = true;
+    // the distortion insert belongs to the acid bass: its amount is a number in 0..1 (absent in older saves = off), no other track has one
+    if (i === BASS_TRACK) t.dist = typeof t.dist === "number" && Number.isFinite(t.dist) ? Math.min(1, Math.max(0, t.dist)) : newDist();
+    else delete t.dist;
     // last step: whole numbers inside the pattern; anything else (or the full length) is "no last step"
     if (typeof t.last !== "number" || !Number.isFinite(t.last) || t.last < 1 || t.last >= p.length) delete t.last;
     else t.last = Math.floor(t.last);

@@ -41,6 +41,20 @@ export function delayReadout(d: DelaySend): string {
   return d.mode === 1 ? formatBeatDelay(d.div) : formatFreeDelay(d.time);
 }
 
+/** The acid bass's distortion insert: webdsp's Saturation (the effect behind the DRIVE punch) on the bass bus, between the synth and the
+ * fader, so the delay and reverb sends hear the driven sound. `dist` is one normalised 0..1 amount: pre-gain and output trim follow the
+ * DRIVE punch exactly (`mangler.ts`: 10..30 dB, trim 3..9 dB), so 30% here is 30% there; the mix fades in over the first `DIST_FADE`
+ * of the travel. At 0 the mix is 0, which webdsp makes an exact pass-through. */
+export const DIST_DRIVE_DB = [10, 30] as const;
+export const DIST_TRIM_DB = [3, 9] as const;
+export const DIST_FADE = 0.1;
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+export const distDriveDb = (dist: number) => DIST_DRIVE_DB[0] + (DIST_DRIVE_DB[1] - DIST_DRIVE_DB[0]) * clamp01(dist);
+export const distTrimDb = (dist: number) => -(DIST_TRIM_DB[0] + (DIST_TRIM_DB[1] - DIST_TRIM_DB[0]) * clamp01(dist));
+export const distMix = (dist: number) => Math.min(1, clamp01(dist) / DIST_FADE);
+export const formatDist = (dist: number) => (dist <= 0 ? "OFF" : `${Math.round(clamp01(dist) * 100)}`);
+export const newDist = (): number => 0;
+
 // Per-track starting sends live in `TRACKS[i].mix` (spec.ts).
 export const defaultDelaySend = (track: number) => TRACKS[track].mix.delay;
 export const defaultReverbSend = (track: number) => TRACKS[track].mix.reverb;

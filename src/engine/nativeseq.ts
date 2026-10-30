@@ -25,7 +25,7 @@
 // live scheduler lets a held punch win), and live keyboard arpeggios.
 import type { Sequence, SequenceEvent } from "webdsp";
 import { Arpeggiator } from "./arp";
-import { lockWrite, manglerWrites, mixWrites, soundWrites, trackFxWrites, type GraphIds, type Write } from "./audio";
+import { lockWrites, manglerWrites, mixWrites, soundWrites, trackFxWrites, type GraphIds, type Write } from "./audio";
 import { baseValues, laneLayers, layeredTarget, MANGLER_KEYS, type ManglerKey } from "./mangler";
 import { lockParams } from "./plock";
 import { NUM_TRACKS } from "./spec";
@@ -323,8 +323,8 @@ function trackLockEvents(t: number, slots: readonly LockSlot[], ctx: NativeCtx):
     if (!locks && !before) return;
     for (const p of lockParams(t)) {
       const locked = locks?.[p.id];
-      if (locked !== undefined) out.push(writeEvent(lockWrite(ctx.ids, t, p, locked), beat));
-      else if (before?.[p.id] !== undefined) out.push(writeEvent(lockWrite(ctx.ids, t, p, p.base(pat.tracks[t])), beat));
+      if (locked !== undefined) for (const w of lockWrites(ctx.ids, t, p, locked)) out.push(writeEvent(w, beat));
+      else if (before?.[p.id] !== undefined) for (const w of lockWrites(ctx.ids, t, p, p.base(pat.tracks[t]))) out.push(writeEvent(w, beat));
     }
   });
   return out;

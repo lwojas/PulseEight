@@ -4,10 +4,11 @@
 // where a control lives on screen, and the UI knows nothing about them.
 //
 //   track.<1-8>.volume | mute | solo | delaySend | reverbSend | arp   (arp: melodic tracks)
+//   track.7.distortion                                                 (acid bass only: its distortion insert)
 //   track.<1-8>.sound.<key>                                            (the track's macro knobs)
 //   pattern.select                                                     (0-based pattern slot)
 //
-// Sound knobs and the delay/reverb sends are lockable (plock.ts): in P-LOCK mode, with a step selected on the focused track, they read
+// Sound knobs, the delay/reverb sends and the bass distortion are lockable (plock.ts): in P-LOCK mode, with a step selected on the focused track, they read
 // and write that step's lock rather than the base, exactly as the on-screen knobs do.
 // Ids are 1-based for tracks (what a person calls them) and never change once shipped: they are the
 // external contract (see docs/dev/midi.md). Volume, sends and sound belong to the pattern on screen, as
@@ -67,6 +68,9 @@ function build(): ParamDef[] {
       { id: idOf(t, "reverbSend"), label: `${name} reverb send`, kind: "norm", min: 0, max: 1, def: defaultReverbSend(t), get: (s) => shown(s, t, "fx.reverbSend"), set: (v) => setLockable(t, "fx.reverbSend", v) },
       { id: idOf(t, "punchSend"), label: `${name} punch FX send`, kind: "bool", min: 0, max: 1, def: 1, get: (s) => (tp(s, t).punch ? 1 : 0), set: (v) => setPunchSend(t, v >= 1) },
     );
+    if (lockParam(t, "fx.distortion")) {
+      defs.push({ id: idOf(t, "distortion"), label: `${name} distortion`, kind: "norm", min: 0, max: 1, def: 0, get: (s) => shown(s, t, "fx.distortion"), set: (v) => setLockable(t, "fx.distortion", v) });
+    }
     if (spec.role !== "drum") {
       defs.push({ id: idOf(t, "arp"), label: `${name} arpeggiator`, kind: "bool", min: 0, max: 1, def: 0, get: (s) => (s.arp[t].on ? 1 : 0), set: (v) => setArp(t, { on: v >= 1 }) });
     }

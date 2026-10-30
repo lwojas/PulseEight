@@ -259,6 +259,9 @@ button.oled { cursor: pointer; text-align: left; }
 .slider-label, .slider-value { position: absolute; top: 50%; transform: translateY(-50%); font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
 .slider-label { left: 8px; }
 .slider-value { right: 8px; }
+.slider[data-locked] { border-color: var(--fx); }
+.dist-bar { margin-top: 10px; }
+.dist-bar .slider { height: 32px; }
 
 /* ---- track FX (delay + reverb sends) ---------------------------------------------------------- */
 
@@ -431,7 +434,13 @@ button.oled { cursor: pointer; text-align: left; }
   .sound .chips { grid-area: chips; align-content: start; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .sound .chips .silk { grid-column: 1 / -1; }
   .sound .chip { min-height: 28px; padding: 2px 4px; font-size: 10px; min-width: 0; white-space: normal; line-height: 1.1; overflow-wrap: anywhere; }
-  .sound .knobs { grid-area: knobs; --ks: var(--ks-lg); margin: 0; align-self: center; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); }
+  .sound-main { grid-area: knobs; align-self: center; min-width: 0; }
+  .sound .knobs { --ks: var(--ks-lg); margin: 0; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); }
+  .dist-bar { margin-top: 6px; }
+  .dist-bar .slider { height: 24px; }
+  .dist-bar .slider-label, .dist-bar .slider-value { font-size: 9px; letter-spacing: 0.04em; }
+  .dist-bar .slider-label { left: 5px; }
+  .dist-bar .slider-value { right: 5px; }
   .sends { grid-area: sends; margin: 0; min-width: 0; align-self: stretch; justify-content: center; padding: 4px 10px 6px; background: transparent; }
   .sound .sends-knobs { grid-area: auto; align-self: auto; --ks: 40px; margin: auto 0; grid-template-columns: repeat(2, 48px); gap: 4px; }
   .sends .knob-label { font-size: 9px; letter-spacing: 0.06em; }

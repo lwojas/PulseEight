@@ -45,6 +45,7 @@ the same controller numbers.
 | **21** | Solo | 0–63 off, 64–127 on |
 | **22** | Arpeggiator | ACID and FM only |
 | **70 – 75** | The track's sound knobs | In the order they appear in the app |
+| **77** | Distortion | ACID only (the DIST slider) |
 
 ### Sound knob map
 
