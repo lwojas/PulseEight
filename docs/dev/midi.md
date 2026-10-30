@@ -31,7 +31,7 @@ One channel per track (1 KICK … 8 FM), same CCs on each:
 | 12 | delay send | 21 | solo |
 | 91 | reverb send | 22 | arpeggiator (ACID, FM) |
 | 70-75 | the track's knobs in app order | 74 / 71 | ACID filter / resonance (70 env mod, 72 decay, 73 bite, 75 wave) |
-| 77 | ACID distortion (`track.7.distortion`) | | |
+| 77 | ACID and FM distortion (`track.7.distortion`, `track.8.distortion`) | | |
 
 Stepped knobs (FM COLOR) split 0-127 into equal bands. CC 10 is unassigned: the app has no pan.
 Patterns: **Bank Select (CC 0) + Program Change** on the default channel, 4 banks x 16 = 64 patterns. While playing the pattern

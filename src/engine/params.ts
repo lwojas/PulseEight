@@ -4,7 +4,7 @@
 // where a control lives on screen, and the UI knows nothing about them.
 //
 //   track.<1-8>.volume | mute | solo | delaySend | reverbSend | arp   (arp: melodic tracks)
-//   track.7.distortion                                                 (acid bass only: its distortion insert)
+//   track.<7,8>.distortion                                                (synths only: ACID and FM)
 //   track.<1-8>.sound.<key>                                            (the track's macro knobs)
 //   pattern.select                                                     (0-based pattern slot)
 //

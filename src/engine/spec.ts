@@ -189,6 +189,9 @@ export const NUM_TRACKS = TRACKS.length;
 export const DRUM_TRACKS = TRACKS.filter((t) => t.role === "drum").map((t) => t.id);
 export const BASS_TRACK = 6;
 export const TONE_TRACK = 7;
+/** The tracks with a distortion insert (see `trackfx.ts`): the two synths. */
+export const DIST_TRACKS: readonly number[] = [BASS_TRACK, TONE_TRACK];
+export const hasDistortion = (track: number): boolean => DIST_TRACKS.includes(track);
 
 // --- normalised <-> engine units -------------------------------------------------------------
 

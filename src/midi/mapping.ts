@@ -10,10 +10,10 @@
 //   CC   7  volume                 CC  91  reverb send        CC 70-75  the track's sound knobs, in
 //   CC  12  delay send             CC  20  mute (64+ = on)               the order shown in the app
 //   CC  21  solo                   CC  22  arpeggiator on     (acid bass: 74 filter, 71 resonance)
-//   CC  77  distortion (acid bass only)
+//   CC  77  distortion (the synths: ACID, FM)
 //
 // There is no pan: the app has none. CC 10 is left free for it.
-import { BASS_TRACK, NUM_TRACKS, TRACKS } from "../engine/spec";
+import { hasDistortion, NUM_TRACKS, TRACKS } from "../engine/spec";
 import type { MidiMapping } from "./control";
 
 const TRACK_COUNT = NUM_TRACKS;
@@ -51,7 +51,7 @@ function build(): MidiMapping["parameters"] {
     parameters[id("delaySend")] = { cc: 12, channel };
     parameters[id("reverbSend")] = { cc: 91, channel };
     if (MELODIC.includes(t)) parameters[id("arp")] = { cc: 22, channel };
-    if (t === BASS_TRACK) parameters[id("distortion")] = { cc: 77, channel };
+    if (hasDistortion(t)) parameters[id("distortion")] = { cc: 77, channel };
     SOUND_KEYS[t].forEach((key, i) => {
       parameters[id(`sound.${key}`)] = { cc: SOUND_BY_KEY[t]?.[key] ?? SOUND_CCS[i], channel };
     });

@@ -1,7 +1,7 @@
 // The whole application state, and the pure functions that edit a pattern.
 // Nothing here touches audio or React.
 import { storageKey } from "../product";
-import { defaultSound, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
+import { defaultSound, hasDistortion, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK } from "./spec";
 import { defaultArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { defaultScale, isChromatic, notesInRange, rootAtOrAbove, type ProjectScale } from "./scale";
@@ -53,7 +53,7 @@ export interface TrackPattern {
   /** Track sends (mixing): delay and reverb. */
   dly: DelaySend;
   rev: ReverbSend;
-  /** Acid bass only: the distortion insert's amount, 0..1 (0 = off; lockable). Absent on every other track. */
+  /** Synths only (ACID, FM): the distortion insert's amount, 0..1 (0 = off; lockable). Absent on every other track. */
   dist?: number;
   /** Punch FX send gate: false keeps the track out of the punch section (neither fed nor taken over). */
   punch: boolean;
@@ -189,7 +189,7 @@ export function newTrackPattern(track: number): TrackPattern {
     level: defaultLevel(track),
     dly: newDelay(track),
     rev: newReverb(track),
-    ...(track === BASS_TRACK ? { dist: newDist() } : {}),
+    ...(hasDistortion(track) ? { dist: newDist() } : {}),
     punch: true,
     oct: 0,
     preset: "",

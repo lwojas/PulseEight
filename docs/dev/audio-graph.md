@@ -25,10 +25,10 @@ instrument ─▶ A ─main─▶ B ─main─▶ C ─main─▶ master ─▶ 
 | **REVERB_t** | Reverb at mix 1 | |
 | **PUNCH** | Filter → Saturation → Bitcrusher → Phaser → Chorus/Flanger → Dub Delay → Reverb | |
 
-The acid bass has one more effect: a **distortion insert**, a webdsp Saturation on its bus A (the same effect as the DRIVE punch).
-Bus effects run before the bus gain, so the chain is synth ▶ distortion ▶ fader ▶ sends. `TrackPattern.dist` (0..1, bass only,
+The two synths (acid bass, FM) have one more effect: a **distortion insert**, a webdsp Saturation on their bus A (the same effect as the DRIVE punch).
+Bus effects run before the bus gain, so the chain is synth ▶ distortion ▶ fader ▶ sends. `TrackPattern.dist` (0..1, synths only,
 lockable as `fx.distortion`) maps to three Saturation parameters at once: pre-gain 10..30 dB and output trim −3..−9 dB (the DRIVE punch's own
-mapping, so the same percentage sounds the same) and a mix that fades in over the first tenth of the travel. At 0 the mix is 0, which webdsp makes an exact pass-through, so the bass sounds as it
+mapping, so the same percentage sounds the same) and a mix that fades in over the first tenth of the travel. At 0 the mix is 0, which webdsp makes an exact pass-through, so the synth sounds as it
 did. Because one lock moves three parameters, `lockWrites` returns a list. No instrument parameter is touched.
 
 Consequences, deliberately:

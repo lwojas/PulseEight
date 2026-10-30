@@ -64,7 +64,7 @@ A monophonic bass voice with a resonant low-pass filter that an envelope snaps o
 | **BITE** | Onset drive and brightness, and how much velocity (accent) changes the timbre. At 0 an accent is only louder |
 | **WAVE** | Round and subby (sine plus sub) at 0, rich saw at 100% |
 
-Under the knobs, a **DIST** slider drives a distortion between the synth and the fader, so the delay and reverb sends hear it too. It is the same saturation as the DRIVE punch, but a permanent part of the bass: 0 is off (the bass is untouched), and more drive adds grit while the output is trimmed to keep the level roughly steady. Like the knobs, it can be locked per step in P-LOCK mode and saved per pattern.
+Under the knobs, a **DIST** slider drives a distortion between the synth and the fader, so the delay and reverb sends hear it too (the FM has the same slider). It is the same saturation as the DRIVE punch, but a permanent part of the voice: 0 is off (the voice is untouched), and more drive adds grit while the output is trimmed to keep the level roughly steady. Like the knobs, it can be locked per step in P-LOCK mode and saved per pattern.
 
 The filter envelope attacks instantly and falls exponentially. Accent and slide, set per step, do the rest. **WAVE** morphs the oscillator: a sine with a sub-oscillator underneath at 0, a bright saw at 100%, so the fundamental stays present as the filter closes.
 
@@ -81,5 +81,7 @@ A two-operator FM voice.
 | **DECAY** | 60 ms – 1.2 s |
 
 COLOR is a choice, not a continuum: it sets the modulator-to-carrier ratio, which decides the harmonic character, and DEPTH, BITE and TONE shape it. Stepped ratios keep every setting musical; continuous ratios mostly sound out of tune.
+
+The **DIST** slider under the knobs works as it does on the ACID: see above.
 
 Next: [Mixing & track FX](04-mixing-and-track-fx.md).

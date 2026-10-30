@@ -8,7 +8,7 @@ import { controller } from "../engine/controller";
 import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
 import { hasLocks, lockStep, soundParam } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
-import { BASS_TRACK, defaultSound, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
+import { defaultSound, hasDistortion, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
 import { BANK_SIZE, defaultLevel, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
 import { BEAT_DIVISIONS, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatDist, formatFreeDelay } from "../engine/trackfx";
 import { getState, setState, useStore } from "../engine/store";
@@ -63,7 +63,7 @@ function PresetChips({ track }: { track: number }) {
   );
 }
 
-/** The acid bass's distortion insert (synth ▶ distortion ▶ fader): one amount, lockable like the knobs. Under the knobs, on every layout. */
+/** A synth's distortion insert (synth ▶ distortion ▶ fader): one amount, lockable like the knobs. Under the knobs, on every layout. */
 function DistortionBar({ track, locks }: { track: number; locks: Record<string, number> | undefined }) {
   const base = useStore((s) => s.patterns[s.pattern].tracks[track].dist ?? 0);
   const dist = locks?.["fx.distortion"] ?? base;
@@ -128,7 +128,7 @@ export function SoundPanel() {
           />
         ))}
       </div>
-      {track === BASS_TRACK && <DistortionBar track={track} locks={locks} />}
+      {hasDistortion(track) && <DistortionBar track={track} locks={locks} />}
       </div>
       <PlockBar track={track} />
       <div className="sends" role="group" aria-label="FX sends">

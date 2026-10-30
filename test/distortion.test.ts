@@ -7,7 +7,7 @@ import { midiMapping } from "../src/midi/mapping";
 import { getParam, paramInfo, setParam } from "../src/engine/params";
 import { fromHostSnapshot, toHostSnapshot } from "../src/engine/persist";
 import { lockParam, lockParams, sanitizeLocks } from "../src/engine/plock";
-import { BASS_TRACK, NUM_TRACKS } from "../src/engine/spec";
+import { BASS_TRACK, DIST_TRACKS, NUM_TRACKS, TONE_TRACK } from "../src/engine/spec";
 import { initialState } from "../src/engine/state";
 import { getState, replaceState, setState } from "../src/engine/store";
 import { distDriveDb, distMix, distTrimDb, formatDist } from "../src/engine/trackfx";
@@ -17,15 +17,15 @@ const tp = (t = T) => getState().patterns[getState().pattern].tracks[t];
 const range = (n: number) => Array.from({ length: NUM_TRACKS }, (_, i) => n + i);
 const ids = {
   trackBus: range(200), busB: range(250), busC: range(260), delayBus: range(500), reverbBus: range(600),
-  delayFx: range(700).map((dub) => ({ dub, free: dub + 100 })), reverbFx: range(900), distFx: 450,
+  delayFx: range(700).map((dub) => ({ dub, free: dub + 100 })), reverbFx: range(900), distFx: range(450),
 } as unknown as GraphIds;
 
 beforeEach(() => replaceState(initialState()));
 
 describe("bass distortion: state", () => {
-  it("exists on the acid bass only, and starts off", () => {
-    expect(tp().dist).toBe(0);
-    for (let t = 0; t < NUM_TRACKS; t++) if (t !== T) expect(tp(t).dist).toBeUndefined();
+  it("exists on the two synths (acid bass, FM) only, and starts off", () => {
+    expect(DIST_TRACKS).toEqual([BASS_TRACK, TONE_TRACK]);
+    for (let t = 0; t < NUM_TRACKS; t++) expect(tp(t).dist).toBe(DIST_TRACKS.includes(t) ? 0 : undefined);
   });
 
   it("clamps, edits only the pattern on screen, and ignores other tracks", () => {
@@ -35,8 +35,8 @@ describe("bass distortion: state", () => {
     expect(tp().dist).toBe(0);
     setDistortion(T, 0.4);
     expect(getState().patterns[1].tracks[T].dist).toBe(0);
-    setDistortion(7, 0.9);
-    expect(tp(7).dist).toBeUndefined();
+    setDistortion(0, 0.9);
+    expect(tp(0).dist).toBeUndefined();
   });
 
   it("maps one amount to drive, trim and mix; off is mix 0 (webdsp's exact pass-through)", () => {
@@ -51,7 +51,7 @@ describe("bass distortion: state", () => {
 });
 
 describe("bass distortion: graph", () => {
-  const writes = () => trackFxWrites(ids, getState().patterns[0], (_, v) => v).filter((w) => w.kind === "fx" && w.effect === ids.distFx);
+  const writes = () => trackFxWrites(ids, getState().patterns[0], (_, v) => v).filter((w) => w.kind === "fx" && w.effect === ids.distFx[T]);
   const by = (p: number) => writes().find((w) => w.kind === "fx" && w.param === p)!;
 
   it("writes drive, output trim and mix to the bass bus's saturation, and nothing for other tracks", () => {
@@ -72,6 +72,15 @@ describe("bass distortion: graph", () => {
     }
   });
 
+  it("the FM has its own insert on its own bus, independent of the bass's", () => {
+    setDistortion(TONE_TRACK, 0.5);
+    const all = trackFxWrites(ids, getState().patterns[0], (_, v) => v).filter((w) => w.kind === "fx" && w.param === NodeParam.SatMix);
+    expect(all).toHaveLength(2);
+    const fm = all.find((w) => w.kind === "fx" && w.effect === ids.distFx[TONE_TRACK])!;
+    expect(fm).toMatchObject({ kind: "fx", bus: ids.trackBus[TONE_TRACK], key: `${TONE_TRACK}:satMix`, value: 1 });
+    expect(all.find((w) => w.kind === "fx" && w.effect === ids.distFx[T])!.value).toBe(0);
+  });
+
   it("is a pass-through at 0", () => {
     expect(by(NodeParam.SatMix).value).toBe(0);
   });
@@ -80,7 +89,7 @@ describe("bass distortion: graph", () => {
     const base = new Set(writes().map((w) => w.key));
     const lock = lockWrites(ids, T, lockParam(T, "fx.distortion")!, 0.25);
     expect(lock.map((w) => w.key).sort()).toEqual([...base].sort());
-    expect(lock.every((w) => w.kind === "fx" && w.effect === ids.distFx && w.bus === ids.trackBus[T])).toBe(true);
+    expect(lock.every((w) => w.kind === "fx" && w.effect === ids.distFx[T] && w.bus === ids.trackBus[T])).toBe(true);
     expect(lock.find((w) => w.param === NodeParam.SatDrive)!.value).toBeCloseTo(distDriveDb(0.25));
   });
 
@@ -104,7 +113,7 @@ describe("bass distortion: graph", () => {
     gb.scheduleLocks(pat, 4, 1.1);
     const [lock, restore] = scheduled;
     expect(lock).toHaveLength(3);
-    expect(lock.find((e: any) => e.param === NodeParam.SatDrive)).toMatchObject({ time: 1.0, target: { effect: { bus: ids.trackBus[T], effect: ids.distFx } } });
+    expect(lock.find((e: any) => e.param === NodeParam.SatDrive)).toMatchObject({ time: 1.0, target: { effect: { bus: ids.trackBus[T], effect: ids.distFx[T] } } });
     expect(lock.find((e: any) => e.param === NodeParam.SatDrive).value).toBeCloseTo(distDriveDb(0.8));
     expect(restore.find((e: any) => e.param === NodeParam.SatMix)).toMatchObject({ time: 1.1, value: 0 });
     expect(gb.lockedKeys.size).toBe(0);
@@ -115,14 +124,16 @@ describe("bass distortion: graph", () => {
 describe("bass distortion: locks and parameters", () => {
   it("only the bass has the lock; locks from a save are kept for the bass and dropped elsewhere", () => {
     expect(lockParams(T).map((p) => p.id)).toContain("fx.distortion");
-    for (let t = 0; t < NUM_TRACKS; t++) if (t !== T) expect(lockParam(t, "fx.distortion")).toBeUndefined();
+    for (let t = 0; t < NUM_TRACKS; t++) expect(!!lockParam(t, "fx.distortion")).toBe(DIST_TRACKS.includes(t));
     expect(sanitizeLocks(T, { "fx.distortion": 0.3 })).toEqual({ "fx.distortion": 0.3 });
-    expect(sanitizeLocks(7, { "fx.distortion": 0.3 })).toBeUndefined();
+    expect(sanitizeLocks(TONE_TRACK, { "fx.distortion": 0.3 })).toEqual({ "fx.distortion": 0.3 });
+    expect(sanitizeLocks(0, { "fx.distortion": 0.3 })).toBeUndefined();
   });
 
   it("is addressable by id and follows P-LOCK mode like the knobs", () => {
     expect(paramInfo(`track.${T + 1}.distortion`)).toMatchObject({ kind: "norm", def: 0 });
-    expect(paramInfo("track.8.distortion")).toBeUndefined();
+    expect(paramInfo("track.8.distortion")).toMatchObject({ kind: "norm", def: 0 });
+    expect(paramInfo("track.1.distortion")).toBeUndefined();
     setParam(`track.${T + 1}.distortion`, 0.4, "midi");
     expect(tp().dist).toBe(0.4);
     setPlockMode(true);
@@ -133,8 +144,9 @@ describe("bass distortion: locks and parameters", () => {
     expect(getParam(`track.${T + 1}.distortion`, getState())).toBe(0.9);
   });
 
-  it("has a CC on the bass's channel", () => {
-    expect(midiMapping.parameters[`track.${T + 1}.distortion`]).toEqual({ cc: 77, channel: T + 1 });
+  it("has a CC on each synth's channel", () => {
+    for (const t of DIST_TRACKS) expect(midiMapping.parameters[`track.${t + 1}.distortion`]).toEqual({ cc: 77, channel: t + 1 });
+    expect(midiMapping.parameters["track.1.distortion"]).toBeUndefined();
   });
 });
 
@@ -152,9 +164,11 @@ describe("bass distortion: saving", () => {
   it("repairs a bad amount and drops one on a track that has no distortion", () => {
     const bad = JSON.parse(toHostSnapshot().data);
     bad.project.patterns[0].tracks[T].dist = "loud";
-    bad.project.patterns[0].tracks[7].dist = 0.5;
+    bad.project.patterns[0].tracks[TONE_TRACK].dist = 7;
+    bad.project.patterns[0].tracks[0].dist = 0.5;
     const restored = fromHostSnapshot({ ...toHostSnapshot(), data: JSON.stringify(bad) })!;
     expect(restored.patterns[0].tracks[T].dist).toBe(0);
-    expect(restored.patterns[0].tracks[7].dist).toBeUndefined();
+    expect(restored.patterns[0].tracks[TONE_TRACK].dist).toBe(1);
+    expect(restored.patterns[0].tracks[0].dist).toBeUndefined();
   });
 });
