@@ -430,6 +430,8 @@ button.oled { cursor: pointer; text-align: left; }
   .band > .panel, .app[data-tab] .band > .panel { padding: 10px 12px; }
   .band .panel-title { margin-bottom: 6px; }
   .sound { display: grid; grid-template-columns: 150px minmax(0, 1fr) 118px; grid-template-rows: auto 1fr; grid-template-areas: "title knobs sends" "chips knobs sends"; column-gap: 16px; min-height: 0; }
+  /* the empty cell to the right of the P-LOCK buttons */
+  .sound .lfo-btn { grid-row: 3; grid-column: 2; margin-top: 10px; align-self: start; }
   .sound .panel-title { grid-area: title; }
   .sound .chips { grid-area: chips; align-content: start; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .sound .chips .silk { grid-column: 1 / -1; }
@@ -541,6 +543,8 @@ button.oled { cursor: pointer; text-align: left; }
   /* sound: sends move from a tall right-hand column to a strip under the knobs */
   .sound { grid-template-columns: 130px minmax(0, 1fr); grid-template-rows: auto 1fr auto; grid-template-areas: "title knobs" "chips knobs" "plock sends"; column-gap: 12px; }
   .sound .plock-bar { grid-area: plock; margin-top: 4px; }
+  /* no empty cell here: it shares the P-LOCK strip, at its right end */
+  .sound .lfo-btn { grid-area: plock; grid-row: auto; grid-column: auto; justify-self: end; align-self: center; margin-top: 4px; }
   .sound .knobs { --ks: 44px; }
   .sound .chip { min-height: 24px; }
   .sound .chips { gap: 3px; }
@@ -621,3 +625,13 @@ button.oled { cursor: pointer; text-align: left; }
 .ptn-modal .slots { grid-template-columns: repeat(16, 1fr); gap: 3px; }
 .ptn-modal .slot { height: 34px; font-size: 11px; min-width: 0; }
 .ptn-modal .chain { max-height: 168px; overflow-y: auto; align-content: flex-start; }
+
+/* ---- LFO button + modal ------------------------------------------------------------------------ */
+.lfo-btn { margin-top: 10px; justify-self: start; }
+.lfo-modal { width: min(460px, 100%); }
+.lfo-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.lfo-row:first-child { border-top: 0; padding-top: 0; }
+.lfo-row[data-on="false"] .lfo-body { opacity: 0.55; }
+.lfo-head, .lfo-body { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.lfo-head .variant { flex: 1 1 140px; min-width: 0; }
+.lfo-knobs { --ks: 44px; margin: 0 0 0 auto; grid-template-columns: repeat(2, 64px); }

@@ -202,7 +202,7 @@ export function Slider({ label, value, onChange, accent, def, readout, locked }:
 // --- tap / long-press ----------------------------------------------------------------------------
 
 /** Pointer handlers giving `onTap` on a short press and `onHold` once the press is held 380 ms. */
-export function usePress(onTap: () => void, onHold?: () => void, holdMs = 380) {
+export function usePress(onTap: (e: RPointerEvent<HTMLElement>) => void, onHold?: () => void, holdMs = 380) {
   const timer = useRef<number | undefined>(undefined);
   const held = useRef(false);
   const live = useRef(false);
@@ -224,11 +224,11 @@ export function usePress(onTap: () => void, onHold?: () => void, holdMs = 380) {
         }, holdMs);
       }
     },
-    onPointerUp: () => {
+    onPointerUp: (e: RPointerEvent<HTMLElement>) => {
       if (!live.current) return;
       window.clearTimeout(timer.current);
       live.current = false;
-      if (!held.current) onTap();
+      if (!held.current) onTap(e);
     },
     onPointerLeave: cancel,
     onPointerCancel: cancel,

@@ -25,7 +25,8 @@ import {
 } from "webdsp";
 import { defaultWorkletUrl } from "webdsp/worklet-url";
 import { baseValues, MANGLER_KEYS, MANGLER_PARAMS, type FxSlot, type ManglerValues } from "./mangler";
-import { lockParams, type LockParam } from "./plock";
+import { lfoOffset } from "./lfo";
+import { lockParam, lockParams, type LockParam } from "./plock";
 import { DIST_TRACKS, hasDistortion, normToUnits, NUM_TRACKS, TRACKS } from "./spec";
 import { trackStepAt, type Pattern } from "./state";
 import {
@@ -202,6 +203,12 @@ export class Groovebox {
   private lockedParams: Array<Map<string, string[]>> = TRACKS.map(() => new Map());
   /** Every key in `lockedParams`: what the immediate base writes leave alone. */
   private lockedKeys = new Set<string>();
+  /** Write keys an LFO is moving: the immediate base writes leave them alone, as for a lock. Per track, by lock id. */
+  private lfoParams: Array<Map<string, string[]>> = TRACKS.map(() => new Map());
+  private lfoKeys = new Set<string>();
+  /** The beat grid's anchor and tempo as last sent to the engine (what a synced LFO follows). */
+  private gridAnchor = 0;
+  private bpm = 120;
   private busCache = new Map<string, number>();
   private manglerCache: Partial<ManglerValues> = {};
 
@@ -329,6 +336,8 @@ export class Groovebox {
   }
 
   setTempo(bpm: number, anchorTime: number, time?: number): void {
+    this.gridAnchor = anchorTime;
+    this.bpm = bpm;
     this.runtime.setTempo(bpm, { anchorTime, time });
   }
 
@@ -344,12 +353,61 @@ export class Groovebox {
       const [track, i] = w.key.split(":").map(Number);
       if (this.soundCache[track][i] === w.value) continue;
       // a lock is sounding or scheduled on this control: the base comes back with the step that ends it (see scheduleLocks)
-      if (!future && this.lockedKeys.has(w.key)) continue;
+      if (!future && (this.lockedKeys.has(w.key) || this.lfoKeys.has(w.key))) continue;
       this.soundCache[track][i] = w.value;
       if (future) events.push({ time: time!, target: { instrument: w.instrument }, param: w.param, value: w.value });
       else this.runtime.setInstrumentParameter(w.instrument, w.param, w.value);
     }
     if (events.length) this.runtime.scheduleParams(events);
+  }
+
+  /** Send one write now, if it changes what the engine holds. */
+  private writeNow(w: Write): void {
+    if (w.kind === "inst") {
+      const [track, i] = w.key.split(":").map(Number);
+      if (this.soundCache[track][i] === w.value) return;
+      this.soundCache[track][i] = w.value;
+      this.runtime.setInstrumentParameter(w.instrument, w.param, w.value);
+    } else if (w.kind === "bus") {
+      this.setBus(w.bus, w.key, w.param, w.value);
+    } else if (w.kind === "fx") {
+      this.setFx(w.bus, w.effect, w.key, w.param, w.value);
+    }
+  }
+
+  /** Move the parameters the tracks' LFOs point at: each is sent its base value (or, with a lock on it, left alone) plus the LFOs' sum.
+   * Called every tick. A parameter an LFO no longer moves goes back to its base value. */
+  applyLfos(pattern: Pattern): void {
+    const time = this.now;
+    for (const spec of TRACKS) {
+      const t = spec.id;
+      const tp = pattern.tracks[t];
+      const offsets = new Map<string, number>();
+      for (const l of tp.lfos ?? []) {
+        if (!l.on || !l.target || this.lockedParams[t].has(l.target)) continue;
+        offsets.set(l.target, (offsets.get(l.target) ?? 0) + lfoOffset(l, time, this.gridAnchor, this.bpm));
+      }
+      const before = this.lfoParams[t];
+      if (offsets.size === 0 && before.size === 0) continue;
+      const now = new Map<string, string[]>();
+      for (const [id, off] of offsets) {
+        const p = lockParam(t, id);
+        if (!p) continue;
+        const writes = lockWrites(this.ids, t, p, Math.min(1, Math.max(0, p.base(tp) + off)));
+        now.set(id, writes.map((w) => w.key));
+        for (const w of writes) this.lfoKeys.add(w.key);
+        for (const w of writes) this.writeNow(w);
+      }
+      for (const [id, keys] of before) {
+        if (now.has(id)) continue;
+        // a step's lock took the parameter: the lock owns it until that step ends, so there is nothing to put back
+        if (this.lockedParams[t].has(id)) { now.set(id, keys); continue; }
+        for (const key of keys) this.lfoKeys.delete(key);
+        const p = lockParam(t, id);
+        if (p) for (const w of lockWrites(this.ids, t, p, p.base(tp))) this.writeNow(w);
+      }
+      this.lfoParams[t] = now;
+    }
   }
 
   /** Parameter locks for step `step` of `pattern`, which sounds at audio time `time`: the step's locked parameters go to the engine at
@@ -396,8 +454,8 @@ export class Groovebox {
   /** `group` limits the bus writes: "pattern" leaves the punch section (bus C) alone. */
   applyMix(mix: MixInput, time?: number, group: "pattern" | "punch" | "all" = "all"): void {
     this.when(time, () => {
-      for (const w of mixWrites(this.ids, mix, group)) if (w.kind === "bus" && !this.lockedKeys.has(w.key)) this.setBus(w.bus, w.key, w.param, w.value);
-      for (const w of trackFxWrites(this.ids, mix.pattern, this.clampFx)) if (w.kind === "fx" && !this.lockedKeys.has(w.key)) this.setFx(w.bus, w.effect, w.key, w.param, w.value);
+      for (const w of mixWrites(this.ids, mix, group)) if (w.kind === "bus" && !this.lockedKeys.has(w.key) && !this.lfoKeys.has(w.key)) this.setBus(w.bus, w.key, w.param, w.value);
+      for (const w of trackFxWrites(this.ids, mix.pattern, this.clampFx)) if (w.kind === "fx" && !this.lockedKeys.has(w.key) && !this.lfoKeys.has(w.key)) this.setFx(w.bus, w.effect, w.key, w.param, w.value);
     });
   }
 

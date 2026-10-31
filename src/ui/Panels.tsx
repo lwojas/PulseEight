@@ -13,6 +13,7 @@ import { BANK_SIZE, defaultLevel, MAX_CHAIN, NUM_PATTERNS } from "../engine/stat
 import { BEAT_DIVISIONS, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatDist, formatFreeDelay } from "../engine/trackfx";
 import { getState, setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
+import { LfoButton } from "./LfoModal";
 import { Modal } from "./Modal";
 import { ConfirmButton } from "./Sequencer";
 
@@ -131,6 +132,7 @@ export function SoundPanel() {
       {hasDistortion(track) && <DistortionBar track={track} locks={locks} />}
       </div>
       <PlockBar track={track} />
+      <LfoButton track={track} />
       <div className="sends" role="group" aria-label="FX sends">
         <span className="silk">SENDS</span>
         <div className="knobs sends-knobs">

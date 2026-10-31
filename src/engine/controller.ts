@@ -557,6 +557,7 @@ class Controller {
     if (!gb) return;
     gb.tick();
     this.sweepHeldPunch(gb.now);
+    gb.applyLfos(this.soundPattern());
     if (this.host?.playing) {
       this.host.tick(gb.now);
       this.runFreeArps(gb.now);

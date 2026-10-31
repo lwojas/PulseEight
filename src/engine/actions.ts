@@ -2,6 +2,7 @@
 // audition sounds. No React here.
 import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
+import type { Lfo } from "./lfo";
 import { clearLocks, lockParam, setLock, soundParam } from "./plock";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { hasDistortion, TRACKS } from "./spec";
@@ -10,6 +11,11 @@ import { BEAT_DIVISIONS, type DelaySend, type ReverbSend } from "./trackfx";
 import { editPattern, getState, setState } from "./store";
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+/** Edit LFO `index` of a track (in the current pattern). */
+export function setLfo(track: number, index: number, patch: Partial<Lfo>): void {
+  editPattern((p) => { Object.assign(p.tracks[track].lfos[index], patch); });
+}
 
 // --- steps -------------------------------------------------------------------------------------
 
@@ -41,20 +47,15 @@ export function tapStep(track: number, step: number): void {
   controller.audition(track, cur.note);
 }
 
-/** Long-press a step: accent a drum hit; select (and place) a melodic step for editing. */
+/** Select a step (Shift+click) without changing it: drums get the ACCENT button for it, melodic steps their editor. */
+export function selectStep(track: number, step: number): void {
+  setState({ focus: track, selStep: step });
+}
+
+/** Long-press a step: select it (for a drum step, only select; a melodic step is also placed). */
 export function holdStep(track: number, step: number): void {
   if (getState().plock) return selectLockStep(track, step);
-  const spec = TRACKS[track];
-  if (spec.role === "drum") {
-    editPattern((p) => {
-      const s = p.tracks[track].steps[step];
-      s.acc = s.on ? !s.acc : true;
-      s.on = true;
-    });
-    setState({ focus: track });
-    controller.audition(track);
-    return;
-  }
+  if (TRACKS[track].role === "drum") return selectStep(track, step);
   editPattern((p) => { p.tracks[track].steps[step].on = true; });
   setState({ focus: track, selStep: step });
 }

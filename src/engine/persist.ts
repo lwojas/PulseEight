@@ -4,6 +4,7 @@
 import { FILE_EXT, PRODUCT } from "../product";
 import { sanitizeLocks } from "./plock";
 import { BASS_TRACK, defaultSound, hasDistortion, NUM_TRACKS, TRACKS } from "./spec";
+import { newLfos, sanitizeLfos } from "./lfo";
 import { emptyStep, FX_LANES, MAX_CHAIN, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type Pattern } from "./state";
 import { normalizeArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
@@ -48,6 +49,7 @@ function migrate(p: Pattern): void {
     const old = t as unknown as { send?: number };
     if (!t.dly) t.dly = { ...newDelay(i), send: typeof old.send === "number" ? old.send : newDelay(i).send };
     if (!t.rev) t.rev = newReverb(i);
+    t.lfos = sanitizeLfos(t.lfos);
     if (typeof t.punch !== "boolean") t.punch = true;
     // the distortion insert belongs to the synths: its amount is a number in 0..1 (absent in older saves = off), no other track has one
     if (hasDistortion(i)) t.dist = typeof t.dist === "number" && Number.isFinite(t.dist) ? Math.min(1, Math.max(0, t.dist)) : newDist();
@@ -124,15 +126,22 @@ function compactPattern(p: Pattern | null): Pattern | null {
     tracks: p.tracks.map((t, i) => {
       let n = t.steps.length;
       while (n > 0 && isBlankStep(t.steps[n - 1], i)) n--;
-      return n === t.steps.length ? t : { ...t, steps: t.steps.slice(0, n) };
+      // LFOs that are all untouched are what a fresh track has: left out too
+      const { lfos, ...rest } = t;
+      const plainLfos = JSON.stringify(lfos) === PLAIN_LFOS;
+      if (n === t.steps.length && !plainLfos) return t;
+      return { ...(plainLfos ? rest : t), steps: t.steps.slice(0, n) } as typeof t;
     }),
   };
 }
+
+const PLAIN_LFOS = JSON.stringify(newLfos());
 
 /** Undoes `compactPattern` in place (a no-op for a full pattern, so files and older snapshots read the same). */
 function expandPattern(p: Pattern | null): void {
   if (!p || !Array.isArray(p.tracks)) return;
   p.tracks.forEach((t, i) => {
+    if (t && !t.lfos) t.lfos = newLfos();
     if (!Array.isArray(t?.steps) || t.steps.length >= MAX_STEPS) return;
     const note = TRACKS[i]?.defaultNote ?? 0;
     for (let n = t.steps.length; n < MAX_STEPS; n++) t.steps.push(emptyStep(note));

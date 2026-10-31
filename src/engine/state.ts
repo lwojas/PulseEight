@@ -5,6 +5,7 @@ import { defaultSound, hasDistortion, NUM_TRACKS, TRACKS, BASS_TRACK, TONE_TRACK
 import { defaultArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { defaultScale, isChromatic, notesInRange, rootAtOrAbove, type ProjectScale } from "./scale";
+import { newLfos, type Lfo } from "./lfo";
 import { newDelay, newDist, newReverb, type DelaySend, type ReverbSend } from "./trackfx";
 
 export const MAX_STEPS = 64;
@@ -55,6 +56,8 @@ export interface TrackPattern {
   rev: ReverbSend;
   /** Synths only (ACID, FM): the distortion insert's amount, 0..1 (0 = off; lockable). Absent on every other track. */
   dist?: number;
+  /** The track's LFOs (see lfo.ts). */
+  lfos: Lfo[];
   /** Punch FX send gate: false keeps the track out of the punch section (neither fed nor taken over). */
   punch: boolean;
   /** Octave shift for melodic tracks. */
@@ -190,6 +193,7 @@ export function newTrackPattern(track: number): TrackPattern {
     dly: newDelay(track),
     rev: newReverb(track),
     ...(hasDistortion(track) ? { dist: newDist() } : {}),
+    lfos: newLfos(),
     punch: true,
     oct: 0,
     preset: "",

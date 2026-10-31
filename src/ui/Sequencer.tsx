@@ -2,7 +2,7 @@
 // step editor (accent / slide / note keys).
 import { memo, useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import {
-  clearTrack, holdStep, randomize, setLastStep, setLength, setOctave, setPlockMode, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
+  clearTrack, holdStep, randomize, selectStep, setLastStep, setLength, setOctave, setPlockMode, setStepGate, setStepNote, tapStep, toggleMute, toggleSolo, toggleStepFlag,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { flashKey, registerKey } from "../engine/keyhl";
@@ -207,9 +207,9 @@ interface PadProps {
   note?: string;
 }
 
-/** One step. Tap toggles/selects, hold accents/selects. The playhead lights it via data-play (see playhead.ts). */
+/** One step. Tap toggles/selects; Shift+click or hold selects without toggling. The playhead lights it via data-play (see playhead.ts). */
 const Pad = memo(function Pad({ track, abs, on, acc, slide, selected, outside, locked, note }: PadProps) {
-  const press = usePress(() => tapStep(track, abs), () => holdStep(track, abs));
+  const press = usePress((e) => (e.shiftKey && !getState().plock ? selectStep(track, abs) : tapStep(track, abs)), () => holdStep(track, abs));
   const playRef = usePlayheadCell(abs, track);
   return (
     <button
@@ -539,10 +539,21 @@ function StepEditor({ track }: { track: number }) {
   const step = useStore((s) => (s.selStep >= 0 && s.focus === track && !s.plock ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
   const scale = useStore((s) => s.scale);
   const phone = useMedia("(max-width: 699px)");
+  const drumSel = useStore((s) => (s.focus === track ? s.selStep : -1));
+  const drumStep = useStore((s) => (s.selStep >= 0 && s.focus === track ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : null));
   if (spec.role === "drum") {
     return (
       <div className="step-editor hint" style={accentStyle(track)}>
-        <span className="silk">{plock ? (phone ? "P-LOCK" : "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB") : "TAP A STEP TO TOGGLE · HOLD FOR ACCENT"}</span>
+        {plock ? (
+          <span className="silk">{phone ? "P-LOCK" : "P-LOCK · TAP A STEP TO SELECT IT, THEN TURN A SOUND KNOB"}</span>
+        ) : (
+          <button
+            type="button" className="btn sm" disabled={!drumStep} data-active={drumStep?.acc ?? false} aria-pressed={drumStep?.acc ?? false}
+            title="Shift+click a step to select it" onClick={() => toggleStepFlag(track, drumSel, "acc")}
+          >
+            ACCENT
+          </button>
+        )}
       </div>
     );
   }
