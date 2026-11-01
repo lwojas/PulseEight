@@ -15,6 +15,7 @@ The **[User Guide](guide/01-getting-started.md)** walks through the instrument i
 | [7 · Projects & storage](guide/07-projects.md) | Autosave, saves, export and import |
 | [8 · MIDI](guide/08-midi.md) | Controllers, DAWs, clock sync |
 | [9 · Reference](guide/09-reference.md) | Limits, tables, shortcuts, troubleshooting |
+| [10 · Signal path](guide/10-signal-path.md) | The route a sound takes, with a diagram |
 
 ## Building on Pulse.8
 

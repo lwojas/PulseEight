@@ -84,4 +84,4 @@ reverb knobs move to a strip under the main knobs so the keyboard still fits on 
 6. **Save.** Give your project a name with **SAVE**. Pulse.8 also saves for you as you go, so if you close the page
    and come back, you'll pick up where you left off.
 
-Next: [Sequencing](02-sequencing.md).
+Next: [Sequencing](02-sequencing.md). For a picture of how a sound reaches your speakers, see the [signal path](10-signal-path.md).
