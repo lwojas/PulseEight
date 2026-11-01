@@ -63,8 +63,8 @@ export const DUB_DIVISIONS = [
 /** How long a held punch takes to reach full effect, in 16th steps (0 = instantly). */
 export const SWEEPS = [
   { label: "NOW", steps: 0 },
-  { label: "1 BT", steps: 4 },
-  { label: "2 BT", steps: 8 },
+  { label: "1 BEAT", steps: 4 },
+  { label: "2 BEATS", steps: 8 },
   { label: "1 BAR", steps: 16 },
 ] as const;
 export const DEFAULT_SWEEP = 2;

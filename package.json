@@ -16,7 +16,7 @@
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "webdsp": "file:../webdsp"
+    "webdsp": "git+https://github.com/lwojas/webdsp.git"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

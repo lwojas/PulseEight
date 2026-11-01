@@ -150,7 +150,7 @@ interface SliderProps {
   def?: number;
   /** Text for the value side (default: the percentage). */
   readout?: string;
-  /** The value is a parameter lock (P-LOCK mode). */
+  /** The value is a parameter lock (TWEAK mode). */
   locked?: boolean;
 }
 

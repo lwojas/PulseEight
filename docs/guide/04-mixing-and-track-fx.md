@@ -1,57 +1,58 @@
 # Mixing & track FX
 
-## Level, mute, solo
+## Level, mute and solo
 
-Every track has a **level** fader, a **M**ute and a **S**olo button, on the **MIX** tab or the slim mixer column on a
-wide screen.
+Every track has a **level** fader, a **M**ute button and a **S**olo button. You'll find them on the **MIX** tab, or in the
+slim mixer column on larger screens.
 
-- **Level** is a gentle taper (quadratic): the bottom of the fader is fine control, and about 95% is unity. Each
-  engine also has a built-in trim, so the default levels are balanced when you start.
-- **Mute** silences a track. **Solo** silences everything that is not soloed; several tracks can be soloed together.
-- Mute and solo are **performance state**: they are not saved with the project and reset when you reload.
-- The fader and mute sit *before* the track's effect sends. A muted track's delay and reverb go quiet with it, and a
-  track at zero level sends nothing.
+- **Level**: the bottom of the fader gives you fine control over quiet levels, and about 95% is the original volume. Each
+  instrument also has its own built-in level setting, so everything is nicely balanced when you start.
+- **Mute** silences a track. **Solo** silences everything that isn't soloed, and you can solo several tracks together.
+- Mute and solo are for playing live. They aren't saved with your project and reset when you reload the page.
+- The fader and mute come *before* a track's delay and reverb. A muted track's echoes and reverb fade away with it, and a
+  track with its level at zero sends nothing.
 
-## Sends
+## Delay and reverb
 
-Each track has its own **delay** and **reverb**. They are separate effects per track, so the snare can sit in a short
-room while the clap rides a long delay.
+Each track has its own **delay** and **reverb**, so the snare can sit in a small room while the clap rides a long echo.
 
-Set the send amounts with the `DLY` and `REV` knobs on the **SOUND** panel. Delay mode and time, and reverb size, are on
-the **Track FX** panel.
+Set how much of each a track gets with the `DLY` and `REV` knobs on the **SOUND** panel. The delay's time and the
+reverb's size are on the **Track FX** panel.
 
-Below the send knobs, the **PUNCH FX** button gates the track's send into the [Punch FX](05-punch-fx.md) section. It is on by
-default. Switch it off and that track is ignored by punches: it is neither fed into throw effects nor cut by a takeover, so
-it plays on dry. It is separate from the delay and reverb sends, saved per pattern, and MIDI-mappable as `track.N.punchSend`.
+Below those knobs, the **PUNCH FX** button decides whether the track takes part in the [Punch FX](05-punch-fx.md). It's
+on by default. Switch it off and the track ignores punches completely: it isn't thrown into the echoes, and it isn't cut
+out when an effect takes over the mix, so it carries on playing dry. It's separate from the delay and reverb, is saved with
+each pattern, and can be controlled from MIDI.
 
 ### Delay
 
 | Mode | Time |
 |---|---|
-| **FREE** | A time in milliseconds, 40 – 900 ms on an exponential taper |
-| **BEAT** | A division of the project tempo: `1/16`, `1/8`, `1/8.`, `1/4`, `1/8T` |
+| **FREE** | Any time from 40 to 900 milliseconds |
+| **SYNC** | A note length at your tempo: `1/16`, `1/8`, `1/8.`, `1/4`, `1/8T` |
 
-BEAT mode follows the tempo, including tempo changes and an external MIDI clock. FREE stays at a fixed time. Feedback
-and tone are fixed to values that suit the material, so a delay always sits in the mix.
+SYNC follows the tempo, including tempo changes and an external MIDI clock. FREE stays at the same time whatever the
+tempo. The feedback and tone are set for you so the delay always sits well in the mix.
 
 ### Reverb
 
-A send plus a **SIZE**. Larger sizes lengthen the decay and open the damping, so a big room is also a brighter one.
+Each track has a send amount and a **SIZE**. Bigger sizes ring for longer and sound brighter, so a big room is also a
+brighter one.
 
-### Defaults
+### Starting settings
 
-New patterns start with sends set for a working mix: every track except the kick has some delay, and the snare, clap,
-percussion and FM have some reverb. Double-tap a send knob to return it to its default.
+New patterns start with a ready-to-go mix. Every track except the kick has a little delay, and the snare, clap, percussion and FM have some reverb. Double-tap a send knob to put it back to its starting
+value.
 
-## Track FX versus Punch FX
+## Track FX and Punch FX
 
 These are two different things, on purpose.
 
 | | Track FX | Punch FX |
 |---|---|---|
-| Purpose | Mixing: part of the sound of a track | Performance: something you do to the mix |
-| Scope | One track | The whole mix |
-| Active | Always, according to the send | Only while you hold a pad, or when written |
-| Stored in | The pattern | The pattern (settings and written lane) |
+| What it's for | Mixing: part of how a track sounds | Performing: something you do to the whole mix |
+| Affects | One track | The whole mix |
+| When it's on | Always, depending on the send amount | Only while you hold a pad, or when recorded |
+| Saved with | The pattern | The pattern (the settings and the recorded effects) |
 
 Next: [Punch FX](05-punch-fx.md).

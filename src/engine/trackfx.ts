@@ -20,7 +20,7 @@ export interface ReverbSend {
   size: number;
 }
 
-export const DELAY_MODES = ["FREE", "BEAT"] as const;
+export const DELAY_MODES = ["FREE", "SYNC"] as const;
 export const BEAT_DIVISIONS = DUB_DIVISIONS;
 
 /** Fixed delay character: only time/mode/send are exposed. */

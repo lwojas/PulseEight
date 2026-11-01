@@ -1,43 +1,45 @@
 # Projects & storage
 
-## Autosave
+## Automatic saving
 
-Pulse.8 saves automatically about half a second after you change anything, and again the moment you leave the page.
-Reload, close the tab, come back tomorrow: you are where you stopped. Autosave lives in your browser's IndexedDB, so
-it is private to that browser on that device.
+Pulse.8 saves for you about half a second after you change anything, and once more when you leave the page. You can
+reload, close the tab and come back tomorrow, and you'll be right where you stopped. This saved copy lives in your web
+browser, so it's private to that browser on that device.
 
-Saved: all 64 patterns, the chain, tempo, swing, key and scale, arpeggiator settings. Not saved: mute, solo,
-WRITE/ERASE arming, the current screen, and other performance state.
+What's saved: all 64 patterns, the chain, tempo, swing, key and scale, and arpeggiator settings. What isn't: mute, solo,
+whether REC FX or ERASE is switched on, which screen you're on, and other things that only matter while you're playing.
 
-## Named saves
+## Saving under a name
 
-- **SAVE** names the project (up to 40 characters). Saving under an existing name replaces it.
-- **LOAD** lists your saves with their dates. Tap one to load it; ✕ deletes it. Loading replaces the current project.
-- The project name is shown in the header (`UNSAVED` until named).
+- **SAVE** lets you name your project (up to 40 characters). Saving under a name you've already used replaces that save.
+- **LOAD** lists your saves with their dates. Tap one to open it, or tap ✕ to delete it. Loading replaces the project
+  you're working on.
+- The project name appears at the top of the screen (it says `UNSAVED` until you give it one).
 
 ## Export and import
 
 **☰ → Project file**
 
-- **EXPORT** downloads the project as `<name>.pulse8.json`.
-- **IMPORT** loads a file you exported.
+- **EXPORT** downloads your project as a file called `<name>.pulse8.json`.
+- **IMPORT** opens a file you exported earlier.
 
-Exports are how you back up work, move it to another device, or share it. Projects from earlier versions of Pulse.8 are
-upgraded automatically when they load.
+Exporting is the way to back up your work, move it to another device, or share it with someone. Projects made in earlier
+versions of Pulse.8 are updated automatically when you open them.
 
-## When storage is blocked
+## If saving is blocked
 
-Private or incognito windows, and browsers set to refuse site data, do not allow storage. Pulse.8 tells you: the SAVE
-button shows a warning, and nothing is autosaved. Open Pulse.8 in a normal window, or use **EXPORT** to keep your work
-as a file.
+Private or incognito windows, and browsers set to block website data, don't allow saving. If that happens, Pulse.8 tells
+you: the SAVE button shows a warning, and nothing is saved automatically. Open Pulse.8 in a normal window, or use
+**EXPORT** to keep your work as a file.
 
 ## Display
 
-**☰ → Display** has **Key highlight**, which lights the on-screen keys as notes play. It is remembered per browser.
+**☰ → Display** has **Key highlight**, which lights up the on-screen keys as notes play. Your choice is remembered in
+that browser.
 
-## Requirements
+## What you need
 
-A current browser with Web Audio (AudioWorklet) and IndexedDB. The first tap starts audio, because browsers require a
-gesture before they allow sound. MIDI additionally needs Web MIDI support ([MIDI](08-midi.md)).
+A recent browser such as Chrome, Edge, Firefox or Safari. Your first tap starts the sound, because browsers don't allow
+audio until you've interacted with the page. MIDI also needs a browser that supports it ([MIDI](08-midi.md)).
 
 Next: [MIDI](08-midi.md).

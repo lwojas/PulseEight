@@ -84,7 +84,7 @@ export function setStepGate(track: number, step: number, gate: number): void {
 
 // --- parameter locks (see plock.ts) -------------------------------------------------------------
 
-/** P-LOCK mode on or off. Locks are never touched by this; leaving the mode just returns the pads to normal editing. */
+/** TWEAK mode on or off. Locks are never touched by this; leaving the mode just returns the pads to normal editing. */
 export function setPlockMode(on: boolean): void {
   const st = getState();
   if (st.plock === on) return;
@@ -92,15 +92,15 @@ export function setPlockMode(on: boolean): void {
   setState({ plock: on, ...(!on && TRACKS[st.focus].role === "drum" ? { selStep: -1 } : {}) });
 }
 
-/** In P-LOCK mode a tap only selects the step (empty or not): nothing is added, removed or sounded differently. */
+/** In TWEAK mode a tap only selects the step (empty or not): nothing is added, removed or sounded differently. */
 function selectLockStep(track: number, step: number): void {
   setState({ focus: track, selStep: step });
   if (!getState().playing) controller.audition(track, getState().patterns[getState().pattern].tracks[track].steps[step].note);
 }
 
-/** A lockable control moved (a sound knob, a send: `id` is its lock id). In normal mode it edits the base. In P-LOCK mode on the
+/** A lockable control moved (a sound knob, a send: `id` is its lock id). In normal mode it edits the base. In TWEAK mode on the
  * focused track it writes only that parameter's lock on the selected step, and nothing when no step is selected (the base is not
- * for P-LOCK mode to change). A control of another track is not what P-LOCK mode is editing: it edits its base. */
+ * for TWEAK mode to change). A control of another track is not what TWEAK mode is editing: it edits its base. */
 export function setLockable(track: number, id: string, value: number): void {
   const st = getState();
   const p = lockParam(track, id);

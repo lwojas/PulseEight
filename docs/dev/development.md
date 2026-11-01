@@ -4,15 +4,15 @@
 
 ```bash
 git clone <this repo> Pulse8
-git clone https://github.com/lwojas/webdsp webdsp      # sibling directory
-cd webdsp && npm ci && cd ../Pulse8
+cd Pulse8
 npm install
 npm run dev                                            # http://localhost:5175 (next free port if taken)
 ```
 
-`package.json` depends on `"webdsp": "file:../webdsp"`, so webdsp must be a sibling checkout. Its `prepare` script builds
-it (tsup) during `npm install`, which is why it needs its own `npm ci` first. To depend on a published copy instead,
-change the dependency to `github:lwojas/webdsp`.
+`package.json` depends on `"webdsp": "git+https://github.com/lwojas/webdsp.git"` (its `main`), so `npm install` fetches and builds it
+(its `prepare` script runs tsup); no sibling checkout is needed. Pulse.8 needs `TriggerParams.envelope` and the LFO helpers
+(`lfoValueAt`, `LFO_DIVISIONS`), which are in webdsp `main`. To work on webdsp alongside, point the dependency at `file:../webdsp`
+locally and do not commit that.
 
 Node 22 is what CI uses.
 
@@ -34,7 +34,7 @@ TypeScript is `strict` with `noUnusedLocals` and `noUnusedParameters`; the build
 
 `vite.config.ts` excludes `webdsp`, `webdsp/worklet-url` and `webdsp/sequencing` from dependency pre-bundling. webdsp
 resolves its AudioWorklet module with `new URL('./engine-processor.js', import.meta.url)`, and pre-bundling would move
-the module and break that lookup. `server.fs.allow: [".."]` lets the dev server read the linked sibling.
+the module and break that lookup. `server.fs.allow: [".."]` lets the dev server read a linked sibling checkout of webdsp, if you use one.
 
 ## Tests
 
@@ -59,7 +59,7 @@ When a change touches one of the invariants below, add the test that pins it.
 ## Invariants worth protecting
 
 - `audio.ts` is the only importer of webdsp's runtime.
-- `state.ts`, `spec.ts`, `mangler.ts`, `arp.ts`, `scale.ts`, `song.ts` and `midi/clock.ts` stay free of React and audio.
+- `state.ts`, `spec.ts`, `plock.ts`, `lfo.ts`, `mangler.ts`, `arp.ts`, `scale.ts`, `song.ts` and `midi/clock.ts` stay free of React and the audio runtime.
 - The playhead and key highlights do not go through React or the store.
 - CC numbers appear only in `midi/mapping.ts`; channels are 1–16 everywhere except on the wire (`midi/control.ts`).
 - Parameter ids, punch ids and saved-array positions are permanent. Append; never reorder.
@@ -94,6 +94,7 @@ A failing test or type error stops the deploy. The `--base` is the repository na
 - FX writes are one punch per step per lane (step-quantised), three lanes per pattern.
 - Sound constants and presets are a first pass, set by measurement rather than by ear. Expect them to be tuned.
 - MIDI input is control only (CC, program change, clock). There is no MIDI note input or output.
+- LFOs are written once per tick (control rate) and do not play in the plugin's native sequence.
 - Web MIDI availability depends on the browser.
 
 ## Related documents

@@ -105,7 +105,7 @@ checks that the new pattern's first hit lands exactly on the boundary.
 
 **What stays with the page (needs the window open):** a punch the player holds (it is performed live; the lanes are left out of the
 sequence while it is held, as the live scheduler lets a held punch win), live keyboard arpeggios (aligned to the DAW's 16th grid
-while it plays), the playhead and key lights (derived from the DAW's position), and recording a punch into a lane (WRITE).
+while it plays), the playhead and key lights (derived from the DAW's position), and recording a punch into a lane (REC FX).
 
 ### MIDI from the DAW
 
@@ -190,3 +190,9 @@ instrument, sends to the track bus (protocol 4 bus targets). The next step write
 (a lock on a cycle's last step is undone on the loop). Where a lock lands on a beat that a per-bar state write also covers, the lock
 wins. It is the same rule as the live scheduler (`Groovebox.scheduleLocks`), and `lockWrites` builds both. When the DAW stops, the page
 forgets what the engine holds (`forgetLocks`) and re-sends the base sound.
+
+## What the native sequence does not carry yet
+
+- **LFOs do not run.** They are written from the page's controller tick (`Groovebox.applyLfos`), which does not drive the plugin's
+  native playback. A parameter an LFO points at sits at its base value, or at a step's lock. The LFO settings still save with the
+  session.

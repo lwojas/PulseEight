@@ -49,7 +49,7 @@ export const soundParam = (track: number, control: number): LockParam => lockPar
 /** The lock parameter with this id, if the track has it. */
 export const lockParam = (track: number, id: string): LockParam | undefined => lockParams(track).find((p) => p.id === id);
 
-/** The step P-LOCK mode is editing on `track`, if any: the selected step of the focused track while the mode is on. */
+/** The step TWEAK mode is editing on `track`, if any: the selected step of the focused track while the mode is on. */
 export function lockStep(s: Pick<AppState, "plock" | "focus" | "selStep" | "patterns" | "pattern">, track: number): Step | undefined {
   return s.plock && s.focus === track && s.selStep >= 0 ? s.patterns[s.pattern].tracks[track].steps[s.selStep] : undefined;
 }

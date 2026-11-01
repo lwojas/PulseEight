@@ -1,65 +1,71 @@
 # Getting started
 
-Pulse.8 runs in the browser. Open it, tap **START**, and a groove is already playing. Everything below is a way of
-changing that groove into yours.
+Pulse.8 is a groovebox that runs in your web browser. Open it, tap **START**, and a beat is already playing. Everything
+in this guide is a way of turning that beat into your own.
 
-## The machine
+## Meet the machine
 
-Eight tracks, one sound engine each, one shared effects section.
+Pulse.8 has eight tracks, each with its own sound, and one shared effects section. Six tracks are drums and two are
+melodic:
 
-| # | Track | Engine | Role |
+| # | Track | What it is | Kind |
 |---|---|---|---|
-| 1 | **KICK** | Sweep kick | drum |
-| 2 | **SNARE** | Two-mode snare (tone + noise) | drum |
-| 3 | **CL HAT** | Metallic hat, closed | drum |
-| 4 | **OP HAT** | Metallic hat, open | drum |
-| 5 | **CLAP** | Burst clap | drum |
-| 6 | **PERC** | Tuned tom | drum |
-| 7 | **ACID** | Acid bass: saw/square, resonant filter, accent, slide | melodic |
-| 8 | **FM** | Two-operator FM | melodic |
+| 1 | **KICK** | A kick with a pitch sweep | drum |
+| 2 | **SNARE** | A snare made of tone and noise | drum |
+| 3 | **CL HAT** | A metallic hi-hat, closed | drum |
+| 4 | **OP HAT** | A metallic hi-hat, open | drum |
+| 5 | **CLAP** | A burst clap | drum |
+| 6 | **PERC** | A tuned tom | drum |
+| 7 | **ACID** | A squelchy acid bass with accent and slide | melodic |
+| 8 | **FM** | A bright, bell-like FM synth | melodic |
 
-The two hats choke each other: an open hat is cut by the next closed hat, as it would be on a real kit.
+The drum tracks get big pads. ACID and FM get a keyboard and an arpeggiator.
 
-## The screen
+The two hats work like a real kit: an open hat is cut off when the next closed hat hits.
 
-Pulse.8 adapts to the device. The pieces are the same everywhere; only their arrangement changes.
+## Finding your way around
 
-**Phone** — five tabs along the bottom:
+Pulse.8 fits itself to your screen. On a phone, the controls are split across tabs. On a computer or tablet, nearly
+everything is on one page. The controls are the same either way.
 
-| Tab | What is on it |
+**On a phone**, five tabs run along the bottom:
+
+| Tab | What you'll find |
 |---|---|
-| **SEQ** | Track strip, step pads, keyboard, written-FX lane, punch pads |
-| **SOUND** | Kit/preset chips, the track's knobs, its delay and reverb sends |
+| **SEQ** | The track strip, step pads, keyboard, the effects you've recorded, and the punch pads |
+| **SOUND** | Kit and preset choices, the knobs, the DIST slider on the synths, and the track's delay and reverb |
 | **MIX** | Level, mute and solo for all eight tracks |
-| **FX** | Track FX (delay and reverb per track) and the Punch FX panel |
-| **PTN** | Pattern slots, copy, clear, chain |
+| **FX** | Each track's delay and reverb, plus the Punch FX |
+| **PTN** | Your pattern slots, copy, clear and chain |
 
-**Wide screens (1100 px and up)** — everything is on one page. Transport and pattern navigation run across the top.
-Below them a band holds the instrument knobs, the track FX and the Punch FX. The sequencer takes the rest of the
-width, with a slim mixer beside it. Drums get a block of large pads; the bass and FM tracks get a two-octave keyboard.
-In a short window (820 px high or less, such as a DAW's default plugin window) the band is compacted: the delay and reverb
-sends move to a strip under the knobs, so the keyboard stays on screen.
+**On a computer or large tablet**, everything sits on one page. The play controls and pattern buttons run across the top.
+Under them is a band with the instrument knobs, the track effects and the Punch FX. The sequencer fills the rest of the
+screen, with a slim mixer beside it. Drum tracks show big pads; the ACID and FM tracks show a two-octave keyboard.
 
-## The transport bar
+If your window is short (for example, when Pulse.8 is running as a plugin inside your music software), the delay and
+reverb knobs move to a strip under the main knobs so the keyboard still fits on screen.
 
-| Control | Does |
+## The play controls
+
+| Control | What it does |
 |---|---|
-| **PLAY / STOP** | Starts and stops the groove. `Space` does the same on a keyboard. |
-| **BPM** | `−` and `+` move the tempo in 1 BPM steps, from 60 to 200. |
-| **PTN / STEP** | The current pattern and the step being played. Tap to open the pattern list. |
-| **SWING** | Delays every second 16th note. 50% is straight; the knob goes to 75%. Double-tap to reset. |
-| **SAVE / LOAD / ☰** | Projects, key and scale, display options, MIDI. See [Projects](07-projects.md). |
+| **PLAY / STOP** | Starts and stops the beat. On a computer keyboard, press `Space`. |
+| **REC** | Records the notes you play on the keyboard onto the steps while the beat is playing. See [Sequencing](02-sequencing.md#recording-notes-as-you-play). |
+| **BPM** | `−` and `+` change the tempo one beat per minute at a time, from 60 to 200. |
+| **PTN / STEP** | Shows which pattern is playing and which step you're on. Tap it to open the pattern list. |
+| **SWING** | Pushes every second 16th note a little late for a looser feel. 50% is perfectly straight; the knob goes up to 75%. Double-tap to reset. |
+| **SAVE / LOAD / ☰** | Saving, loading, key and scale, display options and MIDI. See [Projects](07-projects.md). |
 
-## Controls you will use everywhere
+## Using the controls
 
-- **Knobs** turn by dragging up/down or left/right. **Double-tap** returns a knob to its default. The arrow keys nudge
-  a focused knob.
-- **Sliders** work the same way; double-tap resets.
-- **Destructive buttons** (CLR, CLEAR) ask you to tap twice. A stray tap never wipes a pattern.
+- **Knobs**: drag up/down or left/right to turn them. **Double-tap** a knob to put it back to its starting value. If a
+  knob is selected, the arrow keys nudge it.
+- **Sliders** work the same way, and a double-tap resets them too.
+- **Clear buttons** (anything that says CLR) ask you to tap twice, so one accidental tap never wipes your work.
 
 ## Keyboard shortcuts
 
-| Key | Does |
+| Key | What it does |
 |---|---|
 | `Space` | Play / stop |
 | `1` – `8` | Select a track and hear it |
@@ -67,13 +73,15 @@ sends move to a strip under the knobs, so the keyboard stays on screen.
 
 ## Your first five minutes
 
-1. **Tap START.** The demo groove plays.
-2. **Mute and solo.** Press **M** on the kick, then bring it back. Press **S** on the bass to hear it alone.
-3. **Change the drums.** Select a drum track, open **SOUND** (or look at the band on a wide screen) and pick another
-   **KIT**. All six drums change at once.
-4. **Move a knob.** Select **ACID**, turn **FILTER** and **RES** while it plays. Choose a **PRESET** such as `SQUELCH`.
-5. **Punch something in.** Hold **FILTER** or **SWEEP** in the punch pads. Let go. Now arm **WRITE**, hold a pad
-   during the loop, and the move is recorded and replays every time round.
-6. **Save.** Name it with **SAVE**. Pulse.8 also autosaves, so a reload picks up where you stopped.
+1. **Tap START.** The demo beat starts playing.
+2. **Mute and solo.** Press **M** on the kick to drop it out, then press it again to bring it back. Press **S** on the
+   bass to hear it on its own.
+3. **Change the drums.** Select a drum track, open **SOUND** (or look at the band across the top on a larger screen) and
+   pick another **KIT**. All six drums change at once.
+4. **Move a knob.** Select **ACID**, then turn **FILTER** and **RES** while the beat plays. Try a **PRESET** such as `SQUELCH`.
+5. **Punch something in.** Hold the **FILTER** or **SWEEP** pad, then let go. Now press **REC FX**, hold a pad while the
+   pattern loops, and your move is recorded and plays back every time round.
+6. **Save.** Give your project a name with **SAVE**. Pulse.8 also saves for you as you go, so if you close the page
+   and come back, you'll pick up where you left off.
 
 Next: [Sequencing](02-sequencing.md).

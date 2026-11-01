@@ -13,6 +13,7 @@ missed one. Run `npm test` and `npm run build` (which type-checks) after each.
 - [Change the MIDI map](#change-the-midi-map)
 - [Persist a new piece of project state](#persist-a-new-piece-of-project-state)
 - [Add an action and a control](#add-an-action-and-a-control)
+- [Add a lockable parameter (and LFO target)](#add-a-lockable-parameter-and-lfo-target)
 
 ---
 
@@ -21,7 +22,7 @@ missed one. Run `npm test` and `npm run build` (which type-checks) after each.
 A knob is a `ControlSpec` in `engine/spec.ts`.
 
 ```ts
-exp("cutoff", "FILTER", BassParam.Cutoff, 60, 2500, 250, "Hz"),   // exponential taper
+exp("cutoff", "FILTER", BassParam.Cutoff, 90, 1000, 250, "Hz"),   // exponential taper
 lin("envmod", "ENV MOD", BassParam.EnvMod, 0, 1, 0.6),             // linear, shown as %
 ```
 
@@ -201,3 +202,20 @@ If it is performance state (not part of the music), do not persist it; put it in
 5. If the change must reach the audio engine, you normally need nothing: the controller observes `patterns`, `mutes`,
    `solos` and `pattern`, and `applySound`/`applyMix` push what changed. New *kinds* of audio parameter belong in
    `audio.ts`.
+
+---
+
+## Add a lockable parameter (and LFO target)
+
+A *lockable* parameter is one a step can override (TWEAK) and an LFO can move. The list is `LOCKS` in `engine/plock.ts`.
+
+1. **`plock.ts`**: add a `LockParam` with a **permanent** `id` (it is the key in `Step.parameterLocks` and in `Lfo.target`, so it
+   is saved), a `label`, a `target` and a `base(tp)` that reads the pattern's value.
+2. **`audio.ts → lockWrites`**: add the branch that turns the value into engine writes. Use the **same keys** as the mixer or sound
+   writes use for that parameter, so a lock, an LFO and the base share caches.
+3. **`actions.ts → setLockable`** and **`params.ts`**: route the on-screen control and the parameter through `setLockable` so TWEAK
+   mode edits the step's lock instead of the base.
+4. **LFO list**: `useTargets` in `ui/LfoModal.tsx` decides which lock ids the menu offers for a track.
+5. `sanitizeLocks` and `sanitizeLfos` keep only known ids, so a renamed id is lost from old saves.
+
+Tests: `plock.test.ts`.

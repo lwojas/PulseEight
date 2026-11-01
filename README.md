@@ -12,10 +12,10 @@ engine, its own workflow, its own interface.
 
 - **Eight tracks.** Kick, snare, closed and open hat, clap, perc, **ACID** bass with accent and slide, and a two-operator
   **FM** voice. Every track has a handful of macro knobs tuned so the whole travel sounds good.
-- **A sequencer that gets out of the way.** 16 to 64 steps per pattern, tap to place, hold to accent, swing, a scale-aware
+- **A sequencer that gets out of the way.** 16 to 64 steps per pattern, tap to place, ACCENT button, swing, a scale-aware
   keyboard, and an arpeggiator on the melodic tracks.
 - **Punch FX.** Hold a pad and the effect sweeps in: filter, drive, crush, phaser, flanger, dub echo, roll, reverb, filter
-  sweep. Arm **WRITE** and the move, with its exact sweep shape, is recorded into the pattern and replayed on the audio clock.
+  sweep. Arm **REC FX** and the move, with its exact sweep shape, is recorded into the pattern and replayed on the audio clock.
 - **Proper mixing.** Level, mute and solo per track, plus an independent delay and reverb per track. Delay locks to the
   tempo or runs free.
 - **64 patterns, cueing and chains.** Switch patterns on the bar; the sound of the whole groove can change with them.
@@ -29,16 +29,15 @@ engine, its own workflow, its own interface.
 
 1. Open Pulse.8 and **tap START**. A demo groove is already playing.
 2. Mute a track, load a different **KIT**, turn the **ACID** filter, hold **FILTER** on the punch pads.
-3. Press **WRITE**, hold a pad through a loop, and listen to your move come back round.
+3. Press **REC FX**, hold a pad through a loop, and listen to your move come back round.
 
 The [User Guide](docs/guide/01-getting-started.md) takes it from there.
 
 ## Run it yourself
 
-Pulse.8 is built on [webdsp](https://github.com/lwojas/webdsp), which sits beside it as a sibling checkout.
+Pulse.8 is built on [webdsp](https://github.com/lwojas/webdsp), which `npm install` fetches from GitHub.
 
 ```bash
-git clone https://github.com/lwojas/webdsp ../webdsp && (cd ../webdsp && npm ci)
 npm install
 npm run dev        # http://localhost:5175
 npm test           # the logic test suite

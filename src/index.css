@@ -63,7 +63,7 @@ h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
 .col { display: contents; }
 .panel {
   display: none; flex-direction: column; min-height: 0; margin-top: 8px; padding: 10px;
-  background: var(--bay); border: 1px solid var(--rule-2); border-radius: var(--radius);
+  background: none; border: 0; border-top: 1px solid var(--rule); border-radius: 0;
 }
 .app[data-tab="fx"] .layout { overflow-y: auto; }
 .app[data-tab="seq"] .seq,
@@ -82,7 +82,7 @@ h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
 
 /* ---- header ----------------------------------------------------------------------------------- */
 
-.topbar { flex: none; display: flex; flex-direction: column; background: #0d0e11; border-bottom: 1px solid var(--rule); padding-top: env(safe-area-inset-top); }
+.topbar { flex: none; display: flex; flex-direction: column; background: #0d0e11; padding-top: env(safe-area-inset-top); }
 .transport { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
 .patternbar { display: none; }
 .logo { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; color: var(--bass); margin-right: auto; white-space: nowrap; }
@@ -248,7 +248,7 @@ button.oled { cursor: pointer; text-align: left; }
 /* ---- mixer ------------------------------------------------------------------------------------ */
 
 .mixer { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.mix-row { flex: 1 1 0; min-height: 30px; max-height: 46px; display: grid; grid-template-columns: 50px 1fr 34px; gap: 6px; align-items: stretch; padding: 2px 0; border-bottom: 1px solid var(--rule-2); }
+.mix-row { flex: 1 1 0; min-height: 30px; max-height: 46px; display: grid; grid-template-columns: 50px 1fr 34px; gap: 6px; align-items: stretch; padding: 2px 0; }
 .mix-row[data-dim="true"] { opacity: 0.55; }
 .mix-row .btn.sm { min-height: 0; min-width: 0; padding: 0; }
 .mix-ms { display: flex; flex-direction: column; gap: 3px; }
@@ -260,8 +260,11 @@ button.oled { cursor: pointer; text-align: left; }
 .slider-label { left: 8px; }
 .slider-value { right: 8px; }
 .slider[data-locked] { border-color: var(--fx); }
-.dist-bar { margin-top: 10px; }
-.dist-bar .slider { height: 32px; }
+.dist-bar { margin-top: 24px; }
+/* pill-shaped, so the faders read as different from the square buttons around them */
+.dist-bar .slider { height: 32px; border-radius: 999px; }
+.dist-bar .slider-label { left: 14px; }
+.dist-bar .slider-value { right: 14px; }
 
 /* ---- track FX (delay + reverb sends) ---------------------------------------------------------- */
 
@@ -302,8 +305,9 @@ button.oled { cursor: pointer; text-align: left; }
 .punch[data-held="true"][data-pingpong="true"]::before { animation: punch-sweep var(--sweep, 0s) linear infinite alternate; }
 .punch[data-held="true"] b, .punch[data-held="true"] small { color: var(--text); }
 @keyframes punch-sweep { to { transform: scaleX(1); } }
-.punchbar { flex: none; margin-top: 8px; padding-top: 2px; border-top: 1px solid var(--rule-2); }
+.punchbar { --acc: var(--fx); flex: none; margin-top: 8px; padding-top: 2px; border-top: 1px solid var(--rule-2); }
 .punchbar .write-controls { margin: 6px 0; }
+@media (max-width: 699px) { .punchbar { border-top: 0; } }
 .punch-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .punch[data-compact="true"] { min-height: calc(var(--punch-h) * 0.75); }
 .punch[data-compact="true"] b { font-size: 10px; letter-spacing: 0.02em; }
@@ -381,6 +385,7 @@ button.oled { cursor: pointer; text-align: left; }
   .band { grid-area: band; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(190px, 0.5fr) minmax(0, 1.1fr); gap: var(--gap); }
   .col-a { grid-area: seq; }
   .col-c { grid-area: mix; }
+  .band > .panel + .panel, .col-c { border-left: 1px solid var(--rule); padding-left: var(--gap); }
   .col { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
   .panel, .app[data-tab] .panel { display: flex; margin-top: 0; flex: 0 1 auto; padding: 10px; }
 
@@ -430,7 +435,7 @@ button.oled { cursor: pointer; text-align: left; }
   .band > .panel, .app[data-tab] .band > .panel { padding: 10px 12px; }
   .band .panel-title { margin-bottom: 6px; }
   .sound { display: grid; grid-template-columns: 150px minmax(0, 1fr) 118px; grid-template-rows: auto 1fr; grid-template-areas: "title knobs sends" "chips knobs sends"; column-gap: 16px; min-height: 0; }
-  /* the empty cell to the right of the P-LOCK buttons */
+  /* the empty cell to the right of the TWEAK buttons */
   .sound .lfo-btn { grid-row: 3; grid-column: 2; margin-top: 10px; align-self: start; }
   .sound .panel-title { grid-area: title; }
   .sound .chips { grid-area: chips; align-content: start; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -438,11 +443,11 @@ button.oled { cursor: pointer; text-align: left; }
   .sound .chip { min-height: 28px; padding: 2px 4px; font-size: 10px; min-width: 0; white-space: normal; line-height: 1.1; overflow-wrap: anywhere; }
   .sound-main { grid-area: knobs; align-self: center; min-width: 0; }
   .sound .knobs { --ks: var(--ks-lg); margin: 0; grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); }
-  .dist-bar { margin-top: 6px; }
+  .dist-bar { margin-top: 16px; }
   .dist-bar .slider { height: 24px; }
   .dist-bar .slider-label, .dist-bar .slider-value { font-size: 9px; letter-spacing: 0.04em; }
-  .dist-bar .slider-label { left: 5px; }
-  .dist-bar .slider-value { right: 5px; }
+  .dist-bar .slider-label { left: 10px; }
+  .dist-bar .slider-value { right: 10px; }
   .sends { grid-area: sends; margin: 0; min-width: 0; align-self: stretch; justify-content: center; padding: 4px 10px 6px; background: transparent; }
   .sound .sends-knobs { grid-area: auto; align-self: auto; --ks: 40px; margin: auto 0; grid-template-columns: repeat(2, 48px); gap: 4px; }
   .sends .knob-label { font-size: 9px; letter-spacing: 0.06em; }
@@ -493,7 +498,7 @@ button.oled { cursor: pointer; text-align: left; }
 @media (min-width: 1100px) and (max-height: 760px) {
   .sound .knobs { --ks: 44px; }
   .mangler .knobs { --ks: 40px; grid-template-columns: repeat(1, 66px); }
-  .band .panel-title { margin-bottom: 2px; }
+  .band .panel-title { margin-bottom: 8px; }
 }
 
 @media (min-width: 1100px) and (max-width: 1299px) {
@@ -543,7 +548,7 @@ button.oled { cursor: pointer; text-align: left; }
   /* sound: sends move from a tall right-hand column to a strip under the knobs */
   .sound { grid-template-columns: 130px minmax(0, 1fr); grid-template-rows: auto 1fr auto; grid-template-areas: "title knobs" "chips knobs" "plock sends"; column-gap: 12px; }
   .sound .plock-bar { grid-area: plock; margin-top: 4px; }
-  /* no empty cell here: it shares the P-LOCK strip, at its right end */
+  /* no empty cell here: it shares the TWEAK strip, at its right end */
   .sound .lfo-btn { grid-area: plock; grid-row: auto; grid-column: auto; justify-self: end; align-self: center; margin-top: 4px; }
   .sound .knobs { --ks: 44px; }
   .sound .chip { min-height: 24px; }
@@ -573,7 +578,7 @@ button.oled { cursor: pointer; text-align: left; }
 .project-title { font: 700 12px var(--font-mono); letter-spacing: 0.04em; overflow-wrap: anywhere; }
 .project-title[data-empty="true"] { color: var(--silk); }
 .menu-row .btn svg { vertical-align: -3px; margin-right: 4px; }
-@media (max-width: 699px) { .logo { display: none; } }
+@media (max-width: 699px) { .logo { display: none; } .project-menu { margin-left: auto; } .project-menu .btn.sm { min-height: 40px; min-width: 40px; } }
 @media (max-width: 699px) { .topbar .swing, .project-menu .head-only { display: none; } .menu-group.phone-group { display: flex; } }
 @media (min-width: 700px) { .project-menu .lbl { display: inline; } }
 
@@ -628,6 +633,15 @@ button.oled { cursor: pointer; text-align: left; }
 
 /* ---- LFO button + modal ------------------------------------------------------------------------ */
 .lfo-btn { margin-top: 10px; justify-self: start; }
+/* below the wide layout the TWEAK buttons and LFO share a row, LFO set apart with a wider gap; the wide
+   layout places them in its grid itself, so there the wrapper steps out of the way */
+.plock-row { display: flex; align-items: center; column-gap: 24px; }
+.plock-row .plock-bar { flex: 0 1 auto; min-width: 0; }
+@media (min-width: 1100px) { .plock-row { display: contents; } }
+/* both labels share one grid cell, so the button is as wide as the longer one and never resizes on toggle */
+.swap-label { display: inline-grid; justify-items: center; }
+.swap-label > span { grid-area: 1 / 1; }
+.swap-label > span[data-show="false"] { visibility: hidden; }
 .lfo-modal { width: min(460px, 100%); }
 .lfo-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid var(--rule); }
 .lfo-row:first-child { border-top: 0; padding-top: 0; }

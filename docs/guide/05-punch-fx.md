@@ -1,82 +1,86 @@
 # Punch FX
 
-Punch FX are the performance heart of Pulse.8. Nine effects live on one shared effect section. You hold a pad, the
-effect **sweeps in** while you hold it, and you let go to bring it back out. Arm **WRITE** and the move is recorded
-into the pattern, including how far the sweep had gone at every step.
+Punch FX are what make Pulse.8 fun to perform with. There are nine effects, all sharing one effects section. Hold a pad
+and the effect **fades in** while you hold it; let go and it fades back out. Press **REC FX** and your move is recorded
+into the pattern, including how far the effect had built up at every step.
 
 ## The pads
 
-| Pad | Effect | Type | Character knob |
+| Pad | Effect | Type | Main knob |
 |---|---|---|---|
-| **FILTER** | Closing low-pass with resonance | takeover | DEPTH |
-| **DRIVE** | Tape-style saturation | takeover | DRIVE |
-| **CRUSH** | Bit and sample-rate reduction | takeover | CRUSH |
-| **PHASE** | Sweeping phaser | takeover | RATE (0.4 – 3 Hz) |
-| **DUB** | Echo throw | throw | TIME (`1/16` … `1/8T`) |
-| **ROLL** | 1/16 feedback roll | throw | FEEDBACK |
-| **SWEEP** | Filter sweep, closing or opening | takeover | SHAPE |
-| **FLANGE** | Jet flanger | takeover | RATE (0.1 – 1.2 Hz) |
-| **VERB** | Reverb throw | throw | SIZE |
+| **FILTER** | A filter that closes, with resonance | takeover | DEPTH |
+| **DRIVE** | Warm, tape-style distortion | takeover | DRIVE |
+| **CRUSH** | Lo-fi crunch (bit and sample-rate reduction) | takeover | CRUSH |
+| **PHASE** | A swirling phaser | takeover | RATE (0.4 – 3 Hz) |
+| **DUB** | An echo throw | throw | TIME (`1/16` … `1/8T`) |
+| **ROLL** | A fast 1/16 repeating echo | throw | FEEDBACK |
+| **SWEEP** | A filter sweep, closing or opening | takeover | SHAPE |
+| **FLANGE** | A jet-plane flanger | takeover | RATE (0.1 – 1.2 Hz) |
+| **VERB** | A reverb throw | throw | SIZE |
 
-**Takeover** effects take over the mix. While held, every track's dry output is cut and the whole mix goes through the
-effect, so nothing leaks around it. **Throw** effects (DUB, ROLL, VERB) leave the mix running and lift each track's
-send into the effect, so what is playing is flung into an echo or a room.
+**Takeover** effects take over the mix. While you hold the pad, the normal sound of every track is cut and the whole mix
+plays through the effect, so nothing sneaks past it. **Throw** effects (DUB, ROLL, VERB) leave the mix playing and send
+a part of each track into the effect, so whatever is playing gets flung into an echo or a big room.
 
-Each pad has **one character knob**, shown in the Punch FX panel for the pad you last pressed. The setting is per
-pattern and is saved. Turn it before you press, or while you hold.
+Each pad has **one main knob**, shown in the Punch FX panel for the pad you pressed last. Its setting is saved with the
+pattern. Turn it before you press the pad, or while you hold it.
 
 ### SWEEP shapes
 
-| Shape | Does |
+| Shape | What it does |
 |---|---|
-| **CLOSE** | Filter closes from open to dark |
-| **CLOSE RES** | The same, with a resonant peak riding the sweep |
-| **OPEN** | Filter opens from dark to bright |
-| **OPEN RES** | The same, with a resonant peak |
+| **CLOSE** | The filter closes from open to dark |
+| **CLOSE RES** | The same, with a resonant whistle riding along |
+| **OPEN** | The filter opens from dark to bright |
+| **OPEN RES** | The same, with a resonant whistle |
 
-SWEEP is the one pad that keeps moving while you hold it: it swings back and forth for as long as the pad is down.
+SWEEP is the one pad that keeps moving while you hold it, swinging back and forth for as long as your finger is down.
 
-## Sweep in
+## Fading in
 
-A held effect does not snap on. It rises from nothing to full over the **SWEEP IN** time:
+A held effect doesn't jump straight on. It builds from nothing to full over the **RAMP** time:
 
-| Setting | Time to full |
+| Setting | Time to reach full |
 |---|---|
 | **NOW** | Instant |
-| **1 BT** | One beat |
-| **2 BT** | Two beats (default) |
+| **1 BEAT** | One beat |
+| **2 BEATS** | Two beats (the starting setting) |
 | **1 BAR** | One bar |
 
-The time is in beats at the project tempo, so it scales with BPM. Longer times are for builds, NOW is for stabs.
+These times follow your tempo, so they speed up and slow down with the BPM. Use longer times for builds and NOW for
+quick stabs.
 
-A released **VERB** keeps ringing for about two and a half seconds, so its tail is not cut off.
+When you let go of **VERB**, it keeps ringing out for about two and a half seconds so the tail isn't cut off.
 
-## Writing FX
+## Recording effects
 
-Press **WRITE** (the red dot). While the transport is playing and WRITE is armed, whatever pad you hold is recorded
-into one of the pattern's **three FX lanes**. Tabs above the pads switch the sequencer between **STEPS** and **FX1**, **FX2**, **FX3**, each showing just that lane
-(a tab is outlined when its lane holds something).
+Press **REC FX** (the red dot). While the beat is playing and REC FX is on, whichever pad you hold is recorded into one
+of the pattern's **three FX lanes**. The tabs above the pads switch the sequencer between **STEPS** and **LANE 1**,
+**LANE 2** and **LANE 3**, each showing only that lane. A tab has an outline when its lane has something recorded.
 
-- Each hold is one take. It goes into the **first empty lane**, and the lanes play back **together**, layered on the
-  one effect section. When all three lanes are taken, the next take wipes them all and starts again in lane 1.
-- One effect per step per lane. A lane stores the pad and **how far into its sweep it was**, and playback replays the
-  movement as smooth ramps scheduled on the audio clock, not as an on/off switch.
-- A pad pressed late in a step is aimed at the next step.
-- A pad you are holding always wins over what is written.
-- **ERASE** (hold it) clears every lane as the playhead passes over it.
-- Tap a cell of a lane to clear just that step. A lane's **CLR** wipes that lane (tap twice); **CLR** beside WRITE wipes all three.
-- **FX ON** switches playback of the written lanes on and off without losing them.
-- Two lanes that use the same part of the chain (say FILTER and SWEEP) fight over it: the higher lane wins.
+- Each time you hold a pad, that's one take. It goes into the **first empty lane**, and all the lanes play back **together**,
+  layered on the same effects section. When all three lanes are full, the next take wipes them all and starts again in
+  lane 1.
+- Each lane can hold one effect per step. It remembers the pad and **how far the effect had built up**, and plays back the
+  whole movement as a smooth fade rather than a simple on and off.
+- If you press a pad late in a step, it's placed on the next step.
+- A pad you're holding always overrides what's recorded.
+- **ERASE** (hold it down) clears every lane as the playhead passes over it.
+- Tap a cell in a lane to clear just that step. **CLR LANE** wipes a whole lane (tap twice); **CLR FX**, beside REC FX,
+  wipes all three.
+- The **ON / OFF** button beside ERASE switches the recorded effects on or off without losing them. It shows the current
+  state.
+- If two lanes use the same part of the effect (say FILTER and SWEEP), they compete for it and the higher lane wins.
 
-FX writing is step-quantised: an effect is *selected* on a step boundary, and its level is smooth in between.
+Recorded effects line up with the steps: each effect switches on at a step, and its level moves smoothly in between.
 
 ## Tips
 
-- Set **SWEEP IN** to **1 BAR**, hold **FILTER** from the start of a pattern, and release on the downbeat of the next:
-  a build and a drop.
-- **ROLL** with the feedback up, held for a bar and released, turns whatever is playing into a stuttering echo.
-- Write a **DUB** throw on the last step of a pattern so it echoes into the next.
-- FX are per pattern, so a chain can carry different written moves in each pattern. See
+- Set **RAMP** to **1 BAR**, hold **FILTER** from the start of a pattern, and let go on the first beat of the next one.
+  That's a build and a drop.
+- Hold **ROLL** for a bar with the feedback turned up, then release it, to turn whatever's playing into a stuttering echo.
+- Record a **DUB** throw on the last step of a pattern so it echoes into the next one.
+- Effects are saved per pattern, so each pattern in a chain can have different recorded moves. See
   [Patterns & songs](06-patterns-and-songs.md).
 
 Next: [Patterns & songs](06-patterns-and-songs.md).

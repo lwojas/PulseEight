@@ -44,7 +44,7 @@ function LfoRow({ track, index }: { track: number; index: number }) {
   );
 }
 
-/** The LFO button (beside the P-LOCK buttons of the sound panel) and the modal it opens. */
+/** The LFO button (beside the TWEAK buttons of the sound panel) and the modal it opens. */
 export function LfoButton({ track }: { track: number }) {
   const [open, setOpen] = useState(false);
   const active = useStore((s) => s.patterns[s.pattern].tracks[track].lfos.some((l) => l.on && l.target));

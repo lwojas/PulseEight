@@ -59,6 +59,14 @@ That last row is the one known compromise: punch *routing* changes land within a
 sixteenth-note resolution this is inaudible. If webdsp gains schedulable bus parameters, the `TimedQueue` and
 `Groovebox.when` can be deleted.
 
+## Locks and LFOs on the same parameter
+
+- A **step lock** (TWEAK) wins over the base: `scheduleLocks` sends the step's locked values at its time and, one step later, the
+  base value of anything the previous step locked. Keys held by a lock (`lockedKeys`) are left alone by the immediate base writes.
+- An **LFO** rides on the base: `applyLfos` writes `base + lfo × depth / 2`, summing several LFOs on one parameter, and puts the
+  base back when the LFO stops. Keys an LFO owns (`lfoKeys`) are likewise protected from immediate writes. While a lock holds a
+  parameter, the LFO leaves it alone.
+
 ## Caching
 
 `Groovebox` keeps `soundCache`, `busCache`, `fxCache`, `manglerCache` and `scheduled`. `applySound`, `applyMix`,

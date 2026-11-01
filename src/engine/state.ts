@@ -178,7 +178,7 @@ export interface AppState {
   // pattern bank tools
   chainEdit: boolean;
   copyArm: boolean;
-  /** P-LOCK mode: taps select steps (empty ones too) instead of editing them, and sound controls write the selected step's locks. */
+  /** TWEAK mode: taps select steps (empty ones too) instead of editing them, and sound controls write the selected step's locks. */
   plock: boolean;
 }
 

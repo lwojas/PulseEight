@@ -72,10 +72,24 @@ attribute on the old and new step and updates the step readout and the page prog
 attribute writes and zero React renders. The per-step position is not in the store at all. CSS animation uses
 `transform` and `opacity` only; there are no blurred shadows or filters on cells, knobs or sliders.
 
+## LFOs
+
+LFOs are not scheduled ahead. Every tick (`Controller.tick`), `Groovebox.applyLfos` reads the sounding pattern, computes each running
+LFO's offset from the audio clock (`lfoValueAt` from webdsp, free-running or locked to the beat grid's anchor and tempo) and writes
+`base + offset` to the parameters they point at. They are therefore control-rate (a 10 ms ticker) and run whether or not the
+transport is playing. They are not part of the plugin's native sequence (see [VST3 build](vst.md)).
+
+## Recording notes
+
+With REC on and the transport playing, `Controller.recordDown(track, note)` writes the note on the **nearest step boundary** to
+the audible position (`recordStep`), mapped through the track's own loop with `trackStepAt`. `recordUp` turns the time the key was
+held into the step's gate (`gateForHeld`, the nearest entry in `GATES`). The write is tagged to the pattern that was audible when the
+key went down, so recording across a pattern change lands in the right place.
+
 ## Holding a punch
 
 `punchDown` records `punchSince = audio time`. Every tick, `sweepHeldPunch` computes `sweepLevel(base, bpm, elapsed,
-id)` and pushes the chain to the new level. With WRITE armed, the level at each step's start is recorded into
+id)` and pushes the chain to the new level. With REC FX armed, the level at each step's start is recorded into
 the lane chosen for the hold (`pickWriteLane`: the first empty lane, or wipe all three and use the first) as steps
 become audible. `punchUp` returns the chain to the written lanes' layered value, or to rest.
 A released VERB keeps the reverb return open for `VERB_TAIL` (2.5 s).

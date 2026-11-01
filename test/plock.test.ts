@@ -64,7 +64,7 @@ describe("parameter locks: data", () => {
     expect(hasLocks(step(8))).toBe(false);
   });
 
-  it("ignores knob moves in P-LOCK mode when no step is selected (the base is untouched)", () => {
+  it("ignores knob moves in TWEAK mode when no step is selected (the base is untouched)", () => {
     const before = tp().sound[CUT];
     setPlockMode(true);
     setSoundControl(T, CUT, 0.01);
@@ -73,7 +73,7 @@ describe("parameter locks: data", () => {
   });
 });
 
-describe("P-LOCK mode on the sequencer", () => {
+describe("TWEAK mode on the sequencer", () => {
   it("selects empty and populated steps without adding or removing any", () => {
     const on0 = step(0).on; // demo bass line has a note on step 0
     expect(step(1).on).toBe(false);
@@ -204,7 +204,7 @@ describe("sends and MIDI-mapped knobs", () => {
     expect(step(3).parameterLocks).toEqual({ "fx.delaySend": 0.7 });
   });
 
-  it("a MIDI knob writes the selected step's lock in P-LOCK mode and reads what the UI shows", async () => {
+  it("a MIDI knob writes the selected step's lock in TWEAK mode and reads what the UI shows", async () => {
     const { getParam, setParam } = await import("../src/engine/params");
     setSound(T, CUT, 0.6);
     setPlockMode(true);
@@ -221,7 +221,7 @@ describe("sends and MIDI-mapped knobs", () => {
     expect(tp().sound[CUT]).toBe(0.9);
   });
 
-  it("a MIDI knob of another track edits its base in P-LOCK mode", async () => {
+  it("a MIDI knob of another track edits its base in TWEAK mode", async () => {
     const { setParam } = await import("../src/engine/params");
     setPlockMode(true);
     setState({ selStep: 5 });

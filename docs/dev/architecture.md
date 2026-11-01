@@ -55,6 +55,7 @@ musically, and [webdsp](https://github.com/lwojas/webdsp) for sound. The one rul
 | `actions.ts` | User-level edits. UI components and `params.ts` call these. They edit the store and audition. |
 | `stepcompile.ts`, `nativeseq.ts`, `hostplay.ts` | One step's notes, shared by the live scheduler and the native sequence; the song as a webdsp `Sequence` for a plugin host; following the DAW's transport. See [VST3 build](vst.md). |
 | `plock.ts` | Parameter locks: per-step overrides of a track's sound controls and sends (`Step.parameterLocks`), resolved against the pattern's base values. Pure. |
+| `lfo.ts` | Per-track LFOs: three per track, each pointed at any lockable parameter (`Groovebox.applyLfos` applies them every tick). Pure. |
 | `record.ts` | Realtime note recording: pure helpers that map a key press to the nearest step (`recordStep`) and a held time to a gate (`gateForHeld`). |
 | `controller.ts` | The groovebox controller: transport, the lookahead scheduler, pattern switching and chaining, the punch-in and write logic, the arpeggiator hosts. Owns the `Groovebox`. |
 | `audio.ts` | `Groovebox`: builds and drives the webdsp graph. Mixer, sends, the punch bus, scheduled parameter ramps. |
@@ -82,7 +83,7 @@ musically, and [webdsp](https://github.com/lwojas/webdsp) for sound. The one rul
 
 ### `src/ui/`
 
-`Header`, `Sequencer`, `Panels`, `ProjectMenu`, `ArpControl`, `Modal`, `controls` (Knob, Slider, press handling),
+`Header`, `Sequencer`, `Panels`, `ProjectMenu`, `ArpControl`, `LfoModal`, `Modal`, `controls` (Knob, Slider, press handling),
 plus small hooks. `src/index.css` is the whole stylesheet.
 
 ## Data flow, by example
@@ -113,8 +114,16 @@ See [Timing & scheduling](timing.md).
 The visual language lives in `concept/DESIGN/` (`DESIGN.md` tokens and a reference mock-up). `src/index.css` implements
 it: dark surfaces, three accent colours (`--drum`, `--bass`, `--tone`) and `--fx`, tabular mono readouts.
 
-Layout is CSS-only, by media query: phone (tabs, below 1100 px wide) and desktop (one page, 1100 px and up, with narrower
-overrides below 1300 and 1500 px). Desktop also has a short-window block (`min-width: 1100px` and `max-height: 820px`, with a
-tighter step at 680 px): the band is the tallest fixed-height row, so it is compacted there to keep the sequencer keyboard on
-screen. A DAW's default plugin window is about 1100×700, so check that size (and 1100×640) after any change to the band
-panels. Heights come from the `--cell-h`/`--keys-h` tokens at the top of the file.
+Layout is CSS-only, by media query, with one JavaScript exception: components read the phone query (`PHONE` in `useMedia.ts`)
+to choose shorter labels (CLR, ACC, SLD):
+
+| Query | Layout |
+|---|---|
+| `max-width: 699px` | **Phone**: five tabs; short labels |
+| `700px` and up, below `1100px` | **Tablet**: the same tabs with more room |
+| `min-width: 1100px` | **Desktop**: one page; transport and patterns on top, instrument band, sequencer with a slim mixer beside it. Narrower overrides below 1300 and 1500 px wide |
+| `min-width: 1100px` and `max-height: 820px` | **Short window**: the band is the tallest fixed-height row, so it is compacted (sends move to a strip under the knobs) to keep the sequencer keyboard on screen. A tighter step applies at 760 and 680 px high |
+
+A DAW's default plugin window is about 1100×700, so check that size (and 1100×640) after any change to the band panels. Heights
+come from the `--cell-h`/`--keys-h` tokens at the top of the stylesheet. Panels are separated by thin lines rather than boxes, and
+the distortion/filter sliders are pill-shaped so they read apart from the square buttons.

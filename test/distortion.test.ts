@@ -130,7 +130,7 @@ describe("bass distortion: locks and parameters", () => {
     expect(sanitizeLocks(0, { "fx.distortion": 0.3 })).toBeUndefined();
   });
 
-  it("is addressable by id and follows P-LOCK mode like the knobs", () => {
+  it("is addressable by id and follows TWEAK mode like the knobs", () => {
     expect(paramInfo(`track.${T + 1}.distortion`)).toMatchObject({ kind: "norm", def: 0 });
     expect(paramInfo("track.8.distortion")).toMatchObject({ kind: "norm", def: 0 });
     expect(paramInfo("track.1.distortion")).toBeUndefined();

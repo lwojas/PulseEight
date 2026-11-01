@@ -8,7 +8,7 @@
 //   track.<1-8>.sound.<key>                                            (the track's macro knobs)
 //   pattern.select                                                     (0-based pattern slot)
 //
-// Sound knobs, the delay/reverb sends and the bass distortion are lockable (plock.ts): in P-LOCK mode, with a step selected on the focused track, they read
+// Sound knobs, the delay/reverb sends and the bass distortion are lockable (plock.ts): in TWEAK mode, with a step selected on the focused track, they read
 // and write that step's lock rather than the base, exactly as the on-screen knobs do.
 // Ids are 1-based for tracks (what a person calls them) and never change once shipped: they are the
 // external contract (see docs/dev/midi.md). Volume, sends and sound belong to the pattern on screen, as
@@ -48,7 +48,7 @@ interface ParamDef extends ParamInfo {
 const tp = (s: AppState, t: number): TrackPattern => s.patterns[s.pattern].tracks[t];
 const idOf = (t: number, name: string) => `track.${t + 1}.${name}`;
 
-/** A lockable parameter's value as the controls show it: in P-LOCK mode with a step selected on the track, that step's (its lock over
+/** A lockable parameter's value as the controls show it: in TWEAK mode with a step selected on the track, that step's (its lock over
  * the base); otherwise the base. Writes go through `setLockable`, which edits the same thing. */
 const shown = (s: AppState, t: number, lockId: string): number => {
   const p = lockParam(t, lockId)!;

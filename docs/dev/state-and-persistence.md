@@ -15,6 +15,8 @@ AppState
 │       │    ├─ sound[]   normalised 0..1, one per control in spec.ts
 │       │    ├─ level, oct, preset (name of last loaded preset; cosmetic)
 │       │    ├─ last?: 1-based last step (absent = pattern length); the track loops there, see timing
+│       │    ├─ lfos[3]: { on, target, wave, sync, rate, div, depth }
+│       │    ├─ punch: boolean   does this track take part in the Punch FX
 │       │    ├─ dly: { send, mode, time, div }
 │       │    └─ rev: { send, size }
 │       ├─ fxLanes[3]  one recorded punch-in take each (FX_LANES):
@@ -22,7 +24,7 @@ AppState
 │       │    └─ fxLvl[64]  sweep level 0..1 at the start of each step
 │       └─ mangler: { sweep, param[] }   sweep-in time and character knob per punch
 └─ performance (not persisted)
-   mutes, solos, focus, page, selStep, follow, tab, seqView, write, erase, punch, punchSel,
+   mutes, solos, focus, page, selStep, follow, tab, seqView, write, erase, rec, plock, punch, punchSel,
    chainEdit, copyArm, audio, playing, playPattern, chainPos, cue, fxPlay, keyHighlight, storageBlocked
 ```
 

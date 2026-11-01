@@ -14,4 +14,5 @@ export function useMedia(query: string): boolean {
   return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches);
 }
 
+export const PHONE = "(max-width: 699px)";
 export const WIDE = "(min-width: 1100px)";
