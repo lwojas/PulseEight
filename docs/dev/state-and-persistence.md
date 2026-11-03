@@ -7,24 +7,28 @@ AppState
 ├─ project (persisted)
 │  ├─ projectName, bpm, swing, pattern (current), chain[], chainOn
 │  ├─ scale: { root, scale, preset }
+│  ├─ mixMode: "song" | "perform"        where faders, mutes and solos live
+│  ├─ perfLevels[8]                      the faders in PERFORM mode
+│  ├─ mixMode: "song" | "perform"        where faders, mutes and solos live
+│  ├─ perfLevels[8]                      the faders in PERFORM mode
 │  ├─ arp[8]: ArpSettings per track
 │  └─ patterns[64]: Pattern
 │       ├─ length (16 | 32 | 48 | 64)
 │       ├─ tracks[8]: TrackPattern
 │       │    ├─ steps[64]: { on, note, acc, slide, gate? }
 │       │    ├─ sound[]   normalised 0..1, one per control in spec.ts
-│       │    ├─ level, oct, preset (name of last loaded preset; cosmetic)
+│       │    ├─ level, oct, mute?, solo?      mixer state in SONG mode (absent = off), preset (name of last loaded preset; cosmetic)
 │       │    ├─ last?: 1-based last step (absent = pattern length); the track loops there, see timing
 │       │    ├─ lfos[3]: { on, target, wave, sync, rate, div, depth }
 │       │    ├─ punch: boolean   does this track take part in the Punch FX
-│       │    ├─ dly: { send, mode, time, div }
+│       │    ├─ dly: { send, mode, time, div, fb? }
 │       │    └─ rev: { send, size }
 │       ├─ fxLanes[3]  one recorded punch-in take each (FX_LANES):
 │       │    ├─ fx[64]     punch id per step (0 = none)
 │       │    └─ fxLvl[64]  sweep level 0..1 at the start of each step
 │       └─ mangler: { sweep, param[] }   sweep-in time and character knob per punch
 └─ performance (not persisted)
-   mutes, solos, focus, page, selStep, follow, tab, seqView, write, erase, rec, plock, punch, punchSel,
+   mutes, solos (PERFORM mode's), focus, page, selStep, follow, tab, seqView, write, erase, rec, plock, punch, punchSel,
    chainEdit, copyArm, audio, playing, playPattern, chainPos, cue, fxPlay, keyHighlight, storageBlocked
 ```
 

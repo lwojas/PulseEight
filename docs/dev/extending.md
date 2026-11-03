@@ -155,7 +155,7 @@ defs.push({
 - `kind` is `norm` (0..1), `int` (whole numbers, optional `labels`) or `bool`.
 - `get` reads `AppState`. `set` **must go through the same action the UI uses**, so the UI follows by itself.
 - **Ids are permanent once shipped.** They are the external contract: DAW automation lanes are bound to them.
-- If `set` changes state other than `patterns`, `mutes`, `solos`, `pattern` or `arp`, extend the early-return in
+- If `set` changes state other than `patterns`, `mutes`, `solos`, `mixMode`, `perfLevels`, `pattern` or `arp`, extend the early-return in
   `onParamChange` so the change is reported.
 
 Then give it a CC in `midi/mapping.ts` (next recipe). `paramManifest()` lists it for a host automatically.
@@ -200,7 +200,7 @@ If it is performance state (not part of the music), do not persist it; put it in
 3. Use `Knob`/`Slider` from `ui/controls.tsx` for a continuous value (they give double-tap reset and keyboard nudge), and `Stepper` (the BPM readout between − and +) for a small integer or decimal value.
 4. Do not read `getState()` during render, and do not call the controller to change state.
 5. If the change must reach the audio engine, you normally need nothing: the controller observes `patterns`, `mutes`,
-   `solos` and `pattern`, and `applySound`/`applyMix` push what changed. New *kinds* of audio parameter belong in
+   `solos`, `mixMode`, `perfLevels` and `pattern`, and `applySound`/`applyMix` push what changed. New *kinds* of audio parameter belong in
    `audio.ts`.
 
 ---

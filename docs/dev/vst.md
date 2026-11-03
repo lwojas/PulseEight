@@ -91,7 +91,7 @@ track simply wraps inside it, and a cue transition is laid out event by event wi
 **What is baked into the sequence:**
 - notes: drums, bass, FM, and the arpeggiator rendered from the sequencer's notes (the RND direction is seeded so a loop repeats;
   arps restart each song loop);
-- the per-pattern state **that differs between the layout's patterns**: sound, faders, mutes and solos, delay and reverb sends, track
+- the per-pattern state **that differs between the layout's patterns**: sound, faders, mutes and solos (SONG mode; in PERFORM mode `Song.perform` carries the shared faders and `mutes` / `solos` apply to every pattern), delay and reverb sends, track
   FX. Written at each pattern's start and at every bar, so a locate into the middle of a pattern is repaired within a bar. State that is
   the same everywhere is left to the page's immediate writes, so a single looping pattern carries none. These are mixer writes
   (`{ bus }` targets: webdsp protocol 4), which is what lets a pattern's mix change on the audio clock;

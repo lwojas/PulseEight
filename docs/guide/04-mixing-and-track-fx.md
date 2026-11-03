@@ -8,9 +8,22 @@ slim mixer column on larger screens.
 - **Level**: the bottom of the fader gives you fine control over quiet levels, and about 95% is the original volume. Each
   instrument also has its own built-in level setting, so everything is nicely balanced when you start.
 - **Mute** silences a track. **Solo** silences everything that isn't soloed, and you can solo several tracks together.
-- Mute and solo are for playing live. They aren't saved with your project and reset when you reload the page.
+- Where the faders, mutes and solos live depends on the **MIX MODE** in the menu. See below.
 - The fader and mute come *before* a track's delay and reverb. A muted track's echoes and reverb fade away with it, and a
   track with its level at zero sends nothing.
+
+### Song or perform
+
+The menu's **MIX MODE** switch decides whether the mixer belongs to each pattern or stays put while you change patterns.
+
+| Mode | Faders, mutes and solos |
+|---|---|
+| **SONG** | Each pattern keeps its own. Mute the kick on pattern 1 and leave it on in pattern 2, and it drops out and comes back as the patterns change. |
+| **PERFORM** | One set for the whole project. Mute the kick on pattern 1 and it stays muted on pattern 2, 3 and so on until you unmute it. |
+
+Switching to PERFORM starts from how the current pattern is mixed, so nothing jumps. Switching back to SONG returns each
+pattern to its own mix; PERFORM's settings are kept for next time. The mode, each pattern's mixer and PERFORM's faders are
+saved with your project. PERFORM's mutes and solos are not: they reset when you reload the page.
 
 ## Delay and reverb
 
@@ -29,10 +42,10 @@ each pattern, and can be controlled from MIDI.
 | Mode | Time |
 |---|---|
 | **FREE** | Any time from 40 to 900 milliseconds |
-| **SYNC** | A note length at your tempo: `1/16`, `1/8`, `1/8.`, `1/4`, `1/8T` |
+| **SYNC** | A note length at your tempo: `1/16T`, `1/16`, `1/8T`, `1/8`, `1/4T`, `1/8.`, `1/4`, `1/2T`, `1/4.`, `1/2` (T is a triplet, a dot is dotted), shortest first |
 
 SYNC follows the tempo, including tempo changes and an external MIDI clock. FREE stays at the same time whatever the
-tempo. The feedback and tone are set for you so the delay always sits well in the mix.
+tempo. The feedback and tone are set for you so the delay always sits well in the mix. **LONG**, next to the mode, lengthens the tail so the echoes ring on for many repeats (it fades; it does not build up).
 
 ### Reverb
 

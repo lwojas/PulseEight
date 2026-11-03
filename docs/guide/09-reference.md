@@ -53,8 +53,8 @@ Note names follow the convention that **MIDI note 24 is C1**. ACID plays C1 – 
 
 ## Delay times
 
-`1/16`, `1/8`, `1/8.` (dotted eighth), `1/4`, `1/8T` (eighth-note triplet). Used by the track delay in SYNC mode and by
-the DUB pad.
+The track delay in SYNC mode offers `1/16T`, `1/16`, `1/8T`, `1/8`, `1/4T`, `1/8.`, `1/4`, `1/2T`, `1/4.` and `1/2`. The DUB pad uses `1/16`,
+`1/8`, `1/8.` (dotted eighth), `1/4` and `1/8T` (eighth-note triplet).
 
 ## Hit strength
 

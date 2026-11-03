@@ -6,7 +6,7 @@ Pulse.8 saves for you about half a second after you change anything, and once mo
 reload, close the tab and come back tomorrow, and you'll be right where you stopped. This saved copy lives in your web
 browser, so it's private to that browser on that device.
 
-What's saved: all 64 patterns, the chain, tempo, swing, key and scale, and arpeggiator settings. What isn't: mute, solo,
+What's saved: all 64 patterns, the chain, tempo, swing, key and scale, arpeggiator settings, the MIX MODE, and each pattern's faders, mutes and solos. What isn't: PERFORM mode's mutes and solos,
 whether REC FX or ERASE is switched on, which screen you're on, and other things that only matter while you're playing.
 
 ## Saving under a name

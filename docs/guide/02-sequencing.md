@@ -108,7 +108,7 @@ Press the arpeggiator button on a melodic track to open its full settings. They'
 | **GATE** | On melodic tracks, sets the note length of the selected step. |
 
 Selecting a track plays it once when the beat is stopped. Mute and solo are on the track strip (on larger screens) and in
-the Mix tab.
+the Mix tab. They follow the MIX MODE in the menu (see Mixing).
 
 ## Changing single steps (TWEAK)
 
