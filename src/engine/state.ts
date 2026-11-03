@@ -51,6 +51,9 @@ export interface TrackPattern {
   /** Normalised 0..1 per control of the track's spec. */
   sound: number[];
   level: number;
+  /** Song mode: the track is muted / soloed in this pattern. Absent means off (and keeps a fresh pattern identical to a blank one). */
+  mute?: boolean;
+  solo?: boolean;
   /** Track sends (mixing): delay and reverb. */
   dly: DelaySend;
   rev: ReverbSend;
@@ -127,6 +130,15 @@ export function pickWriteLane(p: Pattern): number {
 /** Sequencer panel: the step pads, or one FX lane (its index). */
 export type SeqView = "steps" | number;
 
+export type MixMode = "song" | "perform";
+
+/** The fader, mute and solo a track has while `p` is the sounding pattern: its own in SONG mode, the shared performance set in PERFORM. */
+type MixSource = Pick<AppState, "mixMode" | "perfLevels" | "mutes" | "solos">;
+export const levelOf = (s: MixSource, p: Pattern, t: number): number => (s.mixMode === "perform" ? s.perfLevels[t] : p.tracks[t].level);
+export const muteOf = (s: MixSource, p: Pattern, t: number): boolean => (s.mixMode === "perform" ? s.mutes[t] : !!p.tracks[t].mute);
+export const soloOf = (s: MixSource, p: Pattern, t: number): boolean => (s.mixMode === "perform" ? s.solos[t] : !!p.tracks[t].solo);
+export const anySoloOf = (s: MixSource, p: Pattern): boolean => p.tracks.some((_, t) => soloOf(s, p, t));
+
 export type Tab = "seq" | "sound" | "mix" | "fx" | "ptn";
 
 export interface AppState {
@@ -143,6 +155,10 @@ export interface AppState {
   scale: ProjectScale;
   /** Arpeggiator settings per track (only the melodic tracks use theirs). */
   arp: ArpSettings[];
+  /** SONG: faders, mutes and solos belong to each pattern. PERFORM: one set (`perfLevels`, `mutes`, `solos`) rides across pattern switches. */
+  mixMode: MixMode;
+  /** The faders in PERFORM mode. Saved with the project. */
+  perfLevels: number[];
   // performance state
   mutes: boolean[];
   solos: boolean[];
@@ -330,6 +346,8 @@ export function initialState(): AppState {
     pattern: 0,
     scale: defaultScale(),
     arp: Array.from({ length: NUM_TRACKS }, defaultArp),
+    mixMode: "song",
+    perfLevels: Array.from({ length: NUM_TRACKS }, (_, i) => defaultLevel(i)),
     mutes: new Array(NUM_TRACKS).fill(false),
     solos: new Array(NUM_TRACKS).fill(false),
     focus: BASS_TRACK,

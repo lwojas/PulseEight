@@ -165,7 +165,7 @@ export class HostPlayback {
 
   onState(next: AppState, prev: AppState): void {
     const song =
-      next.patterns !== prev.patterns || next.mutes !== prev.mutes || next.solos !== prev.solos || next.arp !== prev.arp ||
+      next.patterns !== prev.patterns || next.mutes !== prev.mutes || next.solos !== prev.solos || next.mixMode !== prev.mixMode || next.perfLevels !== prev.perfLevels || next.arp !== prev.arp ||
       next.swing !== prev.swing || next.fxPlay !== prev.fxPlay || next.punch !== prev.punch;
     // Stopped, the project's own pattern or chain is what a start would play. Playing, the audible pattern moves `pattern`: not a change.
     const where = !this._playing && (next.pattern !== prev.pattern || next.chain !== prev.chain || next.chainOn !== prev.chainOn);
@@ -218,7 +218,7 @@ export class HostPlayback {
 
   private build(): Sequence | null {
     const st = getState();
-    const song: Song = { patterns: st.patterns, mutes: st.mutes, solos: st.solos, swing: st.swing, arp: st.arp, fxPlay: st.fxPlay, lanes: st.punch === 0 };
+    const song: Song = { patterns: st.patterns, mutes: st.mutes, solos: st.solos, perform: st.mixMode === "perform" ? st.perfLevels : undefined, swing: st.swing, arp: st.arp, fxPlay: st.fxPlay, lanes: st.punch === 0 };
     const ctx = { ids: this.gb.ids, clamp: this.gb.clampFx };
     if (!this._playing || !this.t) return steadySequence(song, baseLayout(st), ctx);
     const beat = hostBeatAt(this.t, this.gb.now);

@@ -7,7 +7,7 @@ import type { AudibleStep, HostPlayback } from "./hostplay";
 import { laneLayers, layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { TRACKS } from "./spec";
-import { MAX_CHAIN, pickWriteLane, trackStepAt, type Pattern } from "./state";
+import { MAX_CHAIN, muteOf, pickWriteLane, soloOf, trackStepAt, type Pattern } from "./state";
 import { MELODIC, StepCompiler, type StepNote } from "./stepcompile";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
@@ -474,7 +474,7 @@ class Controller {
   private onState(next: ReturnType<typeof getState>, prev: ReturnType<typeof getState>): void {
     if (!this.gb) return;
     if (
-      next.patterns !== prev.patterns || next.mutes !== prev.mutes || next.solos !== prev.solos ||
+      next.patterns !== prev.patterns || next.mutes !== prev.mutes || next.solos !== prev.solos || next.mixMode !== prev.mixMode || next.perfLevels !== prev.perfLevels ||
       next.pattern !== prev.pattern
     ) {
       this.syncNow();
@@ -512,7 +512,13 @@ class Controller {
 
   private mixInput(takeover: boolean, boost: number): MixInput {
     const st = getState();
-    return { pattern: this.soundPattern(), mutes: st.mutes, solos: st.solos, takeover, boost };
+    const pattern = this.soundPattern();
+    const track = pattern.tracks.map((_, t) => t);
+    return {
+      pattern, takeover, boost,
+      mutes: track.map((t) => muteOf(st, pattern, t)), solos: track.map((t) => soloOf(st, pattern, t)),
+      levels: st.mixMode === "perform" ? st.perfLevels : undefined,
+    };
   }
 
   /** Put the punch bus in the state for these punches (none = resting). */

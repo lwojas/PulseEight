@@ -10,7 +10,7 @@ import { PUNCHES } from "../engine/mangler";
 import { isChromatic, notesInRange, rootAtOrAbove, rootAtOrBelow, type ProjectScale } from "../engine/scale";
 import { hasLocks } from "../engine/plock";
 import { noteName, TRACKS } from "../engine/spec";
-import { DEFAULT_GATE, FX_LANES, GATE_BUTTONS, GATES, LENGTHS, PAGE, trackLast } from "../engine/state";
+import { anySoloOf, DEFAULT_GATE, FX_LANES, GATE_BUTTONS, GATES, LENGTHS, muteOf, PAGE, soloOf, trackLast } from "../engine/state";
 import { getState, setState, useStore } from "../engine/store";
 import { ArpControl } from "./ArpControl";
 import { Stepper, usePress } from "./controls";
@@ -156,9 +156,9 @@ function SeqViewTabs() {
 function RailItem({ track }: { track: number }) {
   const spec = TRACKS[track];
   const focused = useStore((s) => s.focus === track);
-  const muted = useStore((s) => s.mutes[track]);
-  const solo = useStore((s) => s.solos[track]);
-  const dim = useStore((s) => (s.solos.some(Boolean) ? !s.solos[track] : s.mutes[track]));
+  const muted = useStore((s) => muteOf(s, s.patterns[s.pattern], track));
+  const solo = useStore((s) => soloOf(s, s.patterns[s.pattern], track));
+  const dim = useStore((s) => (anySoloOf(s, s.patterns[s.pattern]) ? !soloOf(s, s.patterns[s.pattern], track) : muteOf(s, s.patterns[s.pattern], track)));
   return (
     <div className="rail-item" style={accentStyle(track)} data-focus={focused} data-dim={dim}>
       <button

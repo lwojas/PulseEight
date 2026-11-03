@@ -2,6 +2,7 @@
 // file IMPORT / EXPORT.
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { PRODUCT } from "../product";
+import { setMixMode } from "../engine/actions";
 import { controller } from "../engine/controller";
 import { deleteSave, exportProject, hasHostFiles, importProject, importProjectFromHost, listSaves, loadSaved, saveProject, type SavedProject } from "../engine/persist";
 import { refreshKeys } from "../engine/keyhl";
@@ -95,6 +96,7 @@ export function ProjectMenu() {
   const projectName = useStore((s) => s.projectName);
   const keyHl = useStore((s) => s.keyHighlight);
   const scale = useStore((s) => s.scale);
+  const mixMode = useStore((s) => s.mixMode);
   const swing = useStore((s) => s.swing);
   // on phones SAVE / LOAD live in the menu, so the header's save button is not there to anchor to
   const phone = useMedia("(max-width: 699px)");
@@ -197,6 +199,14 @@ export function ProjectMenu() {
               <button type="button" className="btn" onClick={() => open(blocked ? "blocked" : "save")}>{SAVE_ICON} SAVE</button>
               <button type="button" className="btn" onClick={() => open("load")}>{LOAD_ICON} LOAD</button>
             </div>
+          </section>
+          <section className="menu-group" aria-label="Mixer mode">
+            <span className="silk">MIX MODE</span>
+            <div className="menu-row">
+              <button type="button" className="btn" data-active={mixMode === "song"} aria-pressed={mixMode === "song"} onClick={() => setMixMode("song")}>SONG</button>
+              <button type="button" className="btn" data-active={mixMode === "perform"} aria-pressed={mixMode === "perform"} onClick={() => setMixMode("perform")}>PERFORM</button>
+            </div>
+            <p className="modal-note">SONG: each pattern keeps its own faders, mutes and solos. PERFORM: one set of faders, mutes and solos stays put while you switch patterns.</p>
           </section>
           <section className="menu-group" aria-label="Key and scale">
             <span className="silk">KEY &amp; SCALE</span>

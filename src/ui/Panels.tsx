@@ -9,8 +9,8 @@ import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../e
 import { hasLocks, lockStep, soundParam } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, hasDistortion, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
-import { BANK_SIZE, defaultLevel, MAX_CHAIN, NUM_PATTERNS } from "../engine/state";
-import { BEAT_DIVISIONS, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatDist, formatFreeDelay } from "../engine/trackfx";
+import { BANK_SIZE, defaultLevel, levelOf, MAX_CHAIN, muteOf, NUM_PATTERNS, soloOf } from "../engine/state";
+import { BEAT_DIVISIONS, BEAT_ORDER, beatPosition, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatDist, formatFreeDelay } from "../engine/trackfx";
 import { getState, setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
 import { LfoButton } from "./LfoModal";
@@ -163,13 +163,14 @@ export function SoundPanel() {
 
 function MixRow({ track }: { track: number }) {
   const spec = TRACKS[track];
-  const level = useStore((s) => s.patterns[s.pattern].tracks[track].level);
-  const mute = useStore((s) => s.mutes[track]);
-  const solo = useStore((s) => s.solos[track]);
+  const level = useStore((s) => levelOf(s, s.patterns[s.pattern], track));
+  const mute = useStore((s) => muteOf(s, s.patterns[s.pattern], track));
+  const solo = useStore((s) => soloOf(s, s.patterns[s.pattern], track));
+  const phone = useMedia(PHONE);
   return (
     <div className="mix-row" style={accentStyle(track)} data-dim={mute}>
       <button type="button" className="mix-name" onClick={() => setState({ focus: track, selStep: -1 })}>{spec.name}</button>
-      <Slider label="LVL" value={level} def={defaultLevel(track)} onChange={(v) => setLevel(track, v)} />
+      <Slider label="LVL" vertical={phone} value={level} def={defaultLevel(track)} onChange={(v) => setLevel(track, v)} />
       <span className="mix-ms">
         <button type="button" className="btn sm" data-active={mute} aria-pressed={mute} aria-label={`Mute ${spec.name}`} onClick={() => toggleMute(track)}>M</button>
         <button type="button" className="btn sm solo" data-active={solo} aria-pressed={solo} aria-label={`Solo ${spec.name}`} onClick={() => toggleSolo(track)}>S</button>
@@ -199,7 +200,7 @@ export function TrackFxPanel() {
   const rev = useStore((s) => s.patterns[s.pattern].tracks[track].rev);
   const spec = TRACKS[track];
   const beat = dly.mode === 1;
-  const divN = BEAT_DIVISIONS.length;
+  const divN = BEAT_ORDER.length;
   return (
     <div className="trackfx" style={accentStyle(track)}>
       <header className="panel-title">
@@ -209,21 +210,12 @@ export function TrackFxPanel() {
       </header>
       <div className="tfx-groups">
         <section className="tfx-group" aria-label="Delay send">
-          <div className="tfx-head">
-            <span className="silk">DELAY</span>
-            <div className="seg" role="group" aria-label="Delay timing mode">
-              {DELAY_MODES.map((m, i) => (
-                <button key={m} type="button" className="chip" data-active={dly.mode === i} aria-pressed={dly.mode === i} onClick={() => setDelay(track, { mode: i as 0 | 1 })}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="tfx-head"><span className="silk">DELAY</span></div>
           <div className="knobs tfx-knobs" style={{ "--n": 1 } as CSSProperties}>
             {beat ? (
               <Knob
-                key="beat" label="TIME" value={dly.div / (divN - 1)} def={1 / (divN - 1)} steps={divN} accent="var(--fx)"
-                readout={BEAT_DIVISIONS[dly.div].label} onChange={(v) => setDelay(track, { div: Math.round(v * (divN - 1)) })}
+                key="beat" label="TIME" value={beatPosition(dly.div) / (divN - 1)} def={beatPosition(1) / (divN - 1)} steps={divN} accent="var(--fx)"
+                readout={BEAT_DIVISIONS[dly.div].label} onChange={(v) => setDelay(track, { div: BEAT_ORDER[Math.round(v * (divN - 1))] })}
               />
             ) : (
               <Knob
@@ -231,6 +223,21 @@ export function TrackFxPanel() {
                 readout={formatFreeDelay(dly.time)} onChange={(v) => setDelay(track, { time: v })}
               />
             )}
+          </div>
+          <div className="tfx-btns">
+            <div className="seg" role="group" aria-label="Delay timing mode">
+              {DELAY_MODES.map((m, i) => (
+                <button key={m} type="button" className="chip" data-active={dly.mode === i} aria-pressed={dly.mode === i} onClick={() => setDelay(track, { mode: i as 0 | 1 })}>
+                  {m}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button" className="chip" data-active={!!dly.fb} aria-pressed={!!dly.fb} title="Long feedback: the echoes ring on"
+              onClick={() => setDelay(track, { fb: dly.fb ? 0 : 1 })}
+            >
+              LONG
+            </button>
           </div>
         </section>
         <section className="tfx-group" aria-label="Reverb send">
@@ -241,6 +248,7 @@ export function TrackFxPanel() {
               readout={`${Math.round(rev.size * 100)}%`} onChange={(v) => setReverb(track, { size: v })}
             />
           </div>
+          <div className="tfx-btns" aria-hidden="true" />
         </section>
       </div>
     </div>

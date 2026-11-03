@@ -30,7 +30,7 @@ import { lockParam, lockParams, type LockParam } from "./plock";
 import { DIST_TRACKS, hasDistortion, normToUnits, NUM_TRACKS, TRACKS } from "./spec";
 import { trackStepAt, type Pattern } from "./state";
 import {
-  BEAT_DIVISIONS, DELAY_FEEDBACK_BEAT, DELAY_FEEDBACK_FREE, DELAY_TONE, distDriveDb, distMix, distTrimDb, freeDelaySeconds, reverbDamping, reverbDecay,
+  BEAT_DIVISIONS, DELAY_TONE, delayFeedback, distDriveDb, distMix, distTrimDb, freeDelaySeconds, reverbDamping, reverbDecay,
 } from "./trackfx";
 
 /** Work that has to land at a point on the audio clock but is not a sample-accurate event
@@ -56,6 +56,8 @@ export interface MixInput {
   pattern: Pattern;
   mutes: readonly boolean[];
   solos: readonly boolean[];
+  /** Fader levels overriding the pattern's own (PERFORM mode). */
+  levels?: readonly number[];
   takeover: boolean;
   boost: number;
 }
@@ -95,7 +97,7 @@ export function mixWrites(ids: GraphIds, mix: MixInput, group: "pattern" | "punc
     const tp = mix.pattern.tracks[t];
     if (group !== "punch") {
       // the fader/mute sits before every tap, so a muted track's delay and reverb go quiet too
-      bus(ids.trackBus[t], `${t}:g`, NodeParam.BusGain, audible ? levelToGain(tp.level) : 0);
+      bus(ids.trackBus[t], `${t}:g`, NodeParam.BusGain, audible ? levelToGain(mix.levels?.[t] ?? tp.level) : 0);
       bus(ids.trackBus[t], `${t}:d`, NodeParam.BusSendAmount, tp.dly.send);
       bus(ids.busB[t], `${t}:r`, NodeParam.BusSendAmount, tp.rev.send);
     }
@@ -125,10 +127,10 @@ export function trackFxWrites(ids: GraphIds, pattern: Pattern, clamp: (param: nu
     if (beat) {
       const div = BEAT_DIVISIONS[Math.min(BEAT_DIVISIONS.length - 1, Math.max(0, dly.div))].value;
       fx(bus, dub, "dubDiv", NodeParam.DubDelayDivision, div);
-      fx(bus, dub, "dubFb", NodeParam.DubDelayFeedback, DELAY_FEEDBACK_BEAT);
+      fx(bus, dub, "dubFb", NodeParam.DubDelayFeedback, delayFeedback(dly));
     } else {
       fx(bus, free, "freeTime", NodeParam.DelayTime, freeDelaySeconds(dly.time));
-      fx(bus, free, "freeFb", NodeParam.DelayFeedback, DELAY_FEEDBACK_FREE);
+      fx(bus, free, "freeFb", NodeParam.DelayFeedback, delayFeedback(dly));
     }
     fx(ids.reverbBus[t], ids.reverbFx[t], "decay", NodeParam.ReverbDecay, reverbDecay(rev.size));
     fx(ids.reverbBus[t], ids.reverbFx[t], "damp", NodeParam.ReverbDamping, reverbDamping(rev.size));

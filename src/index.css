@@ -260,6 +260,9 @@ button.oled { cursor: pointer; text-align: left; }
 .slider-label { left: 8px; }
 .slider-value { right: 8px; }
 .slider[data-locked] { border-color: var(--fx); }
+.slider[data-vertical] { cursor: ns-resize; }
+.slider[data-vertical] .slider-fill { transform-origin: 50% 100%; }
+.slider[data-vertical] .slider-value { top: auto; bottom: 6px; left: 0; right: 0; transform: none; text-align: center; }
 .dist-bar { margin-top: 24px; }
 /* pill-shaped, so the faders read as different from the square buttons around them */
 .dist-bar .slider { height: 32px; border-radius: 999px; }
@@ -274,7 +277,9 @@ button.oled { cursor: pointer; text-align: left; }
 .tfx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-height: 28px; }
 .tfx-head .silk { color: var(--fx); font-weight: 700; }
 .seg { display: flex; gap: 3px; }
-.seg .chip { min-height: 26px; padding: 0 10px; font-size: 10px; }
+/* the delay's buttons sit under its knob; the reverb keeps an empty row of the same height, so the two knobs line up */
+.tfx-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 26px; margin-top: 4px; }
+.seg .chip, .tfx-btns .chip { min-height: 26px; padding: 0 10px; font-size: 10px; }
 .tfx-knobs { margin-top: 2px; grid-template-columns: minmax(0, 1fr); }
 
 /* ---- FX sends (live in the sound panel) ------------------------------------------------------- */
@@ -455,10 +460,11 @@ button.oled { cursor: pointer; text-align: left; }
   .trackfx { height: 100%; }
   .tfx-groups { flex-direction: row; gap: 8px; flex: 1 1 auto; min-height: 0; }
   .tfx-group { flex: 1 1 0; min-width: 0; padding: 4px 6px 6px; background: transparent; display: flex; flex-direction: column; }
-  .tfx-knobs { --ks: 44px; margin: auto 0; }
+  .tfx-knobs { --ks: 44px; margin: 2px 0 0; }
+  .tfx-btns { margin-top: auto; padding-top: 4px; }
   .tfx-head { min-height: 24px; flex-wrap: wrap; gap: 2px 4px; }
   .trackfx .panel-title .silk { display: none; }
-  .seg .chip { min-height: 22px; padding: 0 5px; font-size: 9px; }
+  .seg .chip, .tfx-btns .chip { min-height: 22px; padding: 0 5px; font-size: 9px; }
   .mangler { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto 1fr; grid-template-areas: "title title title" "knobs mid pads"; column-gap: 14px; }
   .mangler .panel-title { grid-area: title; }
   .mangler .knobs { grid-area: knobs; grid-template-columns: repeat(1, 76px); margin: 0; align-self: center; }
@@ -519,6 +525,8 @@ button.oled { cursor: pointer; text-align: left; }
   .tfx-group { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 2px 6px; }
   .tfx-head { flex-direction: column; align-items: flex-start; flex-wrap: nowrap; min-height: 0; }
   .tfx-knobs { margin: 0; width: auto; flex: none; grid-template-columns: 56px; }
+  .tfx-btns { flex-basis: 100%; min-height: 22px; margin-top: 0; }
+  .tfx-btns:empty { display: none; }
 
   /* punch FX: controls wrap in flex rows above a full-width pad grid; vertical space is plentiful here */
   .mangler { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "knobs mid" "pads pads"; column-gap: 10px; row-gap: 8px; }
@@ -582,6 +590,12 @@ button.oled { cursor: pointer; text-align: left; }
 @media (max-width: 699px) { .topbar .swing, .project-menu .head-only { display: none; } .menu-group.phone-group { display: flex; } }
 @media (min-width: 700px) { .project-menu .lbl { display: inline; } }
 
+/* desktop: the menu's buttons and selects are slimmer (touch sizes stay for narrow screens) */
+@media (min-width: 700px) {
+  .modal .btn, .modal .modal-input { min-height: 28px; height: 28px; padding: 0 10px; font-size: 12px; }
+  .modal .btn.sm { min-width: 28px; padding: 0 6px; }
+  .modal-item { padding: 5px 10px; }
+}
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(5, 6, 8, 0.7); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .modal { width: min(360px, 100%); max-height: 80vh; display: flex; flex-direction: column; background: var(--bay); border: 1px solid var(--rule); border-radius: var(--radius); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--rule-2); }
@@ -590,12 +604,15 @@ button.oled { cursor: pointer; text-align: left; }
 .modal-form, .modal-menu { display: flex; flex-direction: column; gap: 10px; }
 .menu-group { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--rule-2); }
 .menu-group:last-child { padding-bottom: 0; border-bottom: 0; }
-.menu-group > .silk { letter-spacing: 0.12em; }
+.menu-group > .silk { font-size: 13px; letter-spacing: 0.12em; color: var(--text); }
 .menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .menu-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.menu-field .silk { font-size: 10px; }
+.menu-field .silk { font-size: 11px; }
 .modal-input { min-height: 38px; padding: 0 10px; background: var(--bg); color: var(--text); border: 1px solid var(--rule); border-radius: var(--radius); font: 14px var(--font-mono); }
-.modal-select { appearance: auto; min-width: 0; }
+/* every select: a custom chevron inset from the right edge instead of the native one */
+select.chip.variant, .modal-input.modal-select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa0aa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 6px; padding-right: 28px; }
+select.chip.variant { background-color: var(--cap); background-position: right 8px center; padding-right: 24px; }
+.modal .modal-select { min-width: 0; padding-right: 28px; }
 .modal-input:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
 .modal-primary { background: var(--bass); border-color: var(--bass); color: var(--ink); }
 .modal-note { margin: 0; font-size: 12px; color: var(--silk); }
@@ -649,3 +666,15 @@ button.oled { cursor: pointer; text-align: left; }
 .lfo-head, .lfo-body { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .lfo-head .variant { flex: 1 1 140px; min-width: 0; }
 .lfo-knobs { --ks: 44px; margin: 0 0 0 auto; grid-template-columns: repeat(2, 64px); }
+
+/* phone mixer: eight vertical faders in two rows of four, with big mute/solo buttons */
+@media (max-width: 699px) {
+  .mixer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto repeat(2, minmax(0, 1fr)); gap: 10px 8px; row-gap: 22px; }
+  .mixer > .panel-title { grid-column: 1 / -1; }
+  .mix-row, .app .mix-row { max-height: none; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 0; }
+  .mix-row .mix-name { flex: none; text-align: center; font-size: 12px; }
+  .mix-row .slider { flex: 1 1 0; min-height: 90px; }
+  .mix-row .slider-value { left: 0; right: 0; font-size: 11px; }
+  .mix-ms { flex: none; gap: 6px; }
+  .mix-ms .btn.sm, .mix-row .btn.sm { flex: none; height: 36px; font-size: 14px; font-weight: 700; }
+}

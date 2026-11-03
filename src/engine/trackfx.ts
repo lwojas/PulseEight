@@ -1,7 +1,7 @@
 // Track sends: a conventional delay send and reverb send per track (mixing, always available).
 // Deliberately small: delay is Free (a time in ms) or Beat (a tempo division); reverb is send + size.
 // These are separate from the punch FX in mangler.ts, which are performed, not mixed.
-import { DUB_DIVISIONS } from "./mangler";
+import { DubDelayDivision } from "webdsp";
 import { TRACKS } from "./spec";
 
 export interface DelaySend {
@@ -10,8 +10,10 @@ export interface DelaySend {
   mode: 0 | 1;
   /** Free time, normalised 0..1 (see `freeDelaySeconds`). */
   time: number;
-  /** Beat division, index into `DUB_DIVISIONS`. */
+  /** Beat division, index into `BEAT_DIVISIONS` (saved: the list only grows). */
   div: number;
+  /** 1 = LONG feedback: the echoes ring on instead of fading in a few repeats. Absent (older saves) = 0. */
+  fb?: 0 | 1;
 }
 
 export interface ReverbSend {
@@ -21,11 +23,31 @@ export interface ReverbSend {
 }
 
 export const DELAY_MODES = ["FREE", "SYNC"] as const;
-export const BEAT_DIVISIONS = DUB_DIVISIONS;
+/** Sync divisions. The index is what a pattern saves, so the first five keep their original places and new ones are only appended. */
+export const BEAT_DIVISIONS = [
+  { label: "1/16", value: DubDelayDivision.Sixteenth },
+  { label: "1/8", value: DubDelayDivision.Eighth },
+  { label: "1/8.", value: DubDelayDivision.DottedEighth },
+  { label: "1/4", value: DubDelayDivision.Quarter },
+  { label: "1/8T", value: DubDelayDivision.EighthTriplet },
+  { label: "1/16T", value: DubDelayDivision.SixteenthTriplet },
+  { label: "1/4T", value: DubDelayDivision.QuarterTriplet },
+  { label: "1/4.", value: DubDelayDivision.DottedQuarter },
+  { label: "1/2T", value: DubDelayDivision.HalfTriplet },
+  { label: "1/2", value: DubDelayDivision.Half },
+] as const;
+/** The order the TIME knob steps through them (shortest echo first): the `BEAT_DIVISIONS` index at each knob position. */
+export const BEAT_ORDER = [5, 0, 4, 1, 6, 2, 3, 8, 7, 9] as const;
+export const beatPosition = (div: number): number => Math.max(0, BEAT_ORDER.indexOf(div as never));
 
-/** Fixed delay character: only time/mode/send are exposed. */
+/** Fixed delay character: only time/mode/send and the LONG switch are exposed. */
 export const DELAY_FEEDBACK_FREE = 0.4;
 export const DELAY_FEEDBACK_BEAT = 0.45;
+/** LONG feedback: a tail of many repeats, still well short of the delay's own limit (0.95) so it fades instead of building. */
+export const DELAY_FEEDBACK_LONG_FREE = 0.68;
+export const DELAY_FEEDBACK_LONG_BEAT = 0.74;
+export const delayFeedback = (d: DelaySend): number =>
+  d.mode === 1 ? (d.fb ? DELAY_FEEDBACK_LONG_BEAT : DELAY_FEEDBACK_BEAT) : d.fb ? DELAY_FEEDBACK_LONG_FREE : DELAY_FEEDBACK_FREE;
 export const DELAY_TONE = 3500;
 
 /** Free delay time: 40 ms .. 900 ms on an exponential taper. */
@@ -59,5 +81,5 @@ export const newDist = (): number => 0;
 export const defaultDelaySend = (track: number) => TRACKS[track].mix.delay;
 export const defaultReverbSend = (track: number) => TRACKS[track].mix.reverb;
 
-export const newDelay = (track: number): DelaySend => ({ send: defaultDelaySend(track), mode: 1, time: 0.5, div: 1 });
+export const newDelay = (track: number): DelaySend => ({ send: defaultDelaySend(track), mode: 1, time: 0.5, div: 1, fb: 0 });
 export const newReverb = (track: number): ReverbSend => ({ send: defaultReverbSend(track), size: 0.5 });

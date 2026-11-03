@@ -97,9 +97,9 @@ describe("input", () => {
   it("mutes at 64 and above, unmutes below", () => {
     const { control } = rig();
     control.handle([0xb0, 20, 64]);
-    expect(getState().mutes[0]).toBe(true);
+    expect(!!getState().patterns[0].tracks[0].mute).toBe(true);
     control.handle([0xb0, 20, 63]);
-    expect(getState().mutes[0]).toBe(false);
+    expect(!!getState().patterns[0].tracks[0].mute).toBe(false);
   });
   it("sets a stepped control by index (FM colour) and a sound knob by position", () => {
     const { control } = rig();
@@ -187,7 +187,7 @@ describe("parameter origin", () => {
     setParam("track.1.volume", 7, "host");
     setParam("track.1.mute", 0.7, "host");
     expect(getState().patterns[0].tracks[0].level).toBe(1);
-    expect(getState().mutes[0]).toBe(true);
+    expect(!!getState().patterns[0].tracks[0].mute).toBe(true);
   });
   it("describes every parameter for a host", () => {
     const m = paramManifest();

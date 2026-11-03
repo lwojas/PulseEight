@@ -152,15 +152,17 @@ interface SliderProps {
   readout?: string;
   /** The value is a parameter lock (TWEAK mode). */
   locked?: boolean;
+  /** Drag up/down (fills from the bottom) instead of left/right. */
+  vertical?: boolean;
 }
 
-/** A chunky horizontal bar you drag across. */
-export function Slider({ label, value, onChange, accent, def, readout, locked }: SliderProps) {
+/** A chunky bar you drag across (or up, when `vertical`). */
+export function Slider({ label, value, onChange, accent, def, readout, locked, vertical }: SliderProps) {
   const lastTap = useRef(0);
   const active = useRef(false);
   const set = (e: RPointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    onChange(clamp01((e.clientX - rect.left) / rect.width));
+    onChange(vertical ? clamp01((rect.bottom - e.clientY) / rect.height) : clamp01((e.clientX - rect.left) / rect.width));
   };
   const key = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "ArrowRight" || e.key === "ArrowUp") onChange(clamp01(value + 0.05));
@@ -171,6 +173,7 @@ export function Slider({ label, value, onChange, accent, def, readout, locked }:
   return (
     <div
       className="slider"
+      data-vertical={vertical || undefined}
       data-locked={locked || undefined}
       role="slider"
       tabIndex={0}
@@ -192,7 +195,7 @@ export function Slider({ label, value, onChange, accent, def, readout, locked }:
       onPointerCancel={() => (active.current = false)}
       onKeyDown={key}
     >
-      <div className="slider-fill" style={{ transform: `scaleX(${value})` }} />
+      <div className="slider-fill" style={{ transform: vertical ? `scaleY(${value})` : `scaleX(${value})` }} />
       <span className="slider-label">{label}</span>
       <span className="slider-value">{readout ?? Math.round(value * 100)}</span>
     </div>
