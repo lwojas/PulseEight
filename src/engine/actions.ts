@@ -3,6 +3,8 @@
 import { normalizeArp, type ArpSettings } from "./arp";
 import { controller } from "./controller";
 import type { Lfo } from "./lfo";
+import { sanitizeSidechain, scLoops, sidechainOf, type Sidechain } from "./sidechain";
+import { chainLabel, chainMove, chainRemove, chainRepeats } from "./song";
 import { clearLocks, lockParam, setLock, soundParam } from "./plock";
 import { kitSounds, KITS, presetsFor, synthSound } from "./presets";
 import { hasDistortion, TRACKS } from "./spec";
@@ -15,6 +17,17 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 /** Edit LFO `index` of a track (in the current pattern). */
 export function setLfo(track: number, index: number, patch: Partial<Lfo>): void {
   editPattern((p) => { Object.assign(p.tracks[track].lfos[index], patch); });
+}
+
+/** Edit the track's sidechain (in the current pattern): the first edit creates it, and a source that would close a loop is refused. */
+export function setSidechain(track: number, patch: Partial<Sidechain>): void {
+  editPattern((p) => {
+    const tracks = p.tracks;
+    const next = sanitizeSidechain({ ...sidechainOf(tracks[track], track), ...patch }, track);
+    if (!next) return;
+    if (next.on && scLoops(tracks, track, next.src)) return;
+    tracks[track].sc = next;
+  });
 }
 
 // --- steps -------------------------------------------------------------------------------------
@@ -304,9 +317,26 @@ export function clearPattern(): void {
 // --- chain ---------------------------------------------------------------------------------------
 
 export function removeChainEntry(index: number): void {
-  setState((s) => ({ chain: s.chain.filter((_, i) => i !== index) }));
+  setState((s) => ({ chain: chainRemove(s.chain, index), chainSel: -1 }));
+}
+
+/** Select an entry to edit (a tap on the selected one lets go of it). */
+export function selectChainEntry(index: number): void {
+  setState((s) => ({ chainSel: s.chainSel === index ? -1 : index }));
+}
+
+export function moveChainEntry(index: number, dir: -1 | 1): void {
+  setState((s) => ({ chain: chainMove(s.chain, index, dir), chainSel: s.chain[index + dir] ? index + dir : s.chainSel }));
+}
+
+export function setChainRepeats(index: number, repeats: number): void {
+  setState((s) => ({ chain: chainRepeats(s.chain, index, repeats) }));
+}
+
+export function setChainLabel(index: number, label: string): void {
+  setState((s) => ({ chain: chainLabel(s.chain, index, label) }));
 }
 
 export function clearChain(): void {
-  setState({ chain: [], chainOn: false });
+  setState({ chain: [], chainOn: false, chainSel: -1 });
 }

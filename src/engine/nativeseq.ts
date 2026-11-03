@@ -31,7 +31,8 @@ import { lockParams } from "./plock";
 import { NUM_TRACKS } from "./spec";
 import { StepCompiler, MELODIC, type StepNote } from "./stepcompile";
 import type { ArpSettings } from "./arp";
-import { trackLast, trackStepAt, type Pattern } from "./state";
+import { chainPasses, isOnePattern, runStarts } from "./song";
+import { trackLast, trackStepAt, type ChainEntry, type Pattern } from "./state";
 
 /** The tempo the compile runs at: 120 bpm makes a second exactly two quarter notes. */
 const REF_STEP_SECONDS = 15 / 120;
@@ -73,6 +74,8 @@ const beatsOf = (p: Pattern) => p.length * STEP_BEATS;
 
 interface Entry {
   pattern: number;
+  /** Steps from the start of this pattern's run to this entry (see `runStarts`): the `run` of its first step. */
+  run: number;
   /** Beats from the layout's start. */
   start: number;
   beats: number;
@@ -80,28 +83,29 @@ interface Entry {
 
 function entriesOf(song: Pick<Song, "patterns">, layout: Layout): { entries: Entry[]; cycle: number } {
   const entries: Entry[] = [];
+  const runs = runStarts(layout.patterns, (p) => song.patterns[p].length);
   let at = 0;
-  for (const pattern of layout.patterns) {
+  for (const [i, pattern] of layout.patterns.entries()) {
     const beats = beatsOf(song.patterns[pattern]);
-    entries.push({ pattern, start: at, beats });
+    entries.push({ pattern, run: runs[i], start: at, beats });
     at += beats;
   }
   return { entries, cycle: at };
 }
 
 /** The pattern a layout repeats for good (a looping pattern, or a chain of one pattern), if it is just one. Its run never restarts, so a track
- * shorter than the pattern loops on its own through the repeats; any other layout starts each pattern's tracks afresh (`trackStepAt`). */
+ * shorter than the pattern loops on its own through the repeats. In any other layout a run starts when the pattern changes and when the cycle
+ * comes round (`runStarts`), and carries on through consecutive repeats of one pattern. */
 function repeated(layout: Layout): number | null {
-  const first = layout.patterns[0];
-  return first !== undefined && layout.patterns.every((p) => p === first) ? first : null;
+  return isOnePattern(layout.patterns) ? layout.patterns[0] : null;
 }
 
 /** Beats in one cycle of the layout. */
 export const cycleBeats = (patterns: readonly Pattern[], layout: Layout): number => entriesOf({ patterns }, layout).cycle;
 
 /** The layout a stopped transport would start from: the chain when it is on, otherwise the selected pattern looping. */
-export function baseLayout(s: { chainOn: boolean; chain: readonly number[]; pattern: number }): Layout {
-  return { patterns: s.chainOn && s.chain.length ? [...s.chain] : [s.pattern], origin: 0 };
+export function baseLayout(s: { chainOn: boolean; chain: readonly ChainEntry[]; pattern: number }): Layout {
+  return { patterns: s.chainOn && s.chain.length ? chainPasses(s.chain) : [s.pattern], origin: 0 };
 }
 
 export interface SongPos {
@@ -111,7 +115,7 @@ export interface SongPos {
   /** Step within the pattern, and how far into it (0..1 of a step). */
   step: number;
   frac: number;
-  /** Steps into this pattern's run: counted from the layout's start when it is one pattern repeated, else the step itself (see `trackStepAt`). */
+  /** Steps into this pattern's run: counted from the layout's start when it is one pattern repeated, else from the start of its run of the pattern (see `trackStepAt`). */
   run: number;
 }
 
@@ -124,7 +128,7 @@ export function positionAt(patterns: readonly Pattern[], layout: Layout, beat: n
   const e = entries[entry];
   const inPattern = Math.max(0, x - e.start) / STEP_BEATS;
   const step = Math.min(Math.floor(inPattern + 1e-9), patterns[e.pattern].length - 1);
-  const run = repeated(layout) === null ? step : Math.floor((beat - layout.origin) / STEP_BEATS + 1e-9);
+  const run = repeated(layout) === null ? e.run + step : Math.floor((beat - layout.origin) / STEP_BEATS + 1e-9);
   return { entry, pattern: e.pattern, step, frac: Math.max(0, inPattern - step), run };
 }
 
@@ -142,10 +146,12 @@ export function nextBoundary(patterns: readonly Pattern[], layout: Layout, min: 
 }
 
 /** The layout after cueing `cued` at `boundary`: the chain from the cued pattern's place in it, or the pattern alone. */
-export function cueLayout(patterns: readonly Pattern[], chainOn: boolean, chain: readonly number[], cued: number, boundary: number): Layout {
-  if (chainOn && chain.length) {
+export function cueLayout(patterns: readonly Pattern[], chainOn: boolean, entries: readonly ChainEntry[], cued: number, boundary: number): Layout {
+  if (chainOn && entries.length) {
+    const chain = chainPasses(entries);
     const ix = chain.indexOf(cued);
-    if (ix >= 0) {
+    // one pattern over and over is that pattern looping: its run starts at the cue, so the layout does too
+    if (ix >= 0 && !isOnePattern(chain)) {
       const offset = chain.slice(0, ix).reduce((sum, p) => sum + beatsOf(patterns[p]), 0);
       return { patterns: [...chain], origin: boundary - offset };
     }
@@ -217,7 +223,7 @@ function cycleEvents(song: Song, layout: Layout, ctx: NativeCtx): Loop & { loops
   for (const e of entries) {
     const pat = song.patterns[e.pattern];
     for (let s = 0; s < pat.length; s++) {
-      compiler.step(pat, s, s, stepCount++, (e.start / STEP_BEATS + s) * REF_STEP_SECONDS, clock, (n) => events.push(noteEvent(n, ctx.ids)), (t) => !apart.has(t));
+      compiler.step(pat, s, e.run + s, stepCount++, (e.start / STEP_BEATS + s) * REF_STEP_SECONDS, clock, (n) => events.push(noteEvent(n, ctx.ids)), (t) => !apart.has(t));
     }
   }
 
@@ -309,7 +315,7 @@ function lockEvents(song: Song, entries: Entry[], ctx: NativeCtx, skip: Readonly
     for (const e of entries) {
       const pat = song.patterns[e.pattern];
       for (let s = 0; s < pat.length; s++) {
-        slots.push({ pat, step: trackStepAt(pat, t, s, s), beat: e.start + s * STEP_BEATS + (s % 2 === 1 ? swingBeats : 0) });
+        slots.push({ pat, step: trackStepAt(pat, t, s, e.run + s), beat: e.start + s * STEP_BEATS + (s % 2 === 1 ? swingBeats : 0) });
       }
     }
     out.push(...trackLockEvents(t, slots, ctx));

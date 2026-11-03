@@ -1,7 +1,7 @@
 // Sound, mixer, FX mangler and pattern panels.
 import { useRef, useState, type CSSProperties } from "react";
 import {
-  clearChain, clearPattern, clearStepLocks, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setLockable, setPlockMode, setPunchParam,
+  clearChain, clearPattern, clearStepLocks, moveChainEntry, selectChainEntry, setChainLabel, setChainRepeats, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setLockable, setPlockMode, setPunchParam,
   setPunchSend, setReverb, setSoundControl, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
@@ -9,11 +9,13 @@ import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../e
 import { hasLocks, lockStep, soundParam } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, hasDistortion, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
-import { BANK_SIZE, defaultLevel, levelOf, MAX_CHAIN, muteOf, NUM_PATTERNS, soloOf } from "../engine/state";
+import { passAt, passCount } from "../engine/song";
+import { BANK_SIZE, defaultLevel, levelOf, MAX_CHAIN, MAX_LABEL, MAX_PASSES, muteOf, NUM_PATTERNS, soloOf } from "../engine/state";
 import { BEAT_DIVISIONS, BEAT_ORDER, beatPosition, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatDist, formatFreeDelay } from "../engine/trackfx";
 import { getState, setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
 import { LfoButton } from "./LfoModal";
+import { SidechainButton } from "./SidechainModal";
 import { PHONE, useMedia } from "./useMedia";
 import { Modal } from "./Modal";
 import { ConfirmButton } from "./Sequencer";
@@ -134,7 +136,10 @@ export function SoundPanel() {
       </div>
       <div className="plock-row">
         <PlockBar track={track} />
-        <LfoButton track={track} />
+        <div className="lfo-btn fx-btns">
+          <LfoButton track={track} />
+          <SidechainButton track={track} />
+        </div>
       </div>
       <div className="sends" role="group" aria-label="FX sends">
         <span className="silk">SENDS</span>
@@ -369,7 +374,7 @@ function Slot({ index }: { index: number }) {
   const playing = useStore((s) => s.playing && s.playPattern === index);
   const cued = useStore((s) => s.cue === index);
   const filled = useStore((s) => s.patterns[index].tracks.some((t) => t.steps.some((st) => st.on)));
-  const chainIdx = useStore((s) => s.chain.indexOf(index));
+  const chainIdx = useStore((s) => s.chain.findIndex((e) => e.pattern === index));
   return (
     <button
       type="button" className="slot" data-active={active} data-playing={playing} data-cue={cued} data-filled={filled}
@@ -383,28 +388,71 @@ function Slot({ index }: { index: number }) {
 }
 
 function PatternTools({ chainControls = true }: { chainControls?: boolean }) {
-  const phone = useMedia(PHONE);
   const chain = useStore((s) => s.chain);
   const chainOn = useStore((s) => s.chainOn);
   const chainEdit = useStore((s) => s.chainEdit);
   const copyArm = useStore((s) => s.copyArm);
   return (
     <div className="ptn-tools">
-      <button type="button" className="btn sm" data-active={copyArm} aria-pressed={copyArm} onClick={() => setState({ copyArm: !copyArm, chainEdit: false })}>
+      <button type="button" className="btn sm" data-active={copyArm} aria-pressed={copyArm} onClick={() => setState({ copyArm: !copyArm, chainEdit: false, chainSel: -1 })}>
         {copyArm ? "TAP SLOT" : "COPY"}
       </button>
       <ConfirmButton label="CLR PTN" short="CLR" onConfirm={clearPattern} />
       {chainControls && (
         <>
           <span className="silk tools-label">CHAIN</span>
-          <button type="button" className="btn sm" data-active={chainEdit} aria-pressed={chainEdit} onClick={() => setState({ chainEdit: !chainEdit, copyArm: false })}>
+          <button type="button" className="btn sm" data-active={chainEdit} aria-pressed={chainEdit} onClick={() => setState({ chainEdit: !chainEdit, chainSel: -1, copyArm: false })}>
             {chainEdit ? "DONE" : "EDIT"}
           </button>
           <button type="button" className="btn sm" data-active={chainOn} aria-pressed={chainOn} disabled={chain.length === 0} onClick={() => setState({ chainOn: !chainOn })}>
             {chainOn ? "ON" : "OFF"}
           </button>
-          <button type="button" className="btn sm" onClick={clearChain} disabled={chain.length === 0} aria-label="Clear chain">{phone ? "CLR" : "CLR CHAIN"}</button>
+          <ConfirmButton label="CLR CHAIN" short="CLR" disabled={chain.length === 0} onConfirm={clearChain} />
         </>
+      )}
+    </div>
+  );
+}
+
+/** One chain entry: its place, pattern, label and how many times it plays. The selected one also shows move and remove. */
+function ChainRow({ index }: { index: number }) {
+  const entry = useStore((s) => s.chain[index]);
+  const selected = useStore((s) => s.chainSel === index);
+  const last = useStore((s) => index === s.chain.length - 1);
+  const edit = useStore((s) => s.chainEdit);
+  // the repeat being played if it is in this entry, else -1 (a number, so the selector gives a stable value)
+  const rep = useStore((s) => {
+    const at = s.chainOn && s.playing ? passAt(s.chain, s.chainPos) : null;
+    return at?.entry === index ? at.rep : -1;
+  });
+  // the chain plays this entry now, or (chain off) this entry's pattern is the one playing
+  const heard = useStore((s) => s.playing && !s.chainOn && s.playPattern === s.chain[index]?.pattern);
+  const now = rep >= 0;
+  const live = now || heard;
+  if (!entry) return null;
+  const nn = (n: number) => String(n).padStart(2, "0");
+  return (
+    <div className="chain-row" role="listitem" data-now={live} data-sel={selected}>
+      <button type="button" className="chain-no" aria-pressed={selected} aria-label={`Chain entry ${index + 1}, pattern ${entry.pattern + 1}${live ? ", playing" : ""}${selected ? ", selected" : ", select to edit"}`} onClick={() => selectChainEntry(index)}>
+        {live ? "▶" : nn(index + 1)}
+      </button>
+      <span className="chain-chip">{nn(entry.pattern + 1)}</span>
+      <input
+        className="chain-label" value={entry.label ?? ""} maxLength={MAX_LABEL} placeholder="—" autoComplete="off" spellCheck={false}
+        aria-label={`Label of chain entry ${index + 1}`} onChange={(e) => setChainLabel(index, e.target.value)}
+      />
+      <div className="chain-rep" role="group" aria-label={`Repeats of chain entry ${index + 1}`}>
+        <button type="button" aria-label="Fewer repeats" disabled={entry.repeats <= 1} onClick={() => setChainRepeats(index, entry.repeats - 1)}>−</button>
+        <b>{now ? `${rep + 1}/${entry.repeats}` : `×${entry.repeats}`}</b>
+        <button type="button" aria-label="More repeats" onClick={() => setChainRepeats(index, entry.repeats + 1)}>+</button>
+      </div>
+      {selected && (
+        <div className="chain-acts">
+          <button type="button" className="btn sm" aria-label="Move earlier" disabled={index === 0} onClick={() => moveChainEntry(index, -1)}>▲</button>
+          <button type="button" className="btn sm" aria-label="Move later" disabled={last} onClick={() => moveChainEntry(index, 1)}>▼</button>
+          <button type="button" className="btn sm" aria-label="Remove from chain" onClick={() => removeChainEntry(index)}>✕ REMOVE</button>
+          {edit && <span className="silk chain-hint">TAP A SLOT TO SWAP</span>}
+        </div>
       )}
     </div>
   );
@@ -412,30 +460,27 @@ function PatternTools({ chainControls = true }: { chainControls?: boolean }) {
 
 function ChainChips() {
   const chain = useStore((s) => s.chain);
-  const chainOn = useStore((s) => s.chainOn);
   const chainEdit = useStore((s) => s.chainEdit);
-  const chainPos = useStore((s) => s.chainPos);
-  const playing = useStore((s) => s.playing);
+  const sel = useStore((s) => s.chainSel);
+  const passes = passCount(chain);
   return (
-    <div className="chain" aria-label={`Chain, ${chain.length} of ${MAX_CHAIN}`}>
+    <div className="chain" role="list" aria-label={`Chain, ${chain.length} of ${MAX_CHAIN} entries, ${passes} passes`}>
       {chain.length === 0 && <span className="silk">{chainEdit ? "TAP SLOTS TO ADD" : "EDIT, THEN TAP SLOTS"}</span>}
-      {chain.map((p, i) => (
-        <button
-          key={i} type="button" className="chain-chip" data-now={chainOn && playing && chainPos === i}
-          aria-label={`Chain position ${i + 1}: pattern ${p + 1}, tap to remove`} onClick={() => removeChainEntry(i)}
-        >
-          {String(p + 1).padStart(2, "0")}
-        </button>
-      ))}
+      {chain.map((_, i) => <ChainRow key={i} index={i} />)}
+      {chainEdit && chain.length > 0 && sel < 0 && <span className="silk chain-add">{passes >= MAX_PASSES ? "CHAIN FULL" : "+ TAP A SLOT TO ADD"}</span>}
     </div>
   );
 }
+
+/** The pattern tab on a phone lists this many patterns, and MORE the rest. */
+const PHONE_PATTERNS = 32;
 
 const range = (from: number, n: number) => Array.from({ length: n }, (_, i) => from + i);
 
 /** Pattern tab on phones: all 64 patterns, the tools and the chain. */
 export function PatternsPanel() {
   const playing = useStore((s) => s.playing);
+  const [all, setAll] = useState(false);
   return (
     <div className="patterns" style={{ "--acc": "var(--bass)" } as CSSProperties}>
       <header className="panel-title">
@@ -443,7 +488,10 @@ export function PatternsPanel() {
         <h2>PATTERNS</h2>
         <span className="silk">{playing ? "TAP TO CUE" : "TAP TO SELECT"}</span>
       </header>
-      <div className="slots">{range(0, NUM_PATTERNS).map((i) => <Slot key={i} index={i} />)}</div>
+      <div className="slots">{range(0, all ? NUM_PATTERNS : PHONE_PATTERNS).map((i) => <Slot key={i} index={i} />)}</div>
+      <button type="button" className="btn sm slots-more" aria-expanded={all} onClick={() => setAll(!all)}>
+        {all ? "LESS" : `MORE · ${PHONE_PATTERNS + 1}–${NUM_PATTERNS}`}
+      </button>
       <PatternTools />
       <ChainChips />
     </div>
@@ -463,7 +511,7 @@ export function PatternBar() {
   const more = useRef<HTMLButtonElement>(null);
   const close = () => {
     setOpen(false);
-    setState({ chainEdit: false, copyArm: false });
+    setState({ chainEdit: false, chainSel: -1, copyArm: false });
   };
   return (
     <div className="patternbar" role="group" aria-label="Patterns" style={{ "--acc": "var(--bass)" } as CSSProperties}>

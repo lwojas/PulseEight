@@ -26,9 +26,10 @@ import {
 import { defaultWorkletUrl } from "webdsp/worklet-url";
 import { baseValues, MANGLER_KEYS, MANGLER_PARAMS, type FxSlot, type ManglerValues } from "./mangler";
 import { lfoOffset } from "./lfo";
+import { SC_ATTACK_S, SC_KNEE_DB, SC_RATIO, scReleaseSeconds, scThresholdDb, sidechainOf } from "./sidechain";
 import { lockParam, lockParams, type LockParam } from "./plock";
 import { DIST_TRACKS, hasDistortion, normToUnits, NUM_TRACKS, TRACKS } from "./spec";
-import { trackStepAt, type Pattern } from "./state";
+import { trackStepAt, type Pattern, type TrackPattern } from "./state";
 import {
   BEAT_DIVISIONS, DELAY_TONE, delayFeedback, distDriveDb, distMix, distTrimDb, freeDelaySeconds, reverbDamping, reverbDecay,
 } from "./trackfx";
@@ -74,6 +75,8 @@ export interface GraphIds {
   reverbFx: readonly EffectId[];
   /** Per track: the distortion insert (Saturation) on bus A, ahead of the fader and both sends. Only the synths have one. */
   distFx: ReadonlyArray<EffectId | undefined>;
+  /** Per track: the sidechain compressor, last on bus A (after the inserts, before the fader and sends). */
+  scFx?: readonly EffectId[];
   inst: readonly InstrumentId[];
   manglerBus: BusId;
   fx: Readonly<Record<FxSlot, EffectId>>;
@@ -135,8 +138,29 @@ export function trackFxWrites(ids: GraphIds, pattern: Pattern, clamp: (param: nu
     fx(ids.reverbBus[t], ids.reverbFx[t], "decay", NodeParam.ReverbDecay, reverbDecay(rev.size));
     fx(ids.reverbBus[t], ids.reverbFx[t], "damp", NodeParam.ReverbDamping, reverbDamping(rev.size));
     if (hasDistortion(t)) for (const w of distWrites(ids, t, pattern.tracks[t].dist ?? 0)) out.push(w);
+    for (const w of scWrites(ids, t, pattern.tracks[t])) out.push(w);
   }
-  return out;
+  // A key the engine would refuse (it would close a loop) must not land before the key that breaks the loop is gone: sidechains that are
+  // switching off go first, the ones switching on last.
+  const isKey = (w: Write) => w.key.endsWith(":scKey");
+  return [...out.filter((w) => isKey(w) && w.value === 0), ...out.filter((w) => !isKey(w)), ...out.filter((w) => isKey(w) && w.value !== 0)];
+}
+
+/** A track's sidechain compressor: the key and ratio carry the on/off (ratio 1 is an exact pass-through, and a compressor with no key would
+ * otherwise compress the track against itself), the rest follow AMOUNT and RELEASE. */
+function scWrites(ids: GraphIds, track: number, tp: TrackPattern): Write[] {
+  if (!ids.scFx) return [];
+  const sc = sidechainOf(tp, track);
+  const bus = ids.trackBus[track];
+  const fx = (key: string, param: NodeParam, value: number): Write => ({ kind: "fx", key: `${track}:${key}`, bus, effect: ids.scFx![track], param, value });
+  return [
+    fx("scKey", NodeParam.CompSidechain, sc.on ? ids.trackBus[sc.src] : 0),
+    fx("scRatio", NodeParam.CompRatio, sc.on ? SC_RATIO : 1),
+    fx("scThr", NodeParam.CompThreshold, scThresholdDb(sc.amt)),
+    fx("scAtk", NodeParam.CompAttack, SC_ATTACK_S),
+    fx("scRel", NodeParam.CompRelease, scReleaseSeconds(sc.rel)),
+    fx("scKnee", NodeParam.CompKnee, SC_KNEE_DB),
+  ];
 }
 
 /** A synth's distortion insert at amount `dist` (0..1): Saturation drive, output trim and mix, which move together. */
@@ -192,6 +216,7 @@ export class Groovebox {
   private readonly delayFx: Array<{ dub: EffectId; free: EffectId }> = [];
   private readonly reverbFx: EffectId[] = [];
   private readonly distFx: Array<EffectId | undefined> = [];
+  private readonly scFx: EffectId[] = [];
   private readonly inst: InstrumentId[] = [];
   private readonly manglerBus: BusId;
   private readonly fx = {} as Record<FxSlot, EffectId>;
@@ -234,9 +259,11 @@ export class Groovebox {
     runtime.setEffectParameter(this.manglerBus, this.fx.filter, NodeParam.FilterMode, FilterMode.LowPass);
     runtime.setEffectParameter(this.manglerBus, this.fx.phaser, NodeParam.PhaserStages, 6);
 
-    for (const kind of [EffectKind.Delay, EffectKind.DubDelay, EffectKind.Reverb]) {
+    for (const kind of [EffectKind.Delay, EffectKind.DubDelay, EffectKind.Reverb, EffectKind.Compressor]) {
       for (const p of runtime.getEffectParams(kind)) this.effectRange.set(p.id, { min: p.min, max: p.max });
     }
+    // An engine from before the sidechain would take the ratio and ignore the key, compressing a track against itself: without the parameter there is no compressor.
+    const sidechain = runtime.getEffectParams(EffectKind.Compressor).some((p) => p.id === NodeParam.CompSidechain);
     for (const spec of TRACKS) {
       const bus = runtime.createBus();
       const b = runtime.createBus();
@@ -268,6 +295,8 @@ export class Groovebox {
       this.reverbFx.push(verb);
       // a synth's distortion sits on its bus A, so it follows the synth and comes before the fader and both sends; Saturation starts at mix 0, a pass-through
       this.distFx.push(hasDistortion(spec.id) ? runtime.addEffect(bus, EffectKind.Saturation) : undefined);
+      // ... then the sidechain compressor, last on bus A: it ducks the finished track (see sidechain.ts). Bypassed until its first write, which is ratio 1 or a key
+      if (sidechain) this.scFx.push(runtime.addEffect(bus, EffectKind.Compressor));
       const inst = runtime.createInstrument(spec.kind, { bus });
       this.inst.push(inst);
       runtime.setInstrumentParameter(inst, InstrumentCommonParam.Gain, spec.gainDb);
@@ -275,7 +304,7 @@ export class Groovebox {
     }
     this.ids = {
       trackBus: this.trackBus, busB: this.busB, busC: this.busC, delayBus: this.delayBus, reverbBus: this.reverbBus,
-      delayFx: this.delayFx, reverbFx: this.reverbFx, distFx: this.distFx, inst: this.inst, manglerBus: this.manglerBus, fx: this.fx,
+      delayFx: this.delayFx, reverbFx: this.reverbFx, distFx: this.distFx, scFx: sidechain ? this.scFx : undefined, inst: this.inst, manglerBus: this.manglerBus, fx: this.fx,
     };
     this.applyManglerValues(baseValues());
   }

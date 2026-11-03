@@ -6,6 +6,7 @@ import { defaultArp, type ArpSettings } from "./arp";
 import { defaultMangler } from "./mangler";
 import { defaultScale, isChromatic, notesInRange, rootAtOrAbove, type ProjectScale } from "./scale";
 import { newLfos, type Lfo } from "./lfo";
+import type { Sidechain } from "./sidechain";
 import { newDelay, newDist, newReverb, type DelaySend, type ReverbSend } from "./trackfx";
 
 export const MAX_STEPS = 64;
@@ -13,7 +14,20 @@ export const PAGE = 16;
 export const NUM_PATTERNS = 64;
 /** The desktop pattern bar shows one bank of this many patterns at a time. */
 export const BANK_SIZE = 16;
+/** Entries in the chain. */
 export const MAX_CHAIN = 64;
+/** A chain entry plays its pattern this many times at most, and the chain's entries together this many passes (the host's sequence holds every pass). */
+export const MAX_REPEATS = 99;
+export const MAX_PASSES = 256;
+export const MAX_LABEL = 16;
+
+/** One instruction of the chain: play `pattern` `repeats` times, then move on. */
+export interface ChainEntry {
+  pattern: number;
+  repeats: number;
+  /** What the entry is called in the chain ("Intro"); the same pattern can carry a different one in each entry. */
+  label?: string;
+}
 export const LENGTHS = [16, 32, 48, 64] as const;
 
 export interface Step {
@@ -61,6 +75,8 @@ export interface TrackPattern {
   dist?: number;
   /** The track's LFOs (see lfo.ts). */
   lfos: Lfo[];
+  /** Ducking to another track's signal (see sidechain.ts). Absent (older saves, and a track never touched) means off. */
+  sc?: Sidechain;
   /** Punch FX send gate: false keeps the track out of the punch section (neither fed nor taken over). */
   punch: boolean;
   /** Octave shift for melodic tracks. */
@@ -146,7 +162,7 @@ export interface AppState {
   /** Name of the loaded or last-saved project; empty for an unsaved one. */
   projectName: string;
   patterns: Pattern[];
-  chain: number[];
+  chain: readonly ChainEntry[];
   chainOn: boolean;
   bpm: number;
   swing: number;
@@ -179,6 +195,7 @@ export interface AppState {
   /** The DAW's tempo while a plugin host plays the song (the project's own tempo is not used then); null otherwise. */
   hostBpm: number | null;
   playPattern: number;
+  /** Index of the pass being played in the chain's passes (`chainPasses`): the entry and repeat are `passAt`. */
   chainPos: number;
   cue: number | null;
   // FX performance
@@ -193,6 +210,8 @@ export interface AppState {
   punchSel: number;
   // pattern bank tools
   chainEdit: boolean;
+  /** The chain entry being edited (-1: none): a tap on a pattern slot then changes its pattern instead of adding an entry. */
+  chainSel: number;
   copyArm: boolean;
   /** TWEAK mode: taps select steps (empty ones too) instead of editing them, and sound controls write the selected step's locks. */
   plock: boolean;
@@ -372,6 +391,7 @@ export function initialState(): AppState {
     punch: 0,
     punchSel: 1,
     chainEdit: false,
+    chainSel: -1,
     copyArm: false,
     plock: false,
   };

@@ -7,7 +7,7 @@
 | Tracks | 8 (6 drums, ACID and FM) |
 | Patterns | 64 |
 | Steps per pattern | 16, 32, 48 or 64 |
-| Chain length | Up to 64 entries |
+| Chain length | Up to 64 entries (rows), each repeating 1 – 99 times, 256 passes in all |
 | Tempo | 60 – 200 BPM |
 | Swing | 50 – 75% |
 | Notes playing at once | 32, shared across all tracks |

@@ -351,7 +351,7 @@ function SeqMenu({ track }: { track: number }) {
 
 /** A destructive button that needs a second tap within two seconds. */
 /** A destructive button that needs a second tap within two seconds. `short` replaces the label on a phone (the full one stays its accessible name). */
-export function ConfirmButton({ label, short, onConfirm, className = "btn sm" }: { label: string; short?: string; onConfirm: () => void; className?: string }) {
+export function ConfirmButton({ label, short, onConfirm, className = "btn sm", disabled }: { label: string; short?: string; onConfirm: () => void; className?: string; disabled?: boolean }) {
   const phone = useMedia(PHONE);
   const [armed, setArmed] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -362,6 +362,7 @@ export function ConfirmButton({ label, short, onConfirm, className = "btn sm" }:
       type="button"
       className={className}
       data-armed={armed}
+      disabled={disabled}
       aria-label={armed ? undefined : label}
       onClick={() => {
         window.clearTimeout(timer.current);

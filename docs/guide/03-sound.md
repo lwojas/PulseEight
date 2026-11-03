@@ -35,6 +35,19 @@ them. For each one, choose:
 If a step has a TWEAK on the same knob, the tweak wins for that step. LFO settings are saved with each pattern. LFOs work in
 the browser version; they don't play inside the VST3 plugin yet.
 
+## Sidechain
+
+Sidechain ducks a track's volume whenever another track plays, the classic way to make a bass get out of the way of the kick.
+Press **SC** next to the LFO button to open it, then:
+
+- **DUCK**: switches it on. Pick the track to duck to in **TO** (it starts on the first track, the kick).
+- **Amount**: how deep the dip is. Low is a gentle nudge, high is a deep pump.
+- **Release**: how long the track takes to come back up after each hit.
+
+Everything else is set for you. The track follows the actual sound of the source track. The source is heard after its fader and
+mute, so a muted kick ducks nothing, and turning it up ducks harder. The track's delay and reverb sends duck with it. A track
+cannot be ducked by one that is ducked by it (those choices are greyed out). Sidechain settings are saved with each pattern.
+
 ## Drum controls
 
 | Drum | Knob | Range (starting value) |

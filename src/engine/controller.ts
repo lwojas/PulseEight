@@ -7,12 +7,12 @@ import type { AudibleStep, HostPlayback } from "./hostplay";
 import { laneLayers, layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
 import { TRACKS } from "./spec";
-import { MAX_CHAIN, muteOf, pickWriteLane, soloOf, trackStepAt, type Pattern } from "./state";
+import { muteOf, pickWriteLane, soloOf, trackStepAt, type Pattern } from "./state";
 import { MELODIC, StepCompiler, type StepNote } from "./stepcompile";
 import { clearLit, flashKey, setLit } from "./keyhl";
 import { setAudible } from "./playhead";
 import { gateForHeld, recordStep } from "./record";
-import { locateSong } from "./song";
+import { chainAdd, chainPasses, chainPattern, isOnePattern, locateSong } from "./song";
 import { withSource } from "./source";
 import { startTicker } from "./ticker";
 
@@ -134,14 +134,14 @@ class Controller {
     const gb = this.gb;
     const st = getState();
     if (!gb || st.playing) return; // (while a plugin host plays, `playing` is true: the DAW owns the transport)
-    const at = from ? locateSong(st, from.songStep) : { pattern: st.pattern, chainPos: 0, step: 0 };
+    const at = from ? locateSong(st, from.songStep) : { pattern: st.pattern, chainPos: 0, step: 0, run: 0 };
     let idx = at.pattern;
-    if (!from && st.chainOn && st.chain.length) idx = st.chain[0];
+    if (!from && st.chainOn && st.chain.length) idx = st.chain[0].pattern;
     this.chainPos = at.chainPos;
     this.schedPattern = idx;
     this.step = at.step;
-    // an external clock locating into a looping pattern lands where the song is, in every track's loop
-    this.run = from && !(st.chainOn && st.chain.length) ? Math.max(0, Math.floor(from.songStep)) : at.step;
+    // an external clock locating lands where the song is, in every track's loop
+    this.run = at.run;
     this.stepCount = from?.songStep ?? 0;
     this.gridTime = from ? Math.max(from.time, gb.now + 0.03) : gb.now + 0.06;
     this.events = [];
@@ -367,7 +367,7 @@ class Controller {
   selectPattern(i: number): void {
     const st = getState();
     if (st.chainEdit) {
-      if (st.chain.length < MAX_CHAIN) setState({ chain: [...st.chain, i] });
+      setState({ chain: st.chainSel >= 0 ? chainPattern(st.chain, st.chainSel, i) : chainAdd(st.chain, i) });
       return;
     }
     if (st.copyArm) {
@@ -632,28 +632,20 @@ class Controller {
     const gb = this.gb!;
     const st = getState();
     let next = this.schedPattern;
-    // The run of tracks shorter than the pattern: it carries on through repeats of one pattern (a looping pattern, a chain of one pattern),
-    // and starts again when the pattern changes, a cue lands or a chain moves on. This is what the host's layout says (nativeseq.ts).
-    const chained = st.chainOn && st.chain.length > 0;
-    const one = chained && st.chain.every((i) => i === st.chain[0]);
-    let run = 0;
+    // The run of tracks shorter than the pattern carries on while the pattern stays the same (a looping pattern, repeats in a chain) and starts
+    // again when the pattern changes, or when a chain of other patterns starts over. This is what the host's layout says (nativeseq.ts).
+    const passes = st.chainOn ? chainPasses(st.chain) : [];
+    let wrapped = false;
     if (st.cue !== null) {
       next = st.cue;
-      if (st.chainOn) {
-        const ix = st.chain.indexOf(next);
-        if (ix >= 0) {
-          this.chainPos = ix;
-          if (one) run = ix * st.patterns[next].length; // a chain of one pattern is one run, counted from the chain's start
-        }
-      }
-    } else if (chained) {
-      this.chainPos = (this.chainPos + 1) % st.chain.length;
-      next = st.chain[this.chainPos];
-      if (one && next === this.schedPattern) run = this.run;
-    } else if (next === this.schedPattern) {
-      run = this.run;
+      const ix = passes.indexOf(next);
+      if (ix >= 0) this.chainPos = ix;
+    } else if (passes.length) {
+      this.chainPos = (this.chainPos + 1) % passes.length;
+      wrapped = this.chainPos === 0 && !isOnePattern(passes);
+      next = passes[this.chainPos];
     }
-    this.run = run;
+    this.run = next === this.schedPattern && !wrapped ? this.run : 0;
     if (next === this.schedPattern) return;
     this.schedPattern = next;
     gb.applySound(st.patterns[next], time);

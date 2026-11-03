@@ -10,6 +10,8 @@ import {
 import { normToUnits, NUM_TRACKS, TRACKS } from "../src/engine/spec";
 import { newPattern, type Pattern } from "../src/engine/state";
 
+const ch = (...ps: number[]) => ps.map((pattern) => ({ pattern, repeats: 1 }));
+
 const ids: GraphIds = {
   trackBus: [1, 2, 3, 4, 5, 6, 7, 8], busB: [11, 12, 13, 14, 15, 16, 17, 18], busC: [21, 22, 23, 24, 25, 26, 27, 28],
   delayBus: [31, 32, 33, 34, 35, 36, 37, 38], reverbBus: [41, 42, 43, 44, 45, 46, 47, 48],
@@ -34,7 +36,7 @@ describe("notes", () => {
     p.tracks[0].steps[0].on = true;
     p.tracks[0].steps[4].on = true;
     p.tracks[1].steps[8].on = true;
-    const seq = steadySequence(song([p]), baseLayout({ chainOn: false, chain: [], pattern: 0 }), ctx)!;
+    const seq = steadySequence(song([p]), baseLayout({ chainOn: false, chain: ch(), pattern: 0 }), ctx)!;
     expect(seq.lengthBeats).toBe(4);
     expect(notes(seq.events).map((e) => [e.kind === "instrument" && e.instrument, e.beat])).toEqual([[51, 0], [51, 1], [52, 2]]);
   });
@@ -94,9 +96,9 @@ describe("layouts", () => {
   const b = blank();
   b.length = 32;
   it("the base layout is the chain when it is on, else the selected pattern", () => {
-    expect(baseLayout({ chainOn: true, chain: [1, 0], pattern: 3 })).toEqual({ patterns: [1, 0], origin: 0 });
-    expect(baseLayout({ chainOn: true, chain: [], pattern: 3 })).toEqual({ patterns: [3], origin: 0 });
-    expect(baseLayout({ chainOn: false, chain: [1], pattern: 3 })).toEqual({ patterns: [3], origin: 0 });
+    expect(baseLayout({ chainOn: true, chain: ch(1, 0), pattern: 3 })).toEqual({ patterns: [1, 0], origin: 0 });
+    expect(baseLayout({ chainOn: true, chain: ch(), pattern: 3 })).toEqual({ patterns: [3], origin: 0 });
+    expect(baseLayout({ chainOn: false, chain: ch(1), pattern: 3 })).toEqual({ patterns: [3], origin: 0 });
   });
   it("finds the pattern, step and chain position at a DAW beat", () => {
     const ps = [a, b];
@@ -118,9 +120,9 @@ describe("layouts", () => {
     expect(nextBoundary(ps, layout, 4.01)).toBe(12);
     expect(nextBoundary(ps, layout, 13)).toBe(16);
     // chain off: the cued pattern simply starts at the boundary
-    expect(cueLayout(ps, false, [], 1, 12)).toEqual({ patterns: [1], origin: 12 });
+    expect(cueLayout(ps, false, ch(), 1, 12)).toEqual({ patterns: [1], origin: 12 });
     // chain on: the chain continues from the cued pattern's place in it
-    const cued = cueLayout(ps, true, [0, 1], 1, 12);
+    const cued = cueLayout(ps, true, ch(0, 1), 1, 12);
     expect(cued).toEqual({ patterns: [0, 1], origin: 8 });
     expect(positionAt(ps, cued, 12)).toMatchObject({ entry: 1, step: 0 });
   });

@@ -50,7 +50,7 @@ export function LfoButton({ track }: { track: number }) {
   const active = useStore((s) => s.patterns[s.pattern].tracks[track].lfos.some((l) => l.on && l.target));
   return (
     <>
-      <button type="button" className="btn sm lfo-btn" data-active={active} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>LFO</button>
+      <button type="button" className="btn sm" data-active={active} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>LFO</button>
       <Modal open={open} title={`${TRACKS[track].name} · LFOs`} onClose={() => setOpen(false)} className="lfo-modal">
         <div style={accentStyle(track)}>
           {[0, 1, 2].map((i) => <LfoRow key={i} track={track} index={i} />)}

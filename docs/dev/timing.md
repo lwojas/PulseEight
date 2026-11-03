@@ -32,22 +32,24 @@ For the step at `gridTime`:
 
 A track may loop before the pattern ends (`TrackPattern.last`). The pattern clock is unchanged; each step also carries a `run`, the steps
 since the current pattern began playing, which is *not* reset when the same pattern repeats. A track shorter than the pattern plays
-step `run mod last` (`trackStepAt`), so it keeps its own loop through the repeats and drifts against the others. `run` restarts when the
-pattern changes, a cue lands, or a chain moves on to another pattern (a chain of one pattern is one run). That is all the live
+step `run mod last` (`trackStepAt`), so it keeps its own loop through the repeats and drifts against the others. `run` restarts only when the
+pattern changes (a cue, or a chain moving on to another pattern), or when a chain of more than one pattern starts over. Consecutive
+repeats of one pattern in a chain carry on, and a chain of one pattern is one run (`runStarts`, `isOnePattern` in `song.ts`). That is all the live
 scheduler does: no cycle is ever built, however the lengths combine. A looping track's arp starts over when its loop comes round (`StepCompiler`), which is what lets the host repeat the loop exactly.
 
 In a plugin host the same thing is expressed as loops (`nativeseq.ts`): when a layout is one pattern repeating for good, each polymetric
 track is left out of the pattern's cycle and sent as a `Sequence` loop of its own length (`trackLoop`), which the host repeats against the
 DAW position. Swing moves odd steps of the grid, so a track of odd length is a loop of two laps. Any other layout plays each pattern once per
-cycle, so a shorter track just wraps inside it, and a cue transition is laid out event by event. This needs a host that reports
+cycle, so a shorter track just wraps inside it (counting from where its run began, so `A A B` carries A's loop through both A's), and a cue transition is laid out event by event. This needs a host that reports
 `sequenceLoops` (webdsp's `Sequence.loops`); without it the page sequences as in a browser.
 
 ## Pattern boundaries
 
 At the wrap, `advancePattern`:
 
-- a **cue** wins: switch to the cued pattern. If the chain is on and contains it, the chain position follows.
-- otherwise, with the **chain on**, step to the next chain entry (wrapping).
+- a **cue** wins: switch to the cued pattern. If the chain is on and contains it, the chain position follows (its first pass).
+- otherwise, with the **chain on**, step to the next *pass* of the chain (wrapping). A chain entry plays its pattern `repeats` times, so the scheduler
+  walks `chainPasses(chain)`, the entries expanded one pattern per pass; `chainPos` is the index of the pass and `passAt` gives its entry and repeat.
 - otherwise stay.
 
 On a change, `applySound(next, time)` schedules every changed instrument parameter at the boundary, and the mix and punch

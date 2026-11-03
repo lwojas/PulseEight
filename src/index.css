@@ -327,16 +327,171 @@ button.oled { cursor: pointer; text-align: left; }
 .slot[data-active="true"] { background: var(--text); color: var(--ink); border-color: var(--text); }
 .slot[data-playing="true"] { background: var(--bass); color: var(--ink); border-color: var(--bass); }
 /* cue blink: an overlay fading in and out (opacity only, so it stays on the compositor) */
-.slot[data-cue="true"]::before { content: ""; position: absolute; inset: 0; background: var(--bass); opacity: 0; animation: cue 0.5s steps(2, jump-none) infinite; pointer-events: none; }
-.slot-chain { position: absolute; top: 2px; right: 3px; font-size: 8px; font-style: normal; color: var(--tone); }
-.slot[data-active="true"] .slot-chain, .slot[data-playing="true"] .slot-chain { color: var(--ink); }
-.ptn-tools { display: flex; align-items: center; gap: 4px; margin: 6px 0; }
-.tools-label { margin-left: auto; }
-.ptn-tools .btn.sm { min-height: 30px; min-width: 0; padding: 0 8px; }
-.chain { display: flex; flex-wrap: wrap; gap: 3px; min-height: 34px; align-items: center; padding: 4px; background: #0d0e11; border: 1px solid var(--rule-2); border-radius: var(--radius); }
-.chain-chip { height: 26px; min-width: 32px; padding: 0 6px; border-radius: var(--radius); background: var(--cap); border: 1px solid var(--tone); font-family: var(--font-mono); font-weight: 700; font-size: 11px; color: var(--tone); }
-.chain-chip[data-now="true"] { background: var(--tone); color: var(--ink); }
-@keyframes cue { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.slot[data-cue="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--bass);
+  opacity: 0;
+  animation: cue 0.5s steps(2, jump-none) infinite;
+  pointer-events: none;
+}
+.slot-chain {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  font-style: normal;
+  color: var(--tone);
+}
+.slot[data-active="true"] .slot-chain,
+.slot[data-playing="true"] .slot-chain {
+  color: var(--ink);
+}
+.slots-more {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 6px;
+}
+.ptn-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0;
+}
+.tools-label {
+  margin-left: auto;
+}
+.ptn-tools .btn.sm {
+  min-height: 30px;
+  min-width: 0;
+  padding: 0 8px;
+}
+.chain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 34px;
+  padding: 4px;
+  background: #0d0e11;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+}
+.chain > .silk {
+  padding: 6px 4px;
+}
+.chain-row {
+  display: grid;
+  grid-template-columns: 30px 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  border-left: 2px solid transparent;
+  padding-left: 2px;
+}
+.chain-row[data-now="true"] {
+  border-left-color: var(--tone);
+}
+.chain-row[data-sel="true"] {
+  background: #15171c;
+}
+.chain-no,
+.chain-chip {
+  height: 28px;
+  border-radius: var(--radius);
+  background: var(--cap);
+  border: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.chain-no {
+  color: var(--silk);
+}
+.chain-row[data-now="true"] .chain-no {
+  color: var(--tone);
+}
+.chain-no[aria-pressed="true"] {
+  border-color: var(--tone);
+  color: var(--tone);
+}
+.chain-chip {
+  border-color: var(--tone);
+  color: var(--tone);
+}
+.chain-row[data-now="true"] .chain-chip {
+  background: var(--tone);
+  color: var(--ink);
+}
+.chain-label {
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font: 12px var(--font-mono);
+  text-transform: uppercase;
+}
+.chain-label:focus-visible {
+  outline: 2px solid var(--tone);
+  outline-offset: 1px;
+}
+.chain-rep {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.chain-rep b {
+  min-width: 34px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--tone);
+  font-variant-numeric: tabular-nums;
+}
+.chain-rep button {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  background: var(--cap);
+  border: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0;
+}
+.chain-rep button:disabled {
+  opacity: 0.4;
+}
+.chain-acts {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0 4px;
+}
+.chain-acts .btn.sm {
+  min-height: 30px;
+  min-width: 0;
+  padding: 0 10px;
+}
+.chain-hint {
+  margin-left: auto;
+  text-align: right;
+}
+@keyframes cue {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 
 /* ---- start gate ------------------------------------------------------------------------------- */
 
@@ -643,29 +798,111 @@ select.chip.variant { background-color: var(--cap); background-position: right 8
 .arp-group .chip { min-height: 30px; flex: 1 1 0; padding: 0 6px; }
 .arp-knobs { margin-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* pattern bank + chain dialog (wide screens): 64 slots as four rows of 16, then the chain box */
-.ptn-modal { width: min(760px, calc(100vw - 16px)); }
-.ptn-modal .slots { grid-template-columns: repeat(16, 1fr); gap: 3px; }
-.ptn-modal .slot { height: 34px; font-size: 11px; min-width: 0; }
-.ptn-modal .chain { max-height: 168px; overflow-y: auto; align-content: flex-start; }
+.ptn-modal {
+  width: min(760px, calc(100vw - 16px));
+}
+.ptn-modal .slots {
+  grid-template-columns: repeat(16, 1fr);
+  gap: 3px;
+}
+.ptn-modal .slot {
+  height: 34px;
+  font-size: 11px;
+  min-width: 0;
+}
+.ptn-modal .chain {
+  max-height: 220px;
+  overflow-y: auto;
+}
 
 /* ---- LFO button + modal ------------------------------------------------------------------------ */
 .lfo-btn { margin-top: 10px; justify-self: start; }
 /* below the wide layout the TWEAK buttons and LFO share a row, LFO set apart with a wider gap; the wide
    layout places them in its grid itself, so there the wrapper steps out of the way */
-.plock-row { display: flex; align-items: center; column-gap: 24px; }
-.plock-row .plock-bar { flex: 0 1 auto; min-width: 0; }
-@media (min-width: 1100px) { .plock-row { display: contents; } }
-/* both labels share one grid cell, so the button is as wide as the longer one and never resizes on toggle */
-.swap-label { display: inline-grid; justify-items: center; }
-.swap-label > span { grid-area: 1 / 1; }
-.swap-label > span[data-show="false"] { visibility: hidden; }
-.lfo-modal { width: min(460px, 100%); }
-.lfo-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px solid var(--rule); }
-.lfo-row:first-child { border-top: 0; padding-top: 0; }
-.lfo-row[data-on="false"] .lfo-body { opacity: 0.55; }
-.lfo-head, .lfo-body { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.lfo-head .variant { flex: 1 1 140px; min-width: 0; }
-.lfo-knobs { --ks: 44px; margin: 0 0 0 auto; grid-template-columns: repeat(2, 64px); }
+.plock-row {
+  display: flex;
+  align-items: center;
+  column-gap: 24px;
+}
+.plock-row .plock-bar {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+@media (min-width: 1100px) {
+  .plock-row {
+    display: contents;
+  }
+}
+.fx-btns {
+  display: flex;
+  gap: 8px;
+}
+.lfo-modal {
+  width: min(460px, 100%);
+}
+.sc-modal {
+  width: min(380px, 100%);
+}
+.sc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sc-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sc-src {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.sc-src .variant {
+  flex: 1;
+  min-width: 0;
+}
+.sc-body[data-on="false"] .sc-knobs {
+  opacity: 0.55;
+}
+.sc-knobs {
+  --ks: 44px;
+  grid-template-columns: repeat(2, 64px);
+  justify-content: start;
+}
+.lfo-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+}
+.lfo-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.lfo-row[data-on="false"] .lfo-body {
+  opacity: 0.55;
+}
+.lfo-head,
+.lfo-body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lfo-head .variant {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.lfo-knobs {
+  --ks: 44px;
+  margin: 0 0 0 auto;
+  grid-template-columns: repeat(2, 64px);
+}
 
 /* phone mixer: eight vertical faders in two rows of four, with big mute/solo buttons */
 @media (max-width: 699px) {
