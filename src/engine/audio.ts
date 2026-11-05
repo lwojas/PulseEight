@@ -205,6 +205,10 @@ export function manglerWrites(ids: GraphIds, values: ManglerValues, clamp: (para
   });
 }
 
+/** A phone or tablet (coarse pointer, no hover), where audio usually goes out over Bluetooth. */
+export const isTouchDevice = (): boolean =>
+  typeof matchMedia === "function" && matchMedia("(pointer: coarse) and (hover: none)").matches;
+
 export class Groovebox {
   private readonly queue = new TimedQueue();
   /** Per track: A (fader, delay send), B (reverb send), C (punch send, takeover cut). */
@@ -316,9 +320,30 @@ export class Groovebox {
   };
 
   static async create(): Promise<Groovebox> {
-    const runtime = await AudioRuntime.create({ workletModuleUrl: defaultWorkletUrl, maxVoices: 32 });
+    // Phones/tablets (and so most Bluetooth listening) get the "playback" profile: a larger output buffer that rides out
+    // Bluetooth jitter and busy mobile CPUs instead of crackling. Desktop keeps the lowest-latency default.
+    const audioContext = new AudioContext({ latencyHint: isTouchDevice() ? "playback" : "interactive" });
+    const runtime = await AudioRuntime.create({ audioContext, workletModuleUrl: defaultWorkletUrl, maxVoices: 32 });
     await runtime.resume();
-    return new Groovebox(runtime);
+    const gb = new Groovebox(runtime);
+    gb.context = audioContext;
+    return gb;
+  }
+
+  private context: AudioContext | null = null;
+
+  /** The audio-clock time that is coming out of the speakers right now, so the playhead and key lights follow what is
+   * heard instead of running ahead of it (Bluetooth adds a long output delay). Uses the browser's output timestamp,
+   * which advances smoothly with the screen clock; the plain clock moves in whole buffers. */
+  get heard(): number {
+    const ctx = this.context;
+    if (!ctx) return this.now;
+    const ts = ctx.getOutputTimestamp?.();
+    if (ts && ts.contextTime && ts.performanceTime) {
+      const heard = ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+      if (heard <= this.now && heard > this.now - 0.5) return heard;
+    }
+    return this.now - Math.min(ctx.outputLatency || ctx.baseLatency || 0, 0.5);
   }
 
   get now(): number {

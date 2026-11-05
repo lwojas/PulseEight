@@ -2,7 +2,7 @@
 // the FX punch-in/write logic. It owns the Groovebox (audio) and keeps the store in sync with what
 // is *audible* (the scheduler runs ~120 ms ahead of the speakers).
 import { hasEmbeddedHost } from "webdsp";
-import { Groovebox, type MixInput } from "./audio";
+import { Groovebox, isTouchDevice, type MixInput } from "./audio";
 import type { AudibleStep, HostPlayback } from "./hostplay";
 import { laneLayers, layeredTarget, sweepLevel, VERB_ID, VERB_TAIL, type PunchLayer } from "./mangler";
 import { editPattern, getState, observe, setState } from "./store";
@@ -16,7 +16,8 @@ import { chainAdd, chainPasses, chainPattern, isOnePattern, locateSong } from ".
 import { withSource } from "./source";
 import { startTicker } from "./ticker";
 
-const LOOKAHEAD = 0.12; // seconds of audio scheduled ahead
+// seconds of audio scheduled ahead; phones get more headroom so a late timer tick or Bluetooth hiccup never starves the buffer
+const LOOKAHEAD = isTouchDevice() ? 0.25 : 0.12;
 const TICK_MS = 10;
 
 const heldLayers = (id: number, lvl: number): PunchLayer[] => (id ? [{ id, lvl }] : []);
@@ -108,6 +109,7 @@ class Controller {
       await projectReady;
       this.gb = gb;
       startTicker(() => this.tick(), TICK_MS);
+      requestAnimationFrame(this.frame);
       setState({ audio: "ready" });
       this.syncNow();
       // A plugin that can play the song itself follows the DAW's transport and is handed the song; otherwise (a browser, an older
@@ -574,8 +576,15 @@ class Controller {
       return;
     }
     while (this.gridTime < gb.now + LOOKAHEAD) this.scheduleStep();
-    this.publishAudible(gb.now);
+    // On screen the playhead moves once per frame (smooth); a hidden page gets no frames, so the timer keeps it, and FX writing, going.
+    if (document.hidden) this.publishAudible(gb.heard);
   }
+
+  private frame = (): void => {
+    requestAnimationFrame(this.frame);
+    const gb = this.gb;
+    if (gb && getState().playing && !this.host?.playing && !document.hidden) this.publishAudible(gb.heard);
+  };
 
   /** While a punch is held its level climbs; push it to the chain every tick until it is full. */
   private sweepHeldPunch(now: number): void {
