@@ -1,11 +1,11 @@
 // Sound, mixer, FX mangler and pattern panels.
 import { useRef, useState, type CSSProperties } from "react";
 import {
-  clearChain, clearPattern, clearStepLocks, moveChainEntry, selectChainEntry, setChainLabel, setChainRepeats, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setLockable, setPlockMode, setPunchParam,
+  clearChain, clearPattern, clearStepLocks, moveChainEntry, selectChainEntry, setChainLabel, setChainRepeats, loadKit, loadSynthPreset, removeChainEntry, setDelay, setLevel, setLockable, setPlockMode, setPunchMacro, setPunchParam,
   setPunchSend, setReverb, setSoundControl, setSweep, toggleMute, toggleSolo,
 } from "../engine/actions";
 import { controller } from "../engine/controller";
-import { PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
+import { macrosOf, PING_PONG, PING_PONG_NOW_STEPS, punchById, PUNCHES, SWEEPS } from "../engine/mangler";
 import { hasLocks, lockStep, soundParam } from "../engine/plock";
 import { KITS, presetsFor } from "../engine/presets";
 import { defaultSound, hasDistortion, formatControl, TRACKS, unitsToNorm } from "../engine/spec";
@@ -14,7 +14,7 @@ import { BANK_SIZE, defaultLevel, levelOf, MAX_CHAIN, MAX_LABEL, MAX_PASSES, mut
 import { BEAT_DIVISIONS, BEAT_ORDER, beatPosition, defaultDelaySend, defaultReverbSend, DELAY_MODES, formatDist, formatFreeDelay } from "../engine/trackfx";
 import { getState, setState, useStore } from "../engine/store";
 import { Knob, Slider } from "./controls";
-import { LfoButton } from "./LfoModal";
+import { LfoButton, PunchLfoButton } from "./LfoModal";
 import { SidechainButton } from "./SidechainModal";
 import { PHONE, useMedia } from "./useMedia";
 import { Modal } from "./Modal";
@@ -337,6 +337,7 @@ export function ManglerPanel() {
   const write = useStore((s) => s.write);
   const def = punchById(sel) ?? PUNCHES[0];
   const value = m.param[def.id] ?? def.param.def;
+  const macros = macrosOf(m, def.id);
   return (
     <div className="mangler" style={{ "--acc": "var(--fx)" } as CSSProperties}>
       <header className="panel-title">
@@ -349,6 +350,12 @@ export function ManglerPanel() {
           key={def.id} label={def.param.label} value={value} def={def.param.def} steps={def.param.steps?.length} accent="var(--fx)"
           readout={def.param.format(value)} onChange={(v) => setPunchParam(def.id, v)}
         />
+        {def.macros.map((mc, i) => (
+          <Knob
+            key={`${def.id}-${i}`} label={mc.label} value={macros[i]} def={mc.def} accent="var(--fx)"
+            readout={`${Math.round(macros[i] * 100)}%`} onChange={(v) => setPunchMacro(def.id, i as 0 | 1, v)}
+          />
+        ))}
       </div>
       <div className="mangler-mid">
         <div className="chips" role="group" aria-label="Ramp time">
@@ -356,6 +363,7 @@ export function ManglerPanel() {
           {SWEEPS.map((w, i) => (
             <button key={w.label} type="button" className="chip" data-active={m.sweep === i} aria-pressed={m.sweep === i} onClick={() => setSweep(i)}>{w.label}</button>
           ))}
+          <PunchLfoButton punchId={def.id} />
         </div>
         <WriteControls />
       </div>

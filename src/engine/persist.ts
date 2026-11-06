@@ -9,7 +9,7 @@ import { breakLoops, sanitizeSidechain } from "./sidechain";
 import { normalizeChain } from "./song";
 import { emptyStep, FX_LANES, MAX_STEPS, newFxLane, newPattern, NUM_PATTERNS, type AppState, type ChainEntry, type MixMode, type Pattern } from "./state";
 import { normalizeArp, type ArpSettings } from "./arp";
-import { defaultMangler } from "./mangler";
+import { defaultMangler, fillMangler } from "./mangler";
 import { BEAT_DIVISIONS, newDelay, newDist, newReverb } from "./trackfx";
 import { normalizeScale, type ProjectScale } from "./scale";
 import { CURRENT_STORE, idbRequest, openDb, SAVES_STORE, txDone } from "./db";
@@ -72,6 +72,8 @@ function migrate(p: Pattern): void {
   });
   breakLoops(p.tracks);
   if (!Array.isArray(p.mangler?.param)) p.mangler = defaultMangler();
+  // Older saves have no macros or FX LFOs; a punch added since has none of either
+  fillMangler(p.mangler);
   // The single FX lane became three: an old pattern's lane is the first.
   const old = p as unknown as { fx?: number[]; fxLvl?: number[] };
   if (!Array.isArray(p.fxLanes) && Array.isArray(old.fx)) {

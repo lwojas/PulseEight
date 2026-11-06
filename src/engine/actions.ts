@@ -238,6 +238,16 @@ export function setPunchParam(id: number, value: number): void {
   editPattern((p) => { p.mangler.param[id] = clamp01(value); });
 }
 
+/** Set one of a punch's two macros (`which` 0 or 1). */
+export function setPunchMacro(id: number, which: 0 | 1, value: number): void {
+  editPattern((p) => { p.mangler.macro[id][which] = clamp01(value); });
+}
+
+/** Edit a punch's LFO (in the current pattern). */
+export function setPunchLfo(id: number, patch: Partial<Lfo>): void {
+  editPattern((p) => { Object.assign(p.mangler.lfo[id], patch); });
+}
+
 export function setSweep(index: number): void {
   editPattern((p) => { p.mangler.sweep = index; });
 }

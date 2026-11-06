@@ -33,6 +33,8 @@ One channel per track (1 KICK … 8 FM), same CCs on each:
 | 70-75 | the track's knobs in app order | 74 / 71 | ACID filter / resonance (70 env mod, 72 decay, 73 bite, 75 wave) |
 | 77 | ACID and FM distortion (`track.7.distortion`, `track.8.distortion`) | | |
 
+Punch FX macros: `punch.<key>.macro1|macro2` (keys in `PUNCHES`, `engine/mangler.ts`), channel 9, CC 102-119 in catalogue order. They read and write the pattern's `mangler.macro`, like the knobs. The FX LFO has no parameter or CC.
+
 Stepped knobs (FM COLOR) split 0-127 into equal bands. CC 10 is unassigned: the app has no pan.
 Patterns: **Bank Select (CC 0) + Program Change** on the default channel, 4 banks x 16 = 64 patterns. While playing the pattern
 is cued for the next loop (as tapping a slot does). Volume, sends and knobs edit the pattern on screen, as the UI does. Sends and knobs are lockable (`engine/plock.ts`): in TWEAK mode, with a step selected on the focused track, they read and write that step's parameter lock instead of the base, and a selection change is reported as a value change.

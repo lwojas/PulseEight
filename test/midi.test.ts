@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { setLevel, toggleMute } from "../src/engine/actions";
+import { setLevel, setPunchMacro, toggleMute } from "../src/engine/actions";
+import { PUNCHES } from "../src/engine/mangler";
 import { cleanValue, getParam, onParamChange, paramInfo, paramManifest, setParam } from "../src/engine/params";
 import { isOnePattern, locateSong, runStarts } from "../src/engine/song";
 import { initialState, newPattern } from "../src/engine/state";
@@ -190,6 +191,25 @@ describe("parameter origin", () => {
     setParam("track.1.mute", 0.7, "host");
     expect(getState().patterns[0].tracks[0].level).toBe(1);
     expect(!!getState().patterns[0].tracks[0].mute).toBe(true);
+  });
+  it("exposes both macros of every punch FX, mapped on the channel after the tracks", () => {
+    const mapped = compileMapping(midiMapping, bus).byParam;
+    for (const p of PUNCHES) for (const n of [1, 2]) {
+      const id = `punch.${p.key}.macro${n}`;
+      expect(paramInfo(id)).toMatchObject({ kind: "norm", def: p.macros[n - 1].def });
+      expect(mapped.has(id)).toBe(true);
+    }
+    expect(paramInfo("punch.dub.macro1")).toBeDefined();
+    expect(paramInfo("punch.phaser.macro2")).toBeDefined();
+  });
+  it("moves a punch macro from a CC and follows it back from the UI", () => {
+    const { control, sent } = rig();
+    control.handle([0xb8, 110, 127]); // channel 9, CC 110 = DUB macro 1
+    expect(getParam("punch.dub.macro1", getState())).toBe(1);
+    expect(getState().patterns[0].mangler.macro[5][0]).toBe(1);
+    setPunchMacro(5, 1, 0);
+    expect(getParam("punch.dub.macro2", getState())).toBe(0);
+    expect(sent).toContainEqual([0xb8, 111, 0]);
   });
   it("describes every parameter for a host", () => {
     const m = paramManifest();

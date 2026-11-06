@@ -25,6 +25,31 @@ a part of each track into the effect, so whatever is playing gets flung into an 
 Each pad has **one main knob**, shown in the Punch FX panel for the pad you pressed last. Its setting is saved with the
 pattern. Turn it before you press the pad, or while you hold it.
 
+## Macros and the LFO
+
+Beside the main knob each pad has **two macros**. Each moves several parts of the effect together along one musical
+dimension. At 50 % (DRIVE's BLEND: 100 %) the effect sounds as it always has, so turning a macro is a change from there.
+
+| Pad | Macro 1 | Macro 2 |
+|---|---|---|
+| FILTER | CUT: where the filter ends up | RESO: the whistle |
+| DRIVE | GRIT: drive, with the output trim following | BLEND: how much driven signal is mixed in |
+| CRUSH | BITS: how few bits | RATE: how far the sample rate drops |
+| PHASE | DEPTH: notch depth and amount | COLOR: feedback and notch centre |
+| DUB | SPACE: send level and how long it repeats | TONE: dark to bright repeats |
+| ROLL | WET: how hard it is thrown in | TONE: dark to bright repeats |
+| SWEEP | RANGE: how dark the sweep gets | RESO: the resonant peak |
+| FLANGE | DEPTH: swing and amount | FEEDBACK: the ring, and a longer delay with it |
+| VERB | WET: how hard it is thrown in | TONE: dark to bright tail |
+
+The **LFO** button opens one LFO for the pad you pressed last. Point it at **MACRO 1** or **MACRO 2** and it moves that
+macro around where you set it. It works like the track LFOs (wave, SYNC, rate, depth) and starts on a 4-bar cycle. It runs
+on the beat, not on the steps, so a one-bar pattern keeps repeating while the effect slowly changes over 2, 4 or more bars.
+You hear it while the effect is on: while you hold the pad, or while a recorded lane has it playing. Punching works as ever.
+
+The macros are saved with the pattern and can be played from a MIDI controller (see [MIDI](08-midi.md)). Recorded lanes
+that the DAW plugin plays by itself use the macro settings but not the LFO.
+
 ### SWEEP shapes
 
 | Shape | What it does |

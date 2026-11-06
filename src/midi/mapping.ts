@@ -12,13 +12,19 @@
 //   CC  21  solo                   CC  22  arpeggiator on     (acid bass: 74 filter, 71 resonance)
 //   CC  77  distortion (the synths: ACID, FM)
 //
+// Punch FX macros: channel 9 (the one after the tracks), CC 102-119 in catalogue order, macro 1 then macro 2 of each pad
+// (FILTER 102/103, DRIVE 104/105 ... VERB 118/119). 102-119 are undefined in the MIDI spec.
+//
 // There is no pan: the app has none. CC 10 is left free for it.
+import { PUNCHES } from "../engine/mangler";
 import { hasDistortion, NUM_TRACKS, TRACKS } from "../engine/spec";
 import type { MidiMapping } from "./control";
 
 const TRACK_COUNT = NUM_TRACKS;
 /** Sound knob CCs by position on the track (Sound Controller 1-6). */
 const SOUND_CCS = [70, 71, 72, 73, 74, 75];
+/** First CC of the Punch FX macros. */
+const PUNCH_CC = 102;
 
 /** Tracks whose knobs follow the General MIDI sound-controller meanings instead of position. */
 const SOUND_BY_KEY: Record<number, Record<string, number>> = {
@@ -56,6 +62,11 @@ function build(): MidiMapping["parameters"] {
       parameters[id(`sound.${key}`)] = { cc: SOUND_BY_KEY[t]?.[key] ?? SOUND_CCS[i], channel };
     });
   }
+  // the Punch FX macros live on their own channel, after the tracks
+  PUNCHES.forEach((punch, i) => {
+    parameters[`punch.${punch.key}.macro1`] = { cc: PUNCH_CC + i * 2, channel: TRACK_COUNT + 1 };
+    parameters[`punch.${punch.key}.macro2`] = { cc: PUNCH_CC + i * 2 + 1, channel: TRACK_COUNT + 1 };
+  });
   return parameters;
 }
 

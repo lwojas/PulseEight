@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ARP_RATES, Arpeggiator, arpIndex, arpPool, normalizeArp, type ArpDirection, type ArpSettings } from "../src/engine/arp";
-import { baseValues, layeredTarget, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/mangler";
+import { baseValues, fillMangler, fxLfoActive, layeredTarget, macrosAt, manglerTarget, PUNCHES, sweepLevel } from "../src/engine/mangler";
 import { BEAT_DIVISIONS, freeDelaySeconds } from "../src/engine/trackfx";
 import { KITS, kitSounds, BASS_PRESETS, synthSound } from "../src/engine/presets";
 import { defaultSound, normToUnits, TRACKS, unitsToNorm, noteName } from "../src/engine/spec";
@@ -250,5 +250,98 @@ describe("arpeggiator", () => {
     const n = normalizeArp({ on: true, rate: 99, dir: "x", octaves: 9, velocity: 5, gate: -1 });
     expect(n).toMatchObject({ on: true, rate: ARP_RATES.length - 1, dir: "up", octaves: 4, velocity: 1 });
     expect(n.gate).toBeGreaterThan(0);
+  });
+});
+
+describe("punch FX macros", () => {
+  const base = () => newPattern().mangler;
+  it("gives every punch a stable key and two labelled macros", () => {
+    expect(PUNCHES.map((p) => p.key)).toEqual(["filter", "drive", "crush", "phaser", "dub", "roll", "sweep", "flanger", "verb"]);
+    for (const p of PUNCHES) expect(p.macros.every((m) => m.label && m.def >= 0 && m.def <= 1)).toBe(true);
+    expect(base().macro).toHaveLength(PUNCHES.length + 1);
+    expect(base().lfo).toHaveLength(PUNCHES.length + 1);
+  });
+  it("sounds as before at the default macros, and every macro changes the sound", () => {
+    for (const p of PUNCHES) {
+      const [d1, d2] = p.macros.map((m) => m.def);
+      const at = (m1: number, m2: number) => manglerTarget(base(), p.id, 1, false, [m1, m2]);
+      expect(at(d1, d2)).toEqual(manglerTarget(base(), p.id, 1));
+      expect(at(0, d2)).not.toEqual(at(1, d2));
+      expect(at(d1, 0)).not.toEqual(at(d1, 1));
+      expect(at(d1, d2).values).toEqual({ ...baseValues(), ...p.values(base().param[p.id], 1) });
+    }
+  });
+  it("keeps level 0 transparent whatever the macros", () => {
+    for (const p of PUNCHES.filter((x) => x.takeover && x.id !== 7)) {
+      const zero = manglerTarget(base(), p.id, 0, false, [1, 1]).values;
+      expect(zero.fCut).toBe(20000);
+      expect(zero.pMix).toBe(0);
+      expect(zero.xMix).toBe(0);
+      expect(zero.sMix).toBe(0);
+      expect(zero.cBits).toBe(16);
+    }
+  });
+  it("scales the send of a throw with its first macro", () => {
+    const quiet = manglerTarget(base(), 5, 1, false, [0, 0.5]).boost;
+    const loud = manglerTarget(base(), 5, 1, false, [1, 0.5]).boost;
+    expect(quiet).toBeLessThan(manglerTarget(base(), 5, 1).boost);
+    expect(loud).toBeGreaterThan(manglerTarget(base(), 5, 1).boost);
+    expect(manglerTarget(base(), 5, 0, false, [1, 1]).boost).toBe(0);
+  });
+  it("layers use their own macros", () => {
+    const b = base();
+    expect(layeredTarget(b, [{ id: 5, lvl: 1, macros: [1, 0.2] }])).toEqual(manglerTarget(b, 5, 1, false, [1, 0.2]));
+  });
+});
+
+describe("punch FX LFO", () => {
+  const lfo = (patch: object) => {
+    const b = newPattern().mangler;
+    Object.assign(b.lfo[5], { on: true, target: "macro1", wave: 2, sync: true, div: 0, depth: 0.6 }, patch);
+    return b;
+  };
+  const bpm = 120; // a bar is 2 s, a 4-bar cycle 8 s
+  it("leaves the macros alone while off or without a target", () => {
+    const off = newPattern().mangler;
+    expect(macrosAt(off, 5, 3, 0, bpm)).toEqual([0.5, 0.5]);
+    expect(fxLfoActive(lfo({ target: "" }), 5)).toBe(false);
+    expect(fxLfoActive(lfo({ on: false }), 5)).toBe(false);
+    expect(fxLfoActive(lfo({ target: "instrument.cutoff" }), 5)).toBe(false);
+  });
+  it("moves the macro it targets, across bars rather than steps", () => {
+    const b = lfo({ wave: 0 }); // sine over 4 bars (8 s): centre at the start, peak after bar 1, trough after bar 3
+    const at = (t: number) => macrosAt(b, 5, t, 0, bpm);
+    expect(at(0)[0]).toBeCloseTo(0.5, 6);
+    expect(at(2)[0]).toBeCloseTo(0.8, 6);
+    expect(at(6)[0]).toBeCloseTo(0.2, 6);
+    expect(at(8)[0]).toBeCloseTo(at(0)[0], 6);
+    expect(at(2)[1]).toBe(0.5);
+    // the same step of the next repetition of a 1-bar pattern hears a different value
+    expect(at(0.5)[0]).not.toBeCloseTo(at(2.5)[0], 3);
+  });
+  it("targets macro 2 and keeps the result in range", () => {
+    const b = lfo({ target: "macro2", depth: 1 });
+    b.macro[5] = [0.5, 0.95];
+    for (const t of [0, 1, 2, 3, 4, 5, 6, 7]) {
+      const [m1, m2] = macrosAt(b, 5, t, 0, bpm);
+      expect(m1).toBe(0.5);
+      expect(m2).toBeGreaterThanOrEqual(0);
+      expect(m2).toBeLessThanOrEqual(1);
+    }
+  });
+  it("fills in and cleans what an older save lacks", () => {
+    const old = { sweep: 1, param: [0, ...PUNCHES.map(() => 0.3)] } as never as ReturnType<typeof newPattern>["mangler"];
+    fillMangler(old);
+    expect(old.param[1]).toBe(0.3);
+    expect(old.macro[5]).toEqual([0.5, 0.5]);
+    expect(old.lfo[5]).toMatchObject({ on: false, target: "" });
+    const messy = newPattern().mangler;
+    messy.macro[2] = [9, "x"] as never;
+    messy.lfo[3] = { on: true, target: "bogus", wave: 99, sync: true, rate: 7, div: 99, depth: 3 };
+    messy.lfo[4] = { on: true, target: "macro2", wave: 1, sync: false, rate: 0.7, div: 3, depth: -0.4 };
+    fillMangler(messy);
+    expect(messy.macro[2]).toEqual([1, 1]);
+    expect(messy.lfo[3]).toMatchObject({ on: false, target: "" });
+    expect(messy.lfo[4]).toMatchObject({ on: true, target: "macro2", wave: 1, sync: false, rate: 0.7, div: 3, depth: -0.4 });
   });
 });

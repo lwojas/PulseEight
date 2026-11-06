@@ -94,6 +94,8 @@ A Punch FX is an entry in `PUNCHES` (`engine/mangler.ts`) and, if it needs a new
 ```ts
 {
   id: 10,                                  // next free id. Ids are stored in saved FX lanes: never reuse or renumber
+  key: "gate",                             // the MIDI/host name (`punch.gate.macro1`): permanent
+  macros: [{ label: "DEPTH", def: 0.5 }, { label: "TONE", def: 0.5 }],  // each moves several values; `values` gets them as `m`
   label: "GATE", hint: "STUTTER GATE",
   takeover: true,                          // cut the dry mix and send everything through the chain
   boost: 1,                                // throw level at full (non-takeover only)
@@ -114,6 +116,10 @@ the pad existed.
    *transparent* resting value).
 2. `audio.ts` — add the slot to the list in the `Groovebox` constructor (this fixes its position in the chain).
 3. If it is a pad with a new `PING_PONG` behaviour, add its id to that set.
+
+Macros: write `values(p, l, m)` so the default macros give the sound the effect would have without them (see the existing pads;
+`span`/`oct` give 0.5 = unchanged). A throw can add `boostScale(m)`. `mapping.ts` takes the new pad's two CCs from the catalogue order, so
+add it **last**. The LFO is `mangler.lfo[id]`, applied through `macrosAt` (`controller.ts → modulate`); nothing to add per pad.
 
 Tests: "offers the new catalogue with one parameter each" pins the list of pad labels, so **update that list** when you add a pad; "sweeps in: level 0 is transparent" and the takeover test cover the rest.
 

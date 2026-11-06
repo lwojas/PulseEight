@@ -43,21 +43,24 @@ export function lfoOffset(l: Lfo, time: number, anchorTime: number, bpm: number)
   return (v * l.depth) / 2;
 }
 
+const num = (v: unknown, lo: number, hi: number, def: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def);
+
+/** One LFO from a save, cleaned: every field in range, `def` where it is missing. */
+export function sanitizeLfo(raw: unknown, def: Lfo = newLfo()): Lfo {
+  const l = (raw ?? {}) as Partial<Lfo>;
+  return {
+    on: l.on === true,
+    target: typeof l.target === "string" ? l.target : "",
+    wave: Math.round(num(l.wave, 0, LFO_WAVES.length - 1, def.wave)),
+    sync: typeof l.sync === "boolean" ? l.sync : def.sync,
+    rate: num(l.rate, 0, 1, def.rate),
+    div: Math.round(num(l.div, 0, LFO_DIVISIONS.length - 1, def.div)),
+    depth: num(l.depth, -1, 1, def.depth),
+  };
+}
+
 /** LFOs from a save, cleaned: always `NUM_LFOS` of them, every field in range. */
 export function sanitizeLfos(raw: unknown): Lfo[] {
   const list = Array.isArray(raw) ? raw : [];
-  const num = (v: unknown, lo: number, hi: number, def: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def);
-  return Array.from({ length: NUM_LFOS }, (_, i) => {
-    const l = (list[i] ?? {}) as Partial<Lfo>;
-    const d = newLfo();
-    return {
-      on: l.on === true,
-      target: typeof l.target === "string" ? l.target : "",
-      wave: Math.round(num(l.wave, 0, LFO_WAVES.length - 1, d.wave)),
-      sync: l.sync === true,
-      rate: num(l.rate, 0, 1, d.rate),
-      div: Math.round(num(l.div, 0, LFO_DIVISIONS.length - 1, d.div)),
-      depth: num(l.depth, -1, 1, d.depth),
-    };
-  });
+  return Array.from({ length: NUM_LFOS }, (_, i) => sanitizeLfo(list[i]));
 }

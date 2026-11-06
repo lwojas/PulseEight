@@ -6,6 +6,7 @@
 //   track.<1-8>.volume | mute | solo | delaySend | reverbSend | arp   (arp: melodic tracks)
 //   track.<7,8>.distortion                                                (synths only: ACID and FM)
 //   track.<1-8>.sound.<key>                                            (the track's macro knobs)
+//   punch.<key>.macro1 | macro2                                        (the Punch FX macros: filter, drive, crush, phaser, dub, roll, sweep, flanger, verb)
 //   pattern.select                                                     (0-based pattern slot)
 //
 // Sound knobs, the delay/reverb sends and the bass distortion are lockable (plock.ts): in TWEAK mode, with a step selected on the focused track, they read
@@ -16,8 +17,9 @@
 //
 // A parameter's value is in its own domain, `kind` says which:
 //   norm  0..1 continuous      int  min..max whole numbers      bool  0 or 1
-import { setArp, setLevel, setLockable, setMute, setPunchSend, setSolo } from "./actions";
+import { setArp, setLevel, setLockable, setMute, setPunchMacro, setPunchSend, setSolo } from "./actions";
 import { controller } from "./controller";
+import { macrosOf, PUNCHES } from "./mangler";
 import { effectiveValue, lockParam, lockStep } from "./plock";
 import { currentSource, withSource, type ParamSource } from "./source";
 import { defaultLevel, levelOf, muteOf, NUM_PATTERNS, soloOf, type AppState, type TrackPattern } from "./state";
@@ -90,6 +92,14 @@ function build(): ParamDef[] {
       } else {
         defs.push({ id, label, kind: "norm", min: 0, max: 1, def: sound[i], get: (s) => shown(s, t, lockId), set: (v) => setLockable(t, lockId, v) });
       }
+    });
+  }
+  for (const punch of PUNCHES) {
+    punch.macros.forEach((macro, i) => {
+      defs.push({
+        id: `punch.${punch.key}.macro${i + 1}`, label: `${punch.label} ${macro.label.toLowerCase()}`, kind: "norm", min: 0, max: 1, def: macro.def,
+        get: (s) => macrosOf(s.patterns[s.pattern].mangler, punch.id)[i], set: (v) => setPunchMacro(punch.id, i as 0 | 1, v),
+      });
     });
   }
   defs.push({

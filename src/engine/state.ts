@@ -110,6 +110,10 @@ export interface ManglerBase {
   sweep: number;
   /** Character parameter per punch id (index 0 unused), normalised 0..1. */
   param: number[];
+  /** The two macros per punch id (index 0 unused), normalised 0..1 (see mangler.ts). */
+  macro: Array<[number, number]>;
+  /** The LFO per punch id (index 0 unused): it moves one of that punch's macros, running on the beat grid and not on the steps. */
+  lfo: Lfo[];
 }
 
 export interface Pattern {
